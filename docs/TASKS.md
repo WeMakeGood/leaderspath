@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
 **Last Updated:** 2026-01-30
-**Current Phase:** Phase 5 - Divi 5 Modules (Frontend)
+**Current Phase:** Phase 6 - Polish & Testing
 
 This file tracks all development tasks across Claude Code sessions. Each session should read this file at startup and update it when tasks are completed or new tasks are discovered.
 
@@ -138,7 +138,7 @@ Context files remain WordPress-only (embedded in system prompt).
 
 ---
 
-## Phase 5: Divi 5 Modules (Frontend) (CURRENT)
+## Phase 5: Divi 5 Modules (Frontend) (COMPLETED)
 
 Now that data layer exists, build the UI modules.
 
@@ -147,14 +147,16 @@ Now that data layer exists, build the UI modules.
 - `modules/LessonMeta/` - Theme Builder pattern (ACF data from current lesson)
 - `modules/ContextLibrary/` - Theme Builder pattern with compound elements and modal
 - `modules/SkillsList/` - Theme Builder pattern (similar to Context Library, no modal)
+- `modules/Chatbot/` - Theme Builder pattern with interactive frontend JavaScript
 
-### Chatbot Module
-- [ ] Create PHP module class and traits
-- [ ] Create TypeScript/React edit component
-- [ ] Create module.json with settings schema
-- [ ] Implement chat UI (bubbles, input, send button)
-- [ ] Add styling options (colors, fonts, sizing)
-- [ ] Connect to REST API endpoint
+### Chatbot Module (COMPLETED)
+- [x] Create PHP module class and traits
+- [x] Create TypeScript/React edit component
+- [x] Create module.json with settings schema
+- [x] Implement chat UI (bubbles, input, send button)
+- [x] Add styling options (colors, fonts, sizing)
+- [x] Connect to REST API endpoint
+- [x] Frontend JavaScript for real-time chat interaction
 
 ### Context Library Module (COMPLETED)
 - [x] Create PHP module class and traits (Theme Builder pattern)
@@ -475,6 +477,66 @@ Brief notes from each development session:
 - **Phase 4 marked as COMPLETED**
 - **Next: Build Chatbot Divi 5 module (Phase 5)**
 
+### Session 13 (2026-01-30)
+- **Built Chatbot Divi 5 Module** (final module in Phase 5)
+- Created PHP module structure:
+  - `modules/Chatbot/Chatbot.php` - Main class implementing DependencyInterface
+  - `modules/Chatbot/ChatbotTrait/RenderCallbackTrait.php` - Server rendering + script enqueue
+  - `modules/Chatbot/ChatbotTrait/ModuleClassnamesTrait.php` - CSS class generation
+  - `modules/Chatbot/ChatbotTrait/ModuleStylesTrait.php` - Dynamic styles
+  - `modules/Chatbot/ChatbotTrait/CustomCssTrait.php` - Custom CSS fields
+- Created TypeScript/React components:
+  - `src/components/chatbot/module.json` - Full attribute schema for chat UI
+  - `src/components/chatbot/edit.tsx` - VB preview with placeholder messages
+  - `src/components/chatbot/styles.tsx` - VB style component
+  - `src/components/chatbot/types.ts` - TypeScript interfaces
+  - `src/components/chatbot/custom-css.ts`, `module-classnames.ts`, `placeholder-content.ts`, `index.ts`
+  - `src/components/chatbot/style.scss` - BEM CSS with animations
+- Created frontend interactivity:
+  - `assets/js/chatbot.js` - IIFE pattern, fetch API to REST endpoint, DOM manipulation
+  - `assets/css/chatbot.css` - Additional runtime styles (scrollbar, focus states, animations)
+- Module features:
+  - Theme Builder pattern (uses `get_queried_object_id()` for lesson_id)
+  - Configurable user/assistant bubble colors, fonts, backgrounds
+  - Chat area with configurable height
+  - Input field with placeholder text
+  - Send button using Divi button elementType
+  - Disabled state when chatbot not enabled on lesson
+  - Loading indicator (animated dots)
+  - Error display in conversation
+  - Basic markdown-like formatting (code blocks, bold, paragraphs)
+- Registered module in `modules/Modules.php` and `src/index.ts`
+- Build successful: `npm run build` compiles without errors
+- **Phase 5 marked as COMPLETED**
+- **Next: Phase 6 - Polish & Testing**
+
+### Session 14 (2026-01-30)
+- **Enhanced Chatbot with rich text input and markdown rendering**
+- Added TinyMCE for rich text input:
+  - Loaded directly from `/wp-includes/js/tinymce/tinymce.min.js` with custom handle
+  - Configured with `skin: false` and `content_css: false` to prevent theme CSS conflicts
+  - Inline editor with no toolbar - users use keyboard shortcuts (Ctrl+B, Ctrl+I, etc.)
+  - Enter submits, Shift+Enter for new line
+  - HTML-to-Markdown conversion before sending to Claude API
+- Added marked.js for Markdown rendering:
+  - CDN: `https://cdn.jsdelivr.net/npm/marked/marked.min.js`
+  - GitHub Flavored Markdown (gfm: true)
+  - Breaks enabled for single line breaks
+  - Properly renders headers, lists, code blocks, bold, italic, links
+- Script dependencies: `leaderspath-chatbot` depends on `leaderspath-tinymce` and `marked`
+- Changed input from `<textarea>` to `<div>` for TinyMCE inline mode
+- Updated VB preview (edit.tsx) to show div instead of textarea
+- Fixed scroll behavior for new messages:
+  - Changed from `scrollTop = scrollHeight` (scrolls to bottom) to `scrollIntoView({ block: 'start' })`
+  - New messages now appear at the top of the visible area, not the bottom
+  - Users don't have to scroll back up to read long responses
+- **Key learnings:**
+  - `wp_enqueue_editor()` loads CSS that breaks Divi theme - avoid it
+  - TinyMCE `content_style` option injects global `body` styles - removed it
+  - TinyMCE 6 `editor.mode.set()` requires additional plugins - use `contenteditable` directly
+  - marked.js needs `gfm: true` and `breaks: true` for proper block element parsing
+  - Use `scrollIntoView({ block: 'start' })` to show new messages at top, not bottom
+
 ---
 
 ## Quick Reference for Next Session
@@ -496,27 +558,31 @@ modules/
 ├── LessonMeta/              # Theme Builder pattern - displays ACF data from current lesson
 ├── ContextLibrary/          # Theme Builder pattern - compound elements, modal, buttons
 ├── SkillsList/              # Theme Builder pattern - similar to ContextLibrary, no modal
-│   ├── SkillsList.php       # Main class implementing DependencyInterface
-│   └── SkillsListTrait/     # Traits: RenderCallback, ModuleClassnames, ModuleStyles, CustomCss
+├── Chatbot/                 # Theme Builder pattern - interactive frontend JavaScript
+│   ├── Chatbot.php          # Main class implementing DependencyInterface
+│   └── ChatbotTrait/        # Traits: RenderCallback, ModuleClassnames, ModuleStyles, CustomCss
 src/
 ├── index.ts                 # JS module registration (add registerModule() here)
 └── components/
     ├── hello-module/        # Simple reference
     ├── lesson-meta/         # Theme Builder pattern
     ├── context-library/     # Theme Builder pattern with compound elements + modal
-    └── skills-list/         # Theme Builder pattern (same structure, no modal)
+    ├── skills-list/         # Theme Builder pattern (same structure, no modal)
+    └── chatbot/             # Theme Builder pattern with interactive chat
         ├── index.ts         # Module export with metadata + renderers
-        ├── edit.tsx         # Visual Builder React component
-        ├── module.json      # Module schema (attributes, settings groups)
-        ├── types.ts         # TypeScript interfaces (extends InternalAttrs)
+        ├── edit.tsx         # Visual Builder React component (placeholder messages)
+        ├── module.json      # Module schema (chat area, bubbles, input, button)
+        ├── types.ts         # TypeScript interfaces
         ├── styles.tsx       # VB styles component with StyleContainer
         ├── custom-css.ts    # CSS fields definition
         ├── module-classnames.ts
         ├── placeholder-content.ts
-        └── style.scss       # BEM CSS
+        └── style.scss       # BEM CSS with loading animations
 assets/
 ├── js/context-modal.js      # Modal JavaScript for View Content (Context Library only)
-└── css/context-modal.css    # Modal styles
+├── js/chatbot.js            # Chatbot frontend interactivity (REST API calls)
+├── css/context-modal.css    # Modal styles
+└── css/chatbot.css          # Chatbot runtime styles
 ```
 
 ### Divi 5 Module Development - CRITICAL

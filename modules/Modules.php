@@ -16,6 +16,7 @@ use LeadersPath\Modules\HelloModule\HelloModule;
 use LeadersPath\Modules\LessonMeta\LessonMeta;
 use LeadersPath\Modules\ContextLibrary\ContextLibrary;
 use LeadersPath\Modules\SkillsList\SkillsList;
+use LeadersPath\Modules\Chatbot\Chatbot;
 
 /**
  * Register LeadersPath modules with Divi's dependency tree.
@@ -32,5 +33,6 @@ add_action(
 		$dependency_tree->add_dependency( new LessonMeta() );
 		$dependency_tree->add_dependency( new ContextLibrary() );
 		$dependency_tree->add_dependency( new SkillsList() );
+		$dependency_tree->add_dependency( new Chatbot() );
 	}
 );
