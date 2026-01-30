@@ -46,6 +46,9 @@ require LEADERSPATH_PATH . 'includes/class-taxonomies.php';
 require LEADERSPATH_PATH . 'includes/class-capabilities.php';
 require LEADERSPATH_PATH . 'includes/class-acf-fields.php';
 require LEADERSPATH_PATH . 'admin/class-settings.php';
+require LEADERSPATH_PATH . 'admin/class-admin-columns.php';
+require LEADERSPATH_PATH . 'includes/class-claude-api.php';
+require LEADERSPATH_PATH . 'includes/class-rest-api.php';
 
 /**
  * Initialize core functionality.
@@ -54,6 +57,8 @@ new LeadersPath\Includes\Post_Types();
 new LeadersPath\Includes\Taxonomies();
 new LeadersPath\Includes\ACF_Fields();
 new LeadersPath\Admin\Settings();
+new LeadersPath\Admin\Admin_Columns();
+new LeadersPath\Includes\REST_API();
 
 /**
  * Load Divi 5 modules registration.

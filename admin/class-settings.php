@@ -54,6 +54,7 @@ class Settings {
 		add_action( 'admin_menu', [ $this, 'add_settings_page' ] );
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'admin_notices', [ $this, 'display_api_key_notice' ] );
+		add_action( 'wp_ajax_leaderspath_test_connection', [ $this, 'ajax_test_connection' ] );
 	}
 
 	/**
@@ -232,6 +233,12 @@ class Settings {
 			class="regular-text"
 			autocomplete="off"
 		/>
+		<?php if ( $has_key ) : ?>
+			<button type="button" id="leaderspath-test-connection" class="button button-secondary">
+				<?php esc_html_e( 'Test Connection', 'leaderspath' ); ?>
+			</button>
+			<span id="leaderspath-connection-status"></span>
+		<?php endif; ?>
 		<p class="description">
 			<?php
 			printf(
@@ -246,6 +253,36 @@ class Settings {
 				<span class="dashicons dashicons-yes-alt"></span>
 				<?php esc_html_e( 'API key is configured and encrypted.', 'leaderspath' ); ?>
 			</p>
+		<?php endif; ?>
+
+		<?php if ( $has_key ) : ?>
+		<script>
+		jQuery(document).ready(function($) {
+			$('#leaderspath-test-connection').on('click', function() {
+				var $button = $(this);
+				var $status = $('#leaderspath-connection-status');
+
+				$button.prop('disabled', true).text('<?php echo esc_js( __( 'Testing...', 'leaderspath' ) ); ?>');
+				$status.html('');
+
+				$.post(ajaxurl, {
+					action: 'leaderspath_test_connection',
+					nonce: '<?php echo esc_js( wp_create_nonce( 'leaderspath_test_connection' ) ); ?>'
+				}, function(response) {
+					$button.prop('disabled', false).text('<?php echo esc_js( __( 'Test Connection', 'leaderspath' ) ); ?>');
+
+					if (response.success) {
+						$status.html('<span style="color: #46b450; margin-left: 10px;"><span class="dashicons dashicons-yes-alt"></span> ' + response.data.message + '</span>');
+					} else {
+						$status.html('<span style="color: #dc3232; margin-left: 10px;"><span class="dashicons dashicons-warning"></span> ' + response.data.message + '</span>');
+					}
+				}).fail(function() {
+					$button.prop('disabled', false).text('<?php echo esc_js( __( 'Test Connection', 'leaderspath' ) ); ?>');
+					$status.html('<span style="color: #dc3232; margin-left: 10px;"><span class="dashicons dashicons-warning"></span> <?php echo esc_js( __( 'Request failed', 'leaderspath' ) ); ?></span>');
+				});
+			});
+		});
+		</script>
 		<?php endif; ?>
 		<?php
 	}
@@ -469,5 +506,46 @@ class Settings {
 	public static function is_debug_mode(): bool {
 		$options = get_option( self::OPTION_NAME, [] );
 		return ! empty( $options['debug_mode'] );
+	}
+
+	/**
+	 * AJAX handler for testing API connection.
+	 *
+	 * @since 0.1.0
+	 */
+	public function ajax_test_connection(): void {
+		// Verify nonce.
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'leaderspath_test_connection' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid security token.', 'leaderspath' ) ] );
+		}
+
+		// Check capability.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'leaderspath' ) ] );
+		}
+
+		// Test connection.
+		$claude = new \LeadersPath\Includes\Claude_API();
+		$result = $claude->test_connection();
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+		}
+
+		$model_count = $result['model_count'] ?? 0;
+
+		wp_send_json_success( [
+			'message' => sprintf(
+				/* translators: %d: number of models */
+				_n(
+					'Connected! %d model available.',
+					'Connected! %d models available.',
+					$model_count,
+					'leaderspath'
+				),
+				$model_count
+			),
+			'models'  => $result['models'] ?? [],
+		] );
 	}
 }

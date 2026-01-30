@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
 **Last Updated:** 2026-01-29
-**Current Phase:** Data Layer (Inside-Out Development)
+**Current Phase:** Phase 5 - Divi 5 Modules (Frontend)
 
 This file tracks all development tasks across Claude Code sessions. Each session should read this file at startup and update it when tasks are completed or new tasks are discovered.
 
@@ -66,7 +66,7 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 
 ---
 
-## Phase 3: Admin Interface (CURRENT)
+## Phase 3: Admin Interface (COMPLETED)
 
 ### Settings Page
 - [x] Create `admin/class-settings.php`
@@ -76,37 +76,41 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 - [x] Debug/logging toggle
 
 ### Admin Enhancements
-- [ ] Custom admin columns for Lessons (duration, course, chatbot status)
-- [ ] Custom admin columns for Courses (lesson count, status)
-- [ ] Quick edit support where appropriate
-- [ ] Admin notices for missing API key
+- [x] Custom admin columns for Lessons (duration, course, chatbot status)
+- [x] Custom admin columns for Courses (lesson count, difficulty, total duration)
+- [x] Quick edit support (lesson duration, chatbot enabled, course difficulty)
+- [x] Admin notices for missing API key
 
 ---
 
-## Phase 4: REST API & Claude Integration
+## Phase 4: REST API & Claude Integration (COMPLETED)
 
 ### REST API Endpoints
-- [ ] Create `includes/class-rest-api.php`
-- [ ] `POST /wp-json/leaderspath/v1/chat` - Send message to Claude
-- [ ] `GET /wp-json/leaderspath/v1/lessons/{id}/context` - Get lesson context files
-- [ ] `GET /wp-json/leaderspath/v1/lessons/{id}/skills` - Get lesson skills
-- [ ] `GET /wp-json/leaderspath/v1/context/{id}/download` - Download context file
-- [ ] `GET /wp-json/leaderspath/v1/skills/{id}/download` - Download skill definition
-- [ ] Implement authentication (nonce for logged-in, capability checks)
+- [x] Create `includes/class-rest-api.php`
+- [x] `POST /wp-json/leaderspath/v1/chat` - Send message to Claude
+- [x] `GET /wp-json/leaderspath/v1/lessons/{id}/context` - Get lesson context files
+- [x] `GET /wp-json/leaderspath/v1/lessons/{id}/skills` - Get lesson skills
+- [x] `GET /wp-json/leaderspath/v1/context/{id}/download` - Download context file
+- [x] `GET /wp-json/leaderspath/v1/skills/{id}/download` - Download skill definition
+- [x] Implement authentication (nonce for logged-in, capability checks)
 
 ### Claude API Handler
-- [ ] Create `includes/class-claude-api.php`
-- [ ] Implement Messages API integration
-- [ ] Context assembly from lesson files
-- [ ] Model selection (Opus 4.5, Sonnet, Haiku)
-- [ ] Error handling and logging
+- [x] Create `includes/class-claude-api.php`
+- [x] Implement Messages API integration
+- [x] Context assembly from lesson files
+- [x] Model selection (dynamic from API, with fallbacks)
+- [x] Error handling and logging
+- [x] Test connection button in settings (queries available models)
 - [ ] Optional: Streaming response support (SSE)
 
 ---
 
-## Phase 5: Divi 5 Modules (Frontend)
+## Phase 5: Divi 5 Modules (Frontend) (CURRENT)
 
 Now that data layer exists, build the UI modules.
+
+**Reference:** See `docs/divi-modules.md` for Divi 5 module development guide.
+**Working Example:** `modules/HelloModule/` and `src/components/hello-module/` demonstrate the pattern.
 
 ### Chatbot Module
 - [ ] Create PHP module class and traits
@@ -211,3 +215,66 @@ Brief notes from each development session:
 - Next: Admin Enhancements (custom columns for Lessons/Courses)
 - Added proper licensing (GPL-2.0-or-later) and authorship info
 - Reorganized task order: inside-out development (data → admin → frontend)
+
+### Session 3 (2026-01-29)
+- Completed Phase 3: Admin Interface
+  - Created `admin/class-admin-columns.php` with custom columns for Lessons and Courses
+  - Lesson columns: Course (with edit links), Duration (sortable), Chatbot status (enabled + model)
+  - Course columns: Lesson count, Difficulty (color-coded), Total Duration (calculated from lessons)
+  - Quick edit support for: lesson duration, chatbot enabled, course difficulty
+  - All columns include proper escaping, accessibility, and internationalization
+- Completed Phase 4: REST API & Claude Integration
+  - Created `includes/class-rest-api.php` with all endpoints (chat, context, skills, downloads)
+  - Created `includes/class-claude-api.php` with Messages API integration
+  - Dynamic model resolution: queries `/v1/models` endpoint, caches for 24h, falls back to known IDs
+  - Context assembly: system prompt + lesson content + context files + skill definitions
+  - Added "Test Connection" button to settings page (AJAX, shows model count)
+  - Full authentication: nonce verification, capability checks, logged-in requirement
+- Created test data script: `bin/create-test-data.php` (run via `wp eval-file`)
+  - 3 Context Files, 2 Skills, 4 Lessons, 2 Courses, 1 Cohort
+  - All REST endpoints verified working
+- Remaining: Optional streaming support (SSE) - deferred
+- **Next: Phase 5 - Divi 5 Modules (start with Chatbot Module)**
+
+---
+
+## Quick Reference for Next Session
+
+### Test Data Available
+| Type | IDs | Notes |
+|------|-----|-------|
+| Lessons | 97-100 | All have chatbot enabled, various context/skills |
+| Courses | 101-102 | AI Fundamentals (3 lessons), AI in Practice (1 lesson) |
+| Context Files | 92-94 | Ethics, Prompt Engineering, Conversation Flows |
+| Skills | 95-96 | Code Review, Writing Editor |
+| Cohort | 103 | Spring 2026, linked to Course 101 |
+
+### Key Files for Module Development
+```
+modules/
+├── Modules.php              # Module registration (add new modules here)
+├── HelloModule/             # Working reference implementation
+│   ├── HelloModule.php      # PHP class with render callback
+│   └── HelloModuleTrait/    # Traits for rendering
+src/
+├── index.ts                 # Entry point (register modules here)
+└── components/
+    └── hello-module/        # Reference React component
+        ├── index.ts         # Module definition
+        ├── edit.tsx         # Visual Builder component
+        ├── module.json      # Module schema
+        └── style.scss       # Styles
+```
+
+### REST Endpoints Available
+- `POST /leaderspath/v1/chat` - Chat with Claude (needs lesson_id, message, optional history/model)
+- `GET /leaderspath/v1/lessons/{id}/context` - Get context files for lesson
+- `GET /leaderspath/v1/lessons/{id}/skills` - Get skills for lesson
+- `GET /leaderspath/v1/context/{id}/download` - Get context file content
+- `GET /leaderspath/v1/skills/{id}/download` - Get skill definition
+
+### Build Commands
+```bash
+npm run build    # Production build
+npm run start    # Development with watch
+```
