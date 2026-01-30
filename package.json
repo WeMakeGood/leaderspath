@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "LeadersPath WordPress Plugin - AI Learning Community",
-  "author": "WeMakeGood",
+  "author": "Christopher Frazier <chris.frazier@wemakegood.org>",
   "license": "GPL-2.0-or-later",
   "engines": {
     "npm": ">=10.0.0",

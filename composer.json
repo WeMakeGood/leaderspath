@@ -5,8 +5,8 @@
     "license": "GPL-2.0-or-later",
     "authors": [
         {
-            "name": "WeMakeGood",
-            "email": "hello@wemakegood.org"
+            "name": "Christopher Frazier",
+            "email": "chris.frazier@wemakegood.org"
         }
     ],
     "require": {

@@ -3,15 +3,18 @@
  * Plugin Name:     LeadersPath
  * Plugin URI:      https://leaderspath.wemakegood.org
  * Description:     AI-powered learning community plugin with interactive chatbot lessons.
- * Author:          WeMakeGood
+ * Author:          Christopher Frazier
  * Author URI:      https://wemakegood.org
  * Text Domain:     leaderspath
  * Domain Path:     /languages
  * Version:         0.1.0
  * Requires PHP:    8.2
  * Requires at least: 6.4
+ * License:         GPL-2.0-or-later
+ * License URI:     https://www.gnu.org/licenses/gpl-2.0.html
  *
  * @package LeadersPath
+ * @copyright 2026 Managed Word, LLC (dba Make Good)
  */
 
 declare(strict_types=1);
