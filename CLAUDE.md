@@ -44,12 +44,13 @@ leaderspath/
 ├── package.json             # Node dependencies (Divi modules)
 │
 ├── includes/                # Core PHP classes
-│   ├── class-leaderspath.php
 │   ├── class-post-types.php
 │   ├── class-taxonomies.php
 │   ├── class-capabilities.php
-│   ├── class-api-handler.php
-│   └── class-rest-api.php
+│   ├── class-acf-fields.php
+│   ├── class-claude-api.php
+│   ├── class-rest-api.php
+│   └── class-skill-processor.php
 │
 ├── modules/                 # Divi 5 modules (PHP)
 │   ├── Chatbot/

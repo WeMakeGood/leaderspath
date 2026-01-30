@@ -236,6 +236,7 @@ class Post_Types {
 			'labels'              => $labels,
 			'public'              => false,
 			'publicly_queryable'  => true,
+			'exclude_from_search' => false, // Required for ACF relationship field search.
 			'show_ui'             => true,
 			'show_in_menu'        => 'edit.php?post_type=leaderspath_lesson',
 			'show_in_rest'        => true,
@@ -287,6 +288,7 @@ class Post_Types {
 			'labels'              => $labels,
 			'public'              => false,
 			'publicly_queryable'  => true,
+			'exclude_from_search' => false, // Required for ACF relationship field search.
 			'show_ui'             => true,
 			'show_in_menu'        => 'edit.php?post_type=leaderspath_lesson',
 			'show_in_rest'        => true,

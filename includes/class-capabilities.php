@@ -18,6 +18,40 @@ namespace LeadersPath\Includes;
 class Capabilities {
 
 	/**
+	 * Initialize capability checks.
+	 *
+	 * @since 0.1.0
+	 */
+	public function __construct() {
+		// Ensure capabilities are added (handles case where plugin was updated without reactivation).
+		add_action( 'admin_init', [ __CLASS__, 'maybe_add_caps' ] );
+	}
+
+	/**
+	 * Add capabilities if they're missing.
+	 *
+	 * This handles the case where the plugin was activated before all CPTs were defined,
+	 * or when the plugin is updated without being reactivated.
+	 *
+	 * @since 0.1.0
+	 */
+	public static function maybe_add_caps(): void {
+		$admin = get_role( 'administrator' );
+
+		if ( ! $admin ) {
+			return;
+		}
+
+		// Check if our capabilities are already added by testing for one.
+		if ( $admin->has_cap( 'edit_leaderspath_skill' ) ) {
+			return;
+		}
+
+		// Capabilities are missing, add them.
+		self::add_caps();
+	}
+
+	/**
 	 * All custom post type capability bases.
 	 *
 	 * @var array<string>

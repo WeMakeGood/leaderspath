@@ -10,7 +10,8 @@
         }
     ],
     "require": {
-        "php": ">=8.2"
+        "php": ">=8.2",
+        "symfony/yaml": "^7.4"
     },
     "require-dev": {
         "wp-cli/i18n-command": "^2"

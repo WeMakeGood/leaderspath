@@ -167,15 +167,19 @@ Now that data layer exists, build the UI modules.
 
 Tasks discovered during development that need to be addressed:
 
-### Skill Package Processing (BLOCKING for Skill CPT admin)
-- [ ] Create `includes/class-skill-processor.php`
-- [ ] Hook into `acf/save_post` for `leaderspath_skill` post type
-- [ ] Validate uploaded ZIP structure (must contain SKILL.md)
-- [ ] Parse YAML frontmatter from SKILL.md (name, description, compatibility)
-- [ ] Auto-populate read-only ACF fields from frontmatter
-- [ ] Display admin error notice if ZIP validation fails
+### Skill Package Processing (COMPLETED)
+- [x] Create `includes/class-skill-processor.php`
+- [x] Hook into `acf/save_post` for `leaderspath_skill` post type
+- [x] Validate uploaded ZIP structure (must contain SKILL.md)
+- [x] Parse YAML frontmatter from SKILL.md (name, description, compatibility)
+- [x] Auto-populate read-only ACF fields from frontmatter
+- [x] Display admin error notice if ZIP validation fails
 
-**Note:** The Skill CPT edit screen won't function properly until this processor is implemented. The read-only fields (skill_name, skill_description, skill_compatibility) will remain empty without it.
+**Implementation notes:**
+- Uses `symfony/yaml` for YAML parsing (added to composer.json)
+- Validates according to Agent Skills Spec (name: lowercase/hyphens, 1-64 chars; description: 1-1024 chars)
+- Handles both root-level and subdirectory SKILL.md in ZIP files
+- Errors stored in transients and displayed as admin notices
 
 ---
 
@@ -364,6 +368,27 @@ Brief notes from each development session:
   - **CustomCssTrait.php**: Use `WP_Block_Type_Registry` to get CSS fields, NOT `CssStyle::custom_css_fields()` (doesn't exist)
   - **ModuleStylesTrait.php**: Must wrap `$elements->style()` calls in `Style::add()` with `id`, `name`, `orderIndex`, `storeInstance`, `styles` array - otherwise styles appear in VB but NOT on frontend
 - Build and frontend verified successful
+- **Next: Build Chatbot module (interactive chat UI)**
+
+### Session 10 (2026-01-30)
+- **Implemented Skill Package Processing** (was blocking Skill CPT admin)
+- Added `symfony/yaml` dependency via Composer (v7.4.1)
+- Created `includes/class-skill-processor.php`:
+  - Hooks into `acf/save_post` (priority 20) for `leaderspath_skill` posts
+  - Extracts SKILL.md from uploaded ZIP (handles root or subdirectory)
+  - Parses YAML frontmatter using Symfony YAML parser
+  - Validates per Agent Skills Spec:
+    - `name`: 1-64 chars, lowercase + hyphens, no reserved words ("anthropic", "claude")
+    - `description`: 1-1024 chars, no angle brackets
+    - `compatibility`: 1-500 chars (optional)
+  - Auto-populates `skill_name`, `skill_description`, `skill_compatibility` ACF fields
+  - Displays admin notices for validation errors (stored in transients)
+- Updated `leaderspath.php` to load and instantiate `Skill_Processor`
+- **Fixed ACF relationship field search for Context Files and Skills:**
+  - Added `exclude_from_search => false` to both CPT registrations (WordPress defaults to true when `public` is false)
+  - Removed taxonomy filter from ACF relationship fields (was causing empty results when no terms assigned)
+  - Added `Capabilities::maybe_add_caps()` on `admin_init` to auto-fix missing capabilities during development
+- Skill package upload tested and working - fields auto-populate from SKILL.md frontmatter
 - **Next: Build Chatbot module (interactive chat UI)**
 
 ---
