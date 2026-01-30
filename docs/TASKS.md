@@ -362,6 +362,7 @@ Brief notes from each development session:
   - **placeholder-content.ts**: Don't use `placeholder.title` from `@divi/module` - use string directly
   - **ModuleClassnamesTrait.php**: Use `TextClassnames::text_options_classnames()` and `ElementClassnames::classnames()`, NOT `Module::process_classnames()` (doesn't exist)
   - **CustomCssTrait.php**: Use `WP_Block_Type_Registry` to get CSS fields, NOT `CssStyle::custom_css_fields()` (doesn't exist)
+  - **ModuleStylesTrait.php**: Must wrap `$elements->style()` calls in `Style::add()` with `id`, `name`, `orderIndex`, `storeInstance`, `styles` array - otherwise styles appear in VB but NOT on frontend
 - Build and frontend verified successful
 - **Next: Build Chatbot module (interactive chat UI)**
 
