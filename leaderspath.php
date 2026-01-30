@@ -39,6 +39,23 @@ if ( file_exists( LEADERSPATH_PATH . 'vendor/autoload.php' ) ) {
 }
 
 /**
+ * Load core classes.
+ */
+require LEADERSPATH_PATH . 'includes/class-post-types.php';
+require LEADERSPATH_PATH . 'includes/class-taxonomies.php';
+require LEADERSPATH_PATH . 'includes/class-capabilities.php';
+require LEADERSPATH_PATH . 'includes/class-acf-fields.php';
+require LEADERSPATH_PATH . 'admin/class-settings.php';
+
+/**
+ * Initialize core functionality.
+ */
+new LeadersPath\Includes\Post_Types();
+new LeadersPath\Includes\Taxonomies();
+new LeadersPath\Includes\ACF_Fields();
+new LeadersPath\Admin\Settings();
+
+/**
  * Load Divi 5 modules registration.
  */
 require LEADERSPATH_PATH . 'modules/Modules.php';
@@ -119,7 +136,20 @@ add_action( 'wp_enqueue_scripts', 'leaderspath_enqueue_frontend_scripts' );
  * @since 0.1.0
  */
 function leaderspath_activate(): void {
-	// Flush rewrite rules on activation.
+	// Register CPTs and taxonomies first so rewrite rules are generated.
+	$post_types = new LeadersPath\Includes\Post_Types();
+	$post_types->register_post_types();
+
+	$taxonomies = new LeadersPath\Includes\Taxonomies();
+	$taxonomies->register_taxonomies();
+
+	// Create default taxonomy terms.
+	LeadersPath\Includes\Taxonomies::create_default_terms();
+
+	// Add capabilities to roles.
+	LeadersPath\Includes\Capabilities::add_caps();
+
+	// Flush rewrite rules.
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'leaderspath_activate' );
@@ -130,6 +160,9 @@ register_activation_hook( __FILE__, 'leaderspath_activate' );
  * @since 0.1.0
  */
 function leaderspath_deactivate(): void {
+	// Remove capabilities from roles.
+	LeadersPath\Includes\Capabilities::remove_caps();
+
 	// Flush rewrite rules on deactivation.
 	flush_rewrite_rules();
 }

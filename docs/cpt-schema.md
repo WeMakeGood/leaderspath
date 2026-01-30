@@ -208,19 +208,43 @@ Agentic skill definitions for Claude API.
 ]
 ```
 
+#### Skill Package Structure
+
+Skills are ZIP packages following the [Agent Skills Specification](https://docs.anthropic.com/en/docs/agents/skills). Each package contains:
+
+```
+skill-name/
+├── SKILL.md           # Required - main instructions with YAML frontmatter
+├── references/        # Optional - additional documentation
+│   └── REFERENCE.md
+├── scripts/           # Optional - utility scripts
+│   └── utility.py
+└── assets/            # Optional - templates, images
+    └── template.docx
+```
+
+The `SKILL.md` file must begin with YAML frontmatter containing `name` and `description`:
+
+```yaml
+---
+name: skill-name
+description: What this skill does and when to use it.
+compatibility: Requires Python 3.9+ (optional)
+---
+```
+
 #### ACF Field Group: Skill Settings
 
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
-| `skill_definition` | Textarea (code) | JSON/YAML skill definition |
-| `skill_description` | Textarea | What this skill does |
-| `skill_documentation` | WYSIWYG | Usage documentation |
-| `skill_version` | Text | Semantic version |
-| `skill_parameters` | Repeater | Input parameters |
-| `skill_parameters.name` | Text | Parameter name |
-| `skill_parameters.type` | Select | Parameter type |
-| `skill_parameters.required` | True/False | Is required |
-| `skill_parameters.description` | Text | Parameter description |
+| `skill_package` | File (ZIP) | The uploaded skill package |
+| `skill_name` | Text (read-only) | Extracted from SKILL.md frontmatter |
+| `skill_description` | Textarea (read-only) | Extracted from SKILL.md frontmatter |
+| `skill_compatibility` | Text (read-only) | Environment prerequisites from frontmatter |
+| `skill_version` | Text | Semantic version for tracking |
+| `skill_notes` | WYSIWYG | Internal admin notes |
+
+**Note:** The name and description fields are auto-populated when a valid skill package is uploaded. Future enhancement: validate ZIP structure and parse frontmatter on upload.
 
 ---
 

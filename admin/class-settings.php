@@ -1,0 +1,473 @@
+<?php
+/**
+ * Plugin Settings page.
+ *
+ * @package LeadersPath
+ * @since   0.1.0
+ */
+
+declare(strict_types=1);
+
+namespace LeadersPath\Admin;
+
+/**
+ * Manages the LeadersPath settings page.
+ *
+ * @since 0.1.0
+ */
+class Settings {
+
+	/**
+	 * Option group name.
+	 *
+	 * @var string
+	 */
+	private const OPTION_GROUP = 'leaderspath_settings';
+
+	/**
+	 * Option name for storing settings.
+	 *
+	 * @var string
+	 */
+	private const OPTION_NAME = 'leaderspath_options';
+
+	/**
+	 * Settings page slug.
+	 *
+	 * @var string
+	 */
+	private const PAGE_SLUG = 'leaderspath-settings';
+
+	/**
+	 * Encryption method for API key.
+	 *
+	 * @var string
+	 */
+	private const ENCRYPTION_METHOD = 'aes-256-cbc';
+
+	/**
+	 * Initialize the class.
+	 *
+	 * @since 0.1.0
+	 */
+	public function __construct() {
+		add_action( 'admin_menu', [ $this, 'add_settings_page' ] );
+		add_action( 'admin_init', [ $this, 'register_settings' ] );
+		add_action( 'admin_notices', [ $this, 'display_api_key_notice' ] );
+	}
+
+	/**
+	 * Add the settings page to the admin menu.
+	 *
+	 * @since 0.1.0
+	 */
+	public function add_settings_page(): void {
+		add_options_page(
+			__( 'LeadersPath Settings', 'leaderspath' ),
+			__( 'LeadersPath', 'leaderspath' ),
+			'manage_options',
+			self::PAGE_SLUG,
+			[ $this, 'render_settings_page' ]
+		);
+	}
+
+	/**
+	 * Register plugin settings.
+	 *
+	 * @since 0.1.0
+	 */
+	public function register_settings(): void {
+		register_setting(
+			self::OPTION_GROUP,
+			self::OPTION_NAME,
+			[
+				'type'              => 'array',
+				'sanitize_callback' => [ $this, 'sanitize_options' ],
+				'default'           => $this->get_defaults(),
+			]
+		);
+
+		// Claude API Section.
+		add_settings_section(
+			'leaderspath_api_section',
+			__( 'Claude API Configuration', 'leaderspath' ),
+			[ $this, 'render_api_section' ],
+			self::PAGE_SLUG
+		);
+
+		add_settings_field(
+			'api_key',
+			__( 'API Key', 'leaderspath' ),
+			[ $this, 'render_api_key_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_section'
+		);
+
+		add_settings_field(
+			'default_model',
+			__( 'Default Model', 'leaderspath' ),
+			[ $this, 'render_default_model_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_section'
+		);
+
+		// Debug Section.
+		add_settings_section(
+			'leaderspath_debug_section',
+			__( 'Debugging', 'leaderspath' ),
+			[ $this, 'render_debug_section' ],
+			self::PAGE_SLUG
+		);
+
+		add_settings_field(
+			'debug_mode',
+			__( 'Debug Mode', 'leaderspath' ),
+			[ $this, 'render_debug_mode_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_debug_section'
+		);
+	}
+
+	/**
+	 * Get default option values.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return array<string, mixed> Default values.
+	 */
+	private function get_defaults(): array {
+		return [
+			'api_key'       => '',
+			'default_model' => 'sonnet',
+			'debug_mode'    => false,
+		];
+	}
+
+	/**
+	 * Sanitize options before saving.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param array<string, mixed> $input Raw input values.
+	 * @return array<string, mixed> Sanitized values.
+	 */
+	public function sanitize_options( array $input ): array {
+		$sanitized = [];
+		$current   = get_option( self::OPTION_NAME, $this->get_defaults() );
+
+		// API Key - encrypt if changed.
+		if ( isset( $input['api_key'] ) ) {
+			$new_key = sanitize_text_field( $input['api_key'] );
+			// Only re-encrypt if the key has changed (not the placeholder).
+			if ( $new_key !== '' && $new_key !== '••••••••••••••••' ) {
+				$sanitized['api_key'] = $this->encrypt_api_key( $new_key );
+			} else {
+				// Keep existing encrypted key.
+				$sanitized['api_key'] = $current['api_key'] ?? '';
+			}
+		}
+
+		// Default model.
+		$valid_models = [ 'sonnet', 'haiku', 'opus-4.5' ];
+		if ( isset( $input['default_model'] ) && in_array( $input['default_model'], $valid_models, true ) ) {
+			$sanitized['default_model'] = $input['default_model'];
+		} else {
+			$sanitized['default_model'] = 'sonnet';
+		}
+
+		// Debug mode.
+		$sanitized['debug_mode'] = ! empty( $input['debug_mode'] );
+
+		return $sanitized;
+	}
+
+	/**
+	 * Render the settings page.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_settings_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		?>
+		<div class="wrap">
+			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+			<form action="options.php" method="post">
+				<?php
+				settings_fields( self::OPTION_GROUP );
+				do_settings_sections( self::PAGE_SLUG );
+				submit_button();
+				?>
+			</form>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the API section description.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_api_section(): void {
+		echo '<p>' . esc_html__( 'Configure your Anthropic API credentials for Claude integration.', 'leaderspath' ) . '</p>';
+	}
+
+	/**
+	 * Render the API key field.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_api_key_field(): void {
+		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$has_key = ! empty( $options['api_key'] );
+
+		?>
+		<input
+			type="password"
+			id="leaderspath_api_key"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[api_key]"
+			value="<?php echo $has_key ? '••••••••••••••••' : ''; ?>"
+			class="regular-text"
+			autocomplete="off"
+		/>
+		<p class="description">
+			<?php
+			printf(
+				/* translators: %s: Anthropic console URL */
+				esc_html__( 'Enter your Anthropic API key. Get one from %s.', 'leaderspath' ),
+				'<a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>'
+			);
+			?>
+		</p>
+		<?php if ( $has_key ) : ?>
+			<p class="description" style="color: #46b450;">
+				<span class="dashicons dashicons-yes-alt"></span>
+				<?php esc_html_e( 'API key is configured and encrypted.', 'leaderspath' ); ?>
+			</p>
+		<?php endif; ?>
+		<?php
+	}
+
+	/**
+	 * Render the default model field.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_default_model_field(): void {
+		$options       = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$current_model = $options['default_model'] ?? 'sonnet';
+
+		$models = [
+			'sonnet'   => __( 'Sonnet (Recommended - balanced speed and capability)', 'leaderspath' ),
+			'haiku'    => __( 'Haiku (Fastest, lower cost)', 'leaderspath' ),
+			'opus-4.5' => __( 'Opus 4.5 (Most capable, higher cost)', 'leaderspath' ),
+		];
+
+		?>
+		<select
+			id="leaderspath_default_model"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[default_model]"
+		>
+			<?php foreach ( $models as $value => $label ) : ?>
+				<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $current_model, $value ); ?>>
+					<?php echo esc_html( $label ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<p class="description">
+			<?php esc_html_e( 'Default Claude model for new lessons. Can be overridden per lesson.', 'leaderspath' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the debug section description.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_debug_section(): void {
+		echo '<p>' . esc_html__( 'Enable debug features for troubleshooting. Disable in production.', 'leaderspath' ) . '</p>';
+	}
+
+	/**
+	 * Render the debug mode field.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_debug_mode_field(): void {
+		$options    = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$debug_mode = $options['debug_mode'] ?? false;
+
+		?>
+		<label for="leaderspath_debug_mode">
+			<input
+				type="checkbox"
+				id="leaderspath_debug_mode"
+				name="<?php echo esc_attr( self::OPTION_NAME ); ?>[debug_mode]"
+				value="1"
+				<?php checked( $debug_mode, true ); ?>
+			/>
+			<?php esc_html_e( 'Enable debug logging', 'leaderspath' ); ?>
+		</label>
+		<p class="description">
+			<?php esc_html_e( 'When enabled, API requests and responses are logged to the debug log.', 'leaderspath' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Display admin notice if API key is not configured.
+	 *
+	 * @since 0.1.0
+	 */
+	public function display_api_key_notice(): void {
+		// Only show on LeadersPath-related admin pages.
+		$screen = get_current_screen();
+		if ( ! $screen ) {
+			return;
+		}
+
+		$show_on_screens = [
+			'leaderspath_lesson',
+			'leaderspath_course',
+			'leaderspath_cohort',
+			'leaderspath_context',
+			'leaderspath_skill',
+			'edit-leaderspath_lesson',
+			'edit-leaderspath_course',
+			'settings_page_' . self::PAGE_SLUG,
+		];
+
+		if ( ! in_array( $screen->id, $show_on_screens, true ) ) {
+			return;
+		}
+
+		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
+
+		if ( empty( $options['api_key'] ) ) {
+			?>
+			<div class="notice notice-warning">
+				<p>
+					<?php
+					printf(
+						/* translators: %s: Settings page URL */
+						esc_html__( 'LeadersPath: Claude API key is not configured. Chatbot features will not work until you %s.', 'leaderspath' ),
+						'<a href="' . esc_url( admin_url( 'options-general.php?page=' . self::PAGE_SLUG ) ) . '">' . esc_html__( 'add your API key', 'leaderspath' ) . '</a>'
+					);
+					?>
+				</p>
+			</div>
+			<?php
+		}
+	}
+
+	/**
+	 * Encrypt the API key for storage.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param string $api_key The plain text API key.
+	 * @return string The encrypted API key.
+	 */
+	private function encrypt_api_key( string $api_key ): string {
+		$key = $this->get_encryption_key();
+		$iv  = openssl_random_pseudo_bytes( openssl_cipher_iv_length( self::ENCRYPTION_METHOD ) );
+
+		$encrypted = openssl_encrypt( $api_key, self::ENCRYPTION_METHOD, $key, 0, $iv );
+
+		if ( false === $encrypted ) {
+			return '';
+		}
+
+		// Store IV with encrypted data.
+		return base64_encode( $iv . $encrypted );
+	}
+
+	/**
+	 * Decrypt the API key for use.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param string $encrypted_key The encrypted API key.
+	 * @return string The decrypted API key.
+	 */
+	public function decrypt_api_key( string $encrypted_key ): string {
+		if ( empty( $encrypted_key ) ) {
+			return '';
+		}
+
+		$key  = $this->get_encryption_key();
+		$data = base64_decode( $encrypted_key );
+
+		if ( false === $data ) {
+			return '';
+		}
+
+		$iv_length = openssl_cipher_iv_length( self::ENCRYPTION_METHOD );
+		$iv        = substr( $data, 0, $iv_length );
+		$encrypted = substr( $data, $iv_length );
+
+		$decrypted = openssl_decrypt( $encrypted, self::ENCRYPTION_METHOD, $key, 0, $iv );
+
+		return false === $decrypted ? '' : $decrypted;
+	}
+
+	/**
+	 * Get the encryption key.
+	 *
+	 * Uses AUTH_KEY from wp-config.php as the base, ensuring uniqueness per site.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return string The encryption key.
+	 */
+	private function get_encryption_key(): string {
+		// Use WordPress AUTH_KEY as base for encryption.
+		$base_key = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'leaderspath-default-key';
+		return hash( 'sha256', $base_key . 'leaderspath_api_encryption' );
+	}
+
+	/**
+	 * Get the decrypted API key.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return string The decrypted API key, or empty string if not set.
+	 */
+	public static function get_api_key(): string {
+		$options = get_option( self::OPTION_NAME, [] );
+
+		if ( empty( $options['api_key'] ) ) {
+			return '';
+		}
+
+		$instance = new self();
+		return $instance->decrypt_api_key( $options['api_key'] );
+	}
+
+	/**
+	 * Get the default model setting.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return string The default model slug.
+	 */
+	public static function get_default_model(): string {
+		$options = get_option( self::OPTION_NAME, [] );
+		return $options['default_model'] ?? 'sonnet';
+	}
+
+	/**
+	 * Check if debug mode is enabled.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return bool Whether debug mode is enabled.
+	 */
+	public static function is_debug_mode(): bool {
+		$options = get_option( self::OPTION_NAME, [] );
+		return ! empty( $options['debug_mode'] );
+	}
+}
