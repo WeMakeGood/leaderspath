@@ -15,6 +15,9 @@ use WP_Error;
 /**
  * Handles communication with the Anthropic Claude API.
  *
+ * Uses Container API with Skills and Code Execution for full skill support.
+ * See docs/claude-api-integration.md for complete API documentation.
+ *
  * @since 0.1.0
  */
 class Claude_API {
@@ -54,17 +57,27 @@ class Claude_API {
 	];
 
 	/**
+	 * Maximum number of skills per request.
+	 *
+	 * @var int
+	 */
+	private const MAX_SKILLS_PER_REQUEST = 8;
+
+	/**
 	 * Send a message to Claude.
+	 *
+	 * Uses Container API with Skills and Code Execution when skills are configured.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int    $lesson_id Lesson ID for context.
-	 * @param string $message   User message.
-	 * @param array  $history   Previous conversation messages.
-	 * @param string $model     Model slug (sonnet, haiku, opus-4.5).
+	 * @param int         $lesson_id    Lesson ID for context.
+	 * @param string      $message      User message.
+	 * @param array       $history      Previous conversation messages.
+	 * @param string      $model        Model slug (sonnet, haiku, opus-4.5).
+	 * @param string|null $container_id Container ID for session continuity.
 	 * @return array|WP_Error Response data or error.
 	 */
-	public function send_message( int $lesson_id, string $message, array $history = [], string $model = 'sonnet' ) {
+	public function send_message( int $lesson_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null ) {
 		// Get API key.
 		$api_key = \LeadersPath\Admin\Settings::get_api_key();
 
@@ -92,6 +105,9 @@ class Claude_API {
 		$max_tokens  = (int) ( get_field( 'chatbot_max_tokens', $lesson_id ) ?: 4096 );
 		$temperature = (float) ( get_field( 'chatbot_temperature', $lesson_id ) ?? 0.7 );
 
+		// Get skills for this lesson (with valid Anthropic IDs).
+		$skills_for_api = $this->get_skills_for_api( $lesson_id );
+
 		// Build request body.
 		$body = [
 			'model'       => $model_id,
@@ -99,6 +115,27 @@ class Claude_API {
 			'system'      => $system_prompt,
 			'messages'    => $messages,
 		];
+
+		// Add container with skills if any skills are configured.
+		if ( ! empty( $skills_for_api ) ) {
+			$container = [ 'skills' => $skills_for_api ];
+
+			// Reuse existing container if provided.
+			if ( $container_id ) {
+				$container['id'] = $container_id;
+			}
+
+			$body['container'] = $container;
+
+			// Add code execution tool when skills are present.
+			$tool_type = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
+			$body['tools'] = [
+				[
+					'type' => $tool_type,
+					'name' => 'code_execution',
+				],
+			];
+		}
 
 		// Only include temperature if not using extended thinking (opus).
 		// Extended thinking requires temperature to be 1.
@@ -109,16 +146,23 @@ class Claude_API {
 		// Log request if debug mode is enabled.
 		$this->maybe_log( 'Request', $body );
 
+		// Build headers with beta features if skills are used.
+		$headers = [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => $api_key,
+			'anthropic-version' => self::API_VERSION,
+		];
+
+		if ( ! empty( $skills_for_api ) ) {
+			$headers['anthropic-beta'] = \LeadersPath\Admin\Settings::get_beta_headers( [ 'code_execution', 'skills' ] );
+		}
+
 		// Make API request.
 		$response = wp_remote_post(
 			self::API_URL . '/messages',
 			[
-				'timeout' => 120,
-				'headers' => [
-					'Content-Type'      => 'application/json',
-					'x-api-key'         => $api_key,
-					'anthropic-version' => self::API_VERSION,
-				],
+				'timeout' => 180, // Longer timeout for code execution.
+				'headers' => $headers,
 				'body'    => wp_json_encode( $body ),
 			]
 		);
@@ -144,8 +188,15 @@ class Claude_API {
 			return $this->handle_api_error( $status_code, $data );
 		}
 
-		// Extract response content.
-		if ( ! isset( $data['content'][0]['text'] ) ) {
+		// Handle pause_turn for long-running operations.
+		if ( isset( $data['stop_reason'] ) && 'pause_turn' === $data['stop_reason'] ) {
+			return $this->handle_pause_turn( $lesson_id, $data, $messages, $model, $api_key, $headers );
+		}
+
+		// Extract response content (may have multiple content blocks).
+		$content = $this->extract_response_content( $data );
+
+		if ( '' === $content ) {
 			return new WP_Error(
 				'api_invalid_response',
 				__( 'Invalid response from Claude API.', 'leaderspath' ),
@@ -166,10 +217,11 @@ class Claude_API {
 		do_action( 'leaderspath_chat_message_sent', $message, $data, get_current_user_id(), $lesson_id );
 
 		return [
-			'content'      => $data['content'][0]['text'],
+			'content'      => $content,
 			'model'        => $data['model'],
 			'usage'        => $data['usage'] ?? [],
 			'stop_reason'  => $data['stop_reason'] ?? null,
+			'container_id' => $data['container']['id'] ?? null,
 		];
 	}
 
@@ -431,6 +483,168 @@ class Claude_API {
 		];
 
 		return $messages;
+	}
+
+	/**
+	 * Get skills for API request.
+	 *
+	 * Returns only skills that have been successfully synced to Anthropic.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int $lesson_id The lesson ID.
+	 * @return array<int, array<string, string>> Skills array for container.
+	 */
+	private function get_skills_for_api( int $lesson_id ): array {
+		$skills = get_field( 'chatbot_skills', $lesson_id ) ?: [];
+
+		if ( empty( $skills ) ) {
+			return [];
+		}
+
+		$skills_for_api = [];
+
+		foreach ( $skills as $skill_id ) {
+			$anthropic_id = get_field( 'skill_anthropic_id', $skill_id );
+			$sync_status  = get_field( 'skill_sync_status', $skill_id );
+
+			// Only include skills that have been synced to Anthropic.
+			if ( $anthropic_id && 'synced' === $sync_status ) {
+				$skills_for_api[] = [
+					'type'     => 'custom',
+					'skill_id' => $anthropic_id,
+					'version'  => 'latest',
+				];
+			}
+		}
+
+		// Limit to max skills per request.
+		return array_slice( $skills_for_api, 0, self::MAX_SKILLS_PER_REQUEST );
+	}
+
+	/**
+	 * Handle pause_turn response for long-running operations.
+	 *
+	 * When code execution takes a long time, the API may return with
+	 * stop_reason: "pause_turn". We need to continue the conversation
+	 * to get the final result.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int    $lesson_id The lesson ID.
+	 * @param array  $data      The initial response data.
+	 * @param array  $messages  The conversation messages.
+	 * @param string $model     The model slug.
+	 * @param string $api_key   The API key.
+	 * @param array  $headers   The request headers.
+	 * @return array|WP_Error The final response or error.
+	 */
+	private function handle_pause_turn( int $lesson_id, array $data, array $messages, string $model, string $api_key, array $headers ) {
+		$max_continuations = 5; // Prevent infinite loops.
+		$continuation      = 0;
+		$container_id      = $data['container']['id'] ?? null;
+
+		while ( isset( $data['stop_reason'] ) && 'pause_turn' === $data['stop_reason'] && $continuation < $max_continuations ) {
+			$continuation++;
+
+			// Add assistant's partial response to messages.
+			$messages[] = [
+				'role'    => 'assistant',
+				'content' => $data['content'],
+			];
+
+			// Continue the conversation.
+			$body = [
+				'model'     => $this->resolve_model_id( $model ),
+				'max_tokens' => (int) ( get_field( 'chatbot_max_tokens', $lesson_id ) ?: 4096 ),
+				'messages'  => $messages,
+			];
+
+			// Include container to continue in same execution environment.
+			if ( $container_id ) {
+				$body['container'] = [ 'id' => $container_id ];
+			}
+
+			$this->maybe_log( 'Continuation Request', [ 'attempt' => $continuation, 'body' => $body ] );
+
+			$response = wp_remote_post(
+				self::API_URL . '/messages',
+				[
+					'timeout' => 180,
+					'headers' => $headers,
+					'body'    => wp_json_encode( $body ),
+				]
+			);
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$status_code = wp_remote_retrieve_response_code( $response );
+			$body_raw    = wp_remote_retrieve_body( $response );
+			$data        = json_decode( $body_raw, true );
+
+			$this->maybe_log( 'Continuation Response', [ 'status' => $status_code, 'body' => $data ] );
+
+			if ( $status_code >= 400 ) {
+				return $this->handle_api_error( $status_code, $data );
+			}
+
+			// Update container ID if changed.
+			if ( isset( $data['container']['id'] ) ) {
+				$container_id = $data['container']['id'];
+			}
+		}
+
+		// Extract final content.
+		$content = $this->extract_response_content( $data );
+
+		return [
+			'content'      => $content,
+			'model'        => $data['model'],
+			'usage'        => $data['usage'] ?? [],
+			'stop_reason'  => $data['stop_reason'] ?? null,
+			'container_id' => $container_id,
+		];
+	}
+
+	/**
+	 * Extract text content from API response.
+	 *
+	 * Handles responses with multiple content blocks (text, tool use, tool results).
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param array $data The API response data.
+	 * @return string The extracted text content.
+	 */
+	private function extract_response_content( array $data ): string {
+		if ( ! isset( $data['content'] ) || ! is_array( $data['content'] ) ) {
+			return '';
+		}
+
+		$text_parts = [];
+
+		foreach ( $data['content'] as $block ) {
+			if ( ! is_array( $block ) ) {
+				continue;
+			}
+
+			// Extract text content.
+			if ( isset( $block['type'] ) && 'text' === $block['type'] && isset( $block['text'] ) ) {
+				$text_parts[] = $block['text'];
+			}
+
+			// Include code execution results in output (for transparency).
+			if ( isset( $block['type'] ) && 'bash_code_execution_tool_result' === $block['type'] ) {
+				$result = $block['content'] ?? [];
+				if ( isset( $result['stdout'] ) && ! empty( $result['stdout'] ) ) {
+					$text_parts[] = "\n```\n" . $result['stdout'] . "\n```\n";
+				}
+			}
+		}
+
+		return implode( "\n", $text_parts );
 	}
 
 	/**

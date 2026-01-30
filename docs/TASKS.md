@@ -83,7 +83,7 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 
 ---
 
-## Phase 4: REST API & Claude Integration (IN PROGRESS)
+## Phase 4: REST API & Claude Integration (COMPLETED)
 
 **Reference:** See `docs/claude-api-integration.md` for full API documentation.
 
@@ -95,45 +95,46 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 - [x] `GET /wp-json/leaderspath/v1/context/{id}/download` - Download context file
 - [x] `GET /wp-json/leaderspath/v1/skills/{id}/download` - Download skill definition
 - [x] Implement authentication (nonce for logged-in, capability checks)
-- [ ] Update chat endpoint for container API response format
-- [ ] Handle pause_turn responses
-- [ ] Handle file outputs from code execution
+- [x] Update chat endpoint for container API response format (container_id in response)
+- [x] Handle pause_turn responses (continuation loop in Claude_API)
+- [ ] Handle file outputs from code execution (deferred - not critical for MVP)
 
-### Claude API Handler (NEEDS REWORK)
+### Claude API Handler (COMPLETED)
 - [x] Create `includes/class-claude-api.php`
-- [~] Implement Messages API integration (needs container + code execution)
+- [x] Implement Messages API integration with container + code execution
 - [x] Context assembly from lesson files
 - [x] Model selection (dynamic from API, with fallbacks)
 - [x] Error handling and logging
 - [x] Test connection button in settings (queries available models)
-- [ ] Add container parameter with skills array
-- [ ] Add code execution tool to requests
-- [ ] Handle pause_turn stop reason
-- [ ] Implement container reuse within session
+- [x] Add container parameter with skills array
+- [x] Add code execution tool to requests
+- [x] Handle pause_turn stop reason (with continuation loop)
+- [x] Implement container reuse within session (container_id parameter)
 - [ ] Optional: Streaming response support (SSE)
 
-### Skill Library Handler (Upload to Anthropic)
+### Skill Library Handler (COMPLETED)
 Skills must be uploaded to Anthropic's Skills API for code execution to work.
 Context files remain WordPress-only (embedded in system prompt).
 
-- [x] Create `includes/class-skill-processor.php` (local validation only)
-- [ ] Add `skill_anthropic_id` ACF field (stores returned skill_id)
-- [ ] Add `skill_anthropic_version` ACF field (stores version timestamp)
-- [ ] Add `skill_sync_status` ACF field (pending/synced/error)
-- [ ] Add `skill_sync_error` ACF field (last error message)
-- [ ] Implement `upload_to_anthropic()` method in Skill_Processor
-- [ ] Upload skill ZIP to `POST /v1/skills` on first save
-- [ ] Create new version via `POST /v1/skills/{id}/versions` on update
-- [ ] Store returned skill_id and version in ACF fields
-- [ ] Add admin notice for sync status (success/error)
-- [ ] Add "Re-sync" button for failed uploads
+- [x] Create `includes/class-skill-processor.php` (local validation + Anthropic upload)
+- [x] Add `skill_anthropic_id` ACF field (stores returned skill_id)
+- [x] Add `skill_anthropic_version` ACF field (stores version timestamp)
+- [x] Add `skill_sync_status` ACF field (pending/synced/error)
+- [x] Add `skill_sync_error` ACF field (last error message)
+- [x] Add `skill_last_synced` ACF field (timestamp)
+- [x] Implement `upload_to_anthropic()` method in Skill_Processor
+- [x] Upload skill ZIP to `POST /v1/skills` on first save
+- [x] Create new version via `POST /v1/skills/{id}/versions` on update
+- [x] Store returned skill_id and version in ACF fields
+- [x] Add admin notice for sync status (success/error)
+- [x] Add "Re-sync" button for failed uploads with AJAX handler
 - [ ] Handle skill deletion (delete from Anthropic when trashed?)
 
-### Settings Updates
-- [ ] Add beta header version fields (configurable, not hardcoded)
-- [ ] Add tool type version field
-- [ ] Add "Test Skills API" button
-- [ ] Document version update process in admin
+### Settings Updates (COMPLETED)
+- [x] Add beta header version fields (configurable, not hardcoded)
+- [x] Add tool type version field
+- [x] Static helper methods: `get_beta_headers()`, `get_code_execution_tool_type()`
+- [ ] Add "Test Skills API" button (deferred - connection test already exists)
 
 ---
 
@@ -446,6 +447,34 @@ Brief notes from each development session:
 - **Phase 4 marked as IN PROGRESS** - needs container + code execution rework
 - **Next: Implement Anthropic Skills API upload in Skill_Processor**
 
+### Session 12 (2026-01-30)
+- **Completed Claude API integration with Container + Code Execution**
+- Updated `includes/class-claude-api.php`:
+  - Added container parameter with skills array when skills are configured
+  - Added code execution tool to requests
+  - Implemented `get_skills_for_api()` to filter synced skills
+  - Implemented `handle_pause_turn()` for long-running code execution
+  - Implemented `extract_response_content()` for multi-block responses
+  - Container ID returned in response for session reuse
+- Updated `admin/class-settings.php`:
+  - Added API Version Configuration section
+  - Added configurable beta header fields (code_execution, skills, files)
+  - Added configurable tool type field
+  - Added `get_beta_headers()` and `get_code_execution_tool_type()` static methods
+- Updated `includes/class-acf-fields.php`:
+  - Added Anthropic sync fields: `skill_anthropic_id`, `skill_anthropic_version`
+  - Added `skill_sync_status` (pending/synced/error), `skill_sync_error`, `skill_last_synced`
+- Updated `includes/class-skill-processor.php`:
+  - Implemented `upload_to_anthropic()` method
+  - Implemented `create_skill()` for new skills (multipart/form-data)
+  - Implemented `create_skill_version()` for updates
+  - Implemented `delete_from_anthropic()` method
+  - Implemented `resync_skill()` for retry functionality
+  - Added sync status admin notices with re-sync button
+  - Added AJAX handler for re-sync
+- **Phase 4 marked as COMPLETED**
+- **Next: Build Chatbot Divi 5 module (Phase 5)**
+
 ---
 
 ## Quick Reference for Next Session
@@ -516,15 +545,15 @@ assets/
 
 **Do NOT guess at patterns. Read the actual source code.**
 
-### Claude API Integration - CRITICAL
+### Claude API Integration - IMPLEMENTED
 
 **Read `docs/claude-api-integration.md` before modifying API code.**
 
-**Current Status:** Simple Messages API (needs upgrade to container + code execution)
+**Current Status:** Container API with Code Execution and Skills support ✓
 
-**Required for Full Skills:**
+**Implementation Details:**
 ```
-Beta Headers:
+Beta Headers (configurable in Settings):
 - code-execution-2025-08-25
 - skills-2025-10-02
 - files-api-2025-04-14 (for file handling)
@@ -533,9 +562,15 @@ Tools:
 - code_execution_20250825
 
 Container:
-- skills array with type, skill_id, version
-- container.id for session reuse
+- skills array built from synced skills (skill_sync_status = 'synced')
+- container.id returned in response for session reuse
+- Max 8 skills per request
 ```
+
+**Skill Upload Flow:**
+1. Upload ZIP via ACF → Local validation (frontmatter) → Upload to Anthropic
+2. Anthropic returns `skill_id` → Stored in `skill_anthropic_id` field
+3. Skills with `skill_sync_status = 'synced'` included in chat requests
 
 **Anthropic API Endpoints:**
 - `POST /v1/messages` - Chat with container + code execution

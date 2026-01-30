@@ -112,6 +112,46 @@ class Settings {
 			'leaderspath_api_section'
 		);
 
+		// API Versions Section (Advanced).
+		add_settings_section(
+			'leaderspath_api_versions_section',
+			__( 'API Version Configuration', 'leaderspath' ),
+			[ $this, 'render_api_versions_section' ],
+			self::PAGE_SLUG
+		);
+
+		add_settings_field(
+			'beta_code_execution',
+			__( 'Code Execution Beta Header', 'leaderspath' ),
+			[ $this, 'render_beta_code_execution_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_versions_section'
+		);
+
+		add_settings_field(
+			'beta_skills',
+			__( 'Skills Beta Header', 'leaderspath' ),
+			[ $this, 'render_beta_skills_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_versions_section'
+		);
+
+		add_settings_field(
+			'beta_files',
+			__( 'Files API Beta Header', 'leaderspath' ),
+			[ $this, 'render_beta_files_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_versions_section'
+		);
+
+		add_settings_field(
+			'tool_code_execution',
+			__( 'Code Execution Tool Type', 'leaderspath' ),
+			[ $this, 'render_tool_code_execution_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_versions_section'
+		);
+
 		// Debug Section.
 		add_settings_section(
 			'leaderspath_debug_section',
@@ -138,9 +178,14 @@ class Settings {
 	 */
 	private function get_defaults(): array {
 		return [
-			'api_key'       => '',
-			'default_model' => 'sonnet',
-			'debug_mode'    => false,
+			'api_key'                   => '',
+			'default_model'             => 'sonnet',
+			'debug_mode'                => false,
+			// Beta header versions (configurable for API updates).
+			'beta_code_execution'       => 'code-execution-2025-08-25',
+			'beta_skills'               => 'skills-2025-10-02',
+			'beta_files'                => 'files-api-2025-04-14',
+			'tool_code_execution'       => 'code_execution_20250825',
 		];
 	}
 
@@ -178,6 +223,18 @@ class Settings {
 
 		// Debug mode.
 		$sanitized['debug_mode'] = ! empty( $input['debug_mode'] );
+
+		// Beta header versions (sanitize as text, validate format).
+		$beta_fields = [ 'beta_code_execution', 'beta_skills', 'beta_files', 'tool_code_execution' ];
+		$defaults    = $this->get_defaults();
+
+		foreach ( $beta_fields as $field ) {
+			if ( isset( $input[ $field ] ) && ! empty( $input[ $field ] ) ) {
+				$sanitized[ $field ] = sanitize_text_field( $input[ $field ] );
+			} else {
+				$sanitized[ $field ] = $defaults[ $field ];
+			}
+		}
 
 		return $sanitized;
 	}
@@ -355,6 +412,116 @@ class Settings {
 	}
 
 	/**
+	 * Render the API versions section description.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_api_versions_section(): void {
+		?>
+		<p>
+			<?php esc_html_e( 'Advanced: Configure Anthropic API beta header versions. Only change these if Anthropic updates their API.', 'leaderspath' ); ?>
+		</p>
+		<p>
+			<a href="https://docs.anthropic.com/en/api/beta-headers" target="_blank" rel="noopener noreferrer">
+				<?php esc_html_e( 'View Anthropic Beta Headers Documentation', 'leaderspath' ); ?>
+			</a>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the code execution beta header field.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_beta_code_execution_field(): void {
+		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$value   = $options['beta_code_execution'] ?? $this->get_defaults()['beta_code_execution'];
+
+		?>
+		<input
+			type="text"
+			id="leaderspath_beta_code_execution"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[beta_code_execution]"
+			value="<?php echo esc_attr( $value ); ?>"
+			class="regular-text"
+		/>
+		<p class="description">
+			<?php esc_html_e( 'Beta header for code execution. Format: code-execution-YYYY-MM-DD', 'leaderspath' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the skills beta header field.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_beta_skills_field(): void {
+		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$value   = $options['beta_skills'] ?? $this->get_defaults()['beta_skills'];
+
+		?>
+		<input
+			type="text"
+			id="leaderspath_beta_skills"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[beta_skills]"
+			value="<?php echo esc_attr( $value ); ?>"
+			class="regular-text"
+		/>
+		<p class="description">
+			<?php esc_html_e( 'Beta header for skills API. Format: skills-YYYY-MM-DD', 'leaderspath' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the files API beta header field.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_beta_files_field(): void {
+		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$value   = $options['beta_files'] ?? $this->get_defaults()['beta_files'];
+
+		?>
+		<input
+			type="text"
+			id="leaderspath_beta_files"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[beta_files]"
+			value="<?php echo esc_attr( $value ); ?>"
+			class="regular-text"
+		/>
+		<p class="description">
+			<?php esc_html_e( 'Beta header for files API. Format: files-api-YYYY-MM-DD', 'leaderspath' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the code execution tool type field.
+	 *
+	 * @since 0.1.0
+	 */
+	public function render_tool_code_execution_field(): void {
+		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$value   = $options['tool_code_execution'] ?? $this->get_defaults()['tool_code_execution'];
+
+		?>
+		<input
+			type="text"
+			id="leaderspath_tool_code_execution"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[tool_code_execution]"
+			value="<?php echo esc_attr( $value ); ?>"
+			class="regular-text"
+		/>
+		<p class="description">
+			<?php esc_html_e( 'Tool type for code execution. Format: code_execution_YYYYMMDD', 'leaderspath' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
 	 * Display admin notice if API key is not configured.
 	 *
 	 * @since 0.1.0
@@ -506,6 +673,51 @@ class Settings {
 	public static function is_debug_mode(): bool {
 		$options = get_option( self::OPTION_NAME, [] );
 		return ! empty( $options['debug_mode'] );
+	}
+
+	/**
+	 * Get the beta headers for API requests.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param array<string> $features Features to include (code_execution, skills, files).
+	 * @return string Comma-separated beta headers.
+	 */
+	public static function get_beta_headers( array $features = [] ): string {
+		$instance = new self();
+		$defaults = $instance->get_defaults();
+		$options  = get_option( self::OPTION_NAME, $defaults );
+
+		$headers = [];
+
+		if ( empty( $features ) || in_array( 'code_execution', $features, true ) ) {
+			$headers[] = $options['beta_code_execution'] ?? $defaults['beta_code_execution'];
+		}
+
+		if ( empty( $features ) || in_array( 'skills', $features, true ) ) {
+			$headers[] = $options['beta_skills'] ?? $defaults['beta_skills'];
+		}
+
+		if ( in_array( 'files', $features, true ) ) {
+			$headers[] = $options['beta_files'] ?? $defaults['beta_files'];
+		}
+
+		return implode( ',', $headers );
+	}
+
+	/**
+	 * Get the code execution tool type.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return string The tool type identifier.
+	 */
+	public static function get_code_execution_tool_type(): string {
+		$instance = new self();
+		$defaults = $instance->get_defaults();
+		$options  = get_option( self::OPTION_NAME, $defaults );
+
+		return $options['tool_code_execution'] ?? $defaults['tool_code_execution'];
 	}
 
 	/**
