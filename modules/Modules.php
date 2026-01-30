@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use LeadersPath\Modules\HelloModule\HelloModule;
+use LeadersPath\Modules\LessonMeta\LessonMeta;
 
 /**
  * Register LeadersPath modules with Divi's dependency tree.
@@ -26,5 +27,6 @@ add_action(
 	'divi_module_library_modules_dependency_tree',
 	function ( $dependency_tree ) {
 		$dependency_tree->add_dependency( new HelloModule() );
+		$dependency_tree->add_dependency( new LessonMeta() );
 	}
 );

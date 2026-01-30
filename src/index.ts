@@ -13,6 +13,7 @@ import { registerModule } from '@divi/module-library';
 
 // Import modules
 import { helloModule } from './components/hello-module';
+import { lessonMetaModule } from './components/lesson-meta';
 
 /**
  * Register all LeadersPath modules with Divi.
@@ -28,5 +29,8 @@ addAction(
   () => {
     // Register Hello Module (test module)
     registerModule(helloModule.metadata, omit(helloModule, 'metadata'));
+
+    // Register Lesson Meta Module
+    registerModule(lessonMetaModule.metadata, omit(lessonMetaModule, 'metadata'));
   }
 );

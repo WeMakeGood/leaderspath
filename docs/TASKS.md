@@ -134,11 +134,11 @@ Now that data layer exists, build the UI modules.
 - [ ] Add view definition modal
 - [ ] Add download functionality
 
-### Lesson Meta Module
-- [ ] Create PHP module class and traits
-- [ ] Create TypeScript/React edit component
-- [ ] Display duration, objectives, model info
-- [ ] Add layout options (stacked, inline, grid)
+### Lesson Meta Module (COMPLETED)
+- [x] Create PHP module class and traits
+- [x] Create TypeScript/React edit component
+- [x] Display duration, objectives, model info
+- [x] Add visibility toggles and configurable labels in Content tab
 
 ---
 
@@ -236,6 +236,24 @@ Brief notes from each development session:
 - Remaining: Optional streaming support (SSE) - deferred
 - **Next: Phase 5 - Divi 5 Modules (start with Chatbot Module)**
 
+### Session 4 (2026-01-29)
+- Started Phase 5: Divi 5 Modules (Frontend)
+- Completed Lesson Meta Module
+  - PHP: `modules/LessonMeta/LessonMeta.php` with 3 traits (RenderCallback, ModuleClassnames, ModuleStyles)
+  - TypeScript: `src/components/lesson-meta/` with edit component, module.json, styles
+  - Features: Display duration, learning objectives, AI model (from ACF fields)
+  - Content tab: Title text, visibility toggles (show/hide each section), configurable labels
+  - Design tab: Standard Divi decoration (spacing, borders, fonts)
+  - VB shows placeholder content; frontend renders actual ACF data
+- Key learnings documented:
+  - **Theme Builder:** Must use `get_queried_object_id()` not `get_the_ID()` for post ID
+  - **Null checks:** Always use `?? ''` for `$args['selector']` in ModuleStylesTrait
+  - **Toggle values:** Return `'on'`/`'off'` strings, not booleans
+  - **Attribute path:** `$attrs['name']['innerContent']['desktop']['value']`
+- Rewrote `docs/divi-modules.md` with accurate Divi 5 patterns from working code
+- Build and frontend render verified working
+- **Next: Context Library Module or Skills List Module**
+
 ---
 
 ## Quick Reference for Next Session
@@ -252,19 +270,32 @@ Brief notes from each development session:
 ### Key Files for Module Development
 ```
 modules/
-├── Modules.php              # Module registration (add new modules here)
-├── HelloModule/             # Working reference implementation
-│   ├── HelloModule.php      # PHP class with render callback
-│   └── HelloModuleTrait/    # Traits for rendering
+├── Modules.php              # PHP module registration (add new modules here)
+├── HelloModule/             # Simple reference implementation
+├── LessonMeta/              # Full working module with ACF integration
+│   ├── LessonMeta.php       # Main class implementing DependencyInterface
+│   └── LessonMetaTrait/     # Traits: RenderCallback, ModuleClassnames, ModuleStyles
 src/
-├── index.ts                 # Entry point (register modules here)
+├── index.ts                 # JS module registration (add registerModule() here)
 └── components/
-    └── hello-module/        # Reference React component
-        ├── index.ts         # Module definition
-        ├── edit.tsx         # Visual Builder component
-        ├── module.json      # Module schema
-        └── style.scss       # Styles
+    ├── hello-module/        # Simple reference
+    └── lesson-meta/         # Full working module
+        ├── index.ts         # Module export with metadata + renderers
+        ├── edit.tsx         # Visual Builder React component
+        ├── module.json      # Module schema (attributes, settings groups)
+        ├── types.ts         # TypeScript interfaces
+        ├── styles.tsx       # VB styles component
+        ├── module-classnames.ts
+        ├── placeholder-content.ts
+        └── style.scss       # BEM CSS
 ```
+
+### Critical Divi 5 Module Patterns
+- **See `docs/divi-modules.md`** for complete reference with code examples
+- **Theme Builder templates:** Use `get_queried_object_id()` not `get_the_ID()`
+- **Null safety:** Use `$args['selector'] ?? ''` in ModuleStylesTrait
+- **Toggle values:** `'on'`/`'off'` strings (not booleans)
+- **Attribute path:** `$attrs['name']['innerContent']['desktop']['value']`
 
 ### REST Endpoints Available
 - `POST /leaderspath/v1/chat` - Chat with Claude (needs lesson_id, message, optional history/model)
