@@ -1,49 +1,46 @@
 <?php
 /**
- * LessonMeta::module_classnames()
+ * ContextLibrary::module_classnames()
  *
- * @package LeadersPath\Modules\LessonMeta
+ * @package LeadersPath\Modules\ContextLibrary
  * @since 0.1.0
  */
 
 declare(strict_types=1);
 
-namespace LeadersPath\Modules\LessonMeta\LessonMetaTrait;
+namespace LeadersPath\Modules\ContextLibrary\ContextLibraryTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access forbidden.' );
 }
 
-use ET\Builder\Packages\Module\Options\Element\ElementClassnames;
 use ET\Builder\Packages\Module\Options\Text\TextClassnames;
+use ET\Builder\Packages\Module\Options\Element\ElementClassnames;
 
 /**
- * Module classnames trait for LessonMeta.
+ * Module classnames trait for ContextLibrary.
  *
  * @since 0.1.0
  */
 trait ModuleClassnamesTrait {
 
 	/**
-	 * Module classnames function for LessonMeta module.
-	 *
-	 * This function is equivalent of JS function moduleClassnames located in
-	 * src/components/lesson-meta/module-classnames.ts.
+	 * Generate classnames for Context Library Module.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param array $args {
-	 *     An array of arguments.
+	 *     Classnames arguments.
 	 *
 	 *     @type object $classnamesInstance Instance of ET\Builder\Packages\Module\Layout\Components\Classnames.
-	 *     @type array  $attrs              Block attributes data that being rendered.
+	 *     @type array  $attrs              Block attributes.
 	 * }
 	 *
 	 * @return void
 	 */
 	public static function module_classnames( array $args ): void {
 		$classnames_instance = $args['classnamesInstance'];
-		$attrs               = $args['attrs'];
+		$attrs               = $args['attrs'] ?? [];
 
 		// Add text option classnames.
 		$classnames_instance->add(
@@ -57,9 +54,7 @@ trait ModuleClassnamesTrait {
 				[
 					'attrs' => array_merge(
 						$attrs['module']['decoration'] ?? [],
-						[
-							'link' => $attrs['module']['advanced']['link'] ?? [],
-						]
+						[ 'link' => $attrs['module']['advanced']['link'] ?? [] ]
 					),
 				]
 			)

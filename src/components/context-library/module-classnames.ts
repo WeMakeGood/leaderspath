@@ -1,5 +1,5 @@
 /**
- * Lesson Meta Module classnames function.
+ * Context Library Module classnames function.
  *
  * @package LeadersPath
  * @since 0.1.0
@@ -11,23 +11,23 @@ import {
   textOptionsClassnames,
 } from '@divi/module';
 
-import { LessonMetaAttrs } from './types';
+import { ContextLibraryAttrs } from './types';
 
 /**
- * Generate classnames for Lesson Meta Module.
+ * Generate classnames for Context Library Module.
  *
  * This function is equivalent of PHP function module_classnames located in
- * modules/LessonMeta/LessonMetaTrait/ModuleClassnamesTrait.php.
+ * modules/ContextLibrary/ContextLibraryTrait/ModuleClassnamesTrait.php.
  *
  * @since 0.1.0
  *
- * @param {ModuleLibrary.Module.Classnames.Args<LessonMetaAttrs>} args Classnames arguments.
+ * @param {ModuleLibrary.Module.Classnames.Args<ContextLibraryAttrs>} args Classnames arguments.
  * @returns {void}
  */
 export const moduleClassnames = ({
   classnamesInstance,
   attrs,
-}: ModuleLibrary.Module.Classnames.Args<LessonMetaAttrs>): void => {
+}: ModuleLibrary.Module.Classnames.Args<ContextLibraryAttrs>): void => {
   // Add text option classnames.
   classnamesInstance.add(textOptionsClassnames(attrs?.module?.advanced?.text), true);
 

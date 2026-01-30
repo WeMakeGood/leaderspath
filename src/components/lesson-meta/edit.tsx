@@ -32,15 +32,10 @@ export const LessonMetaEdit = (props: LessonMetaEditProps): ReactElement => {
     name,
   } = props;
 
-  // Get visibility toggle values.
-  const showDuration = attrs?.showDuration?.innerContent?.desktop?.value ?? 'on';
-  const showObjectives = attrs?.showObjectives?.innerContent?.desktop?.value ?? 'on';
-  const showModel = attrs?.showModel?.innerContent?.desktop?.value ?? 'on';
-
-  // Get label values for placeholder display.
-  const durationLabel = attrs?.durationLabel?.innerContent?.desktop?.value ?? 'Duration:';
-  const objectivesLabel = attrs?.objectivesLabel?.innerContent?.desktop?.value ?? 'Learning Objectives:';
-  const modelLabel = attrs?.modelLabel?.innerContent?.desktop?.value ?? 'AI Model:';
+  // Get visibility toggle values following PostTitle pattern.
+  const showDuration = attrs?.duration?.advanced?.show?.desktop?.value ?? 'on';
+  const showObjectives = attrs?.objectives?.advanced?.show?.desktop?.value ?? 'on';
+  const showModel = attrs?.model?.advanced?.show?.desktop?.value ?? 'on';
 
   return (
     <ModuleContainer
@@ -62,7 +57,9 @@ export const LessonMetaEdit = (props: LessonMetaEditProps): ReactElement => {
         {/* Duration Section - Placeholder */}
         {showDuration === 'on' && (
           <div className="leaderspath-lesson-meta__section leaderspath-lesson-meta__duration">
-            <span className="leaderspath-lesson-meta__label">{durationLabel}</span>
+            {elements.render({
+              attrName: 'durationLabel',
+            })}
             <span className="leaderspath-lesson-meta__value">45 minutes</span>
           </div>
         )}
@@ -70,7 +67,9 @@ export const LessonMetaEdit = (props: LessonMetaEditProps): ReactElement => {
         {/* Objectives Section - Placeholder */}
         {showObjectives === 'on' && (
           <div className="leaderspath-lesson-meta__section leaderspath-lesson-meta__objectives">
-            <span className="leaderspath-lesson-meta__label">{objectivesLabel}</span>
+            {elements.render({
+              attrName: 'objectivesLabel',
+            })}
             <ul className="leaderspath-lesson-meta__list">
               <li>Understand the key concepts</li>
               <li>Apply learning in practical scenarios</li>
@@ -82,7 +81,9 @@ export const LessonMetaEdit = (props: LessonMetaEditProps): ReactElement => {
         {/* Model Section - Placeholder */}
         {showModel === 'on' && (
           <div className="leaderspath-lesson-meta__section leaderspath-lesson-meta__model">
-            <span className="leaderspath-lesson-meta__label">{modelLabel}</span>
+            {elements.render({
+              attrName: 'modelLabel',
+            })}
             <span className="leaderspath-lesson-meta__value leaderspath-lesson-meta__badge">
               Claude Sonnet
             </span>

@@ -5,21 +5,18 @@
  * @since 0.1.0
  */
 
+import { LessonMetaAttrs } from './types';
+
 /**
- * Placeholder content shown when module is first added.
+ * Default placeholder content for Lesson Meta module.
+ *
+ * @since 0.1.0
  */
-export const placeholderContent = {
+export const placeholderContent: LessonMetaAttrs = {
   title: {
     innerContent: {
       desktop: {
         value: 'Lesson Details',
-      },
-    },
-  },
-  showDuration: {
-    innerContent: {
-      desktop: {
-        value: 'on',
       },
     },
   },
@@ -30,24 +27,10 @@ export const placeholderContent = {
       },
     },
   },
-  showObjectives: {
-    innerContent: {
-      desktop: {
-        value: 'on',
-      },
-    },
-  },
   objectivesLabel: {
     innerContent: {
       desktop: {
         value: 'Learning Objectives:',
-      },
-    },
-  },
-  showModel: {
-    innerContent: {
-      desktop: {
-        value: 'on',
       },
     },
   },

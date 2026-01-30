@@ -1,6 +1,6 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-01-29
+**Last Updated:** 2026-01-30
 **Current Phase:** Phase 5 - Divi 5 Modules (Frontend)
 
 This file tracks all development tasks across Claude Code sessions. Each session should read this file at startup and update it when tasks are completed or new tasks are discovered.
@@ -110,7 +110,9 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 Now that data layer exists, build the UI modules.
 
 **Reference:** See `docs/divi-modules.md` for Divi 5 module development guide.
-**Working Example:** `modules/HelloModule/` and `src/components/hello-module/` demonstrate the pattern.
+**Working Examples:**
+- `modules/LessonMeta/` - Theme Builder pattern (ACF data from current lesson)
+- `modules/ContextLibrary/` - Theme Builder pattern with compound elements and modal
 
 ### Chatbot Module
 - [ ] Create PHP module class and traits
@@ -120,12 +122,15 @@ Now that data layer exists, build the UI modules.
 - [ ] Add styling options (colors, fonts, sizing)
 - [ ] Connect to REST API endpoint
 
-### Context Library Module
-- [ ] Create PHP module class and traits
-- [ ] Create TypeScript/React edit component
-- [ ] Implement file list display (list/cards/accordion)
-- [ ] Add view content modal/expandable
-- [ ] Add download functionality
+### Context Library Module (COMPLETED)
+- [x] Create PHP module class and traits (Theme Builder pattern)
+- [x] Create TypeScript/React edit component with proper types
+- [x] Implement responsive card grid layout
+- [x] Add view content modal (custom modal, Divi lightbox is image-only)
+- [x] Add download functionality (links to REST endpoint)
+- [x] Visibility toggles for description, file type badge, buttons
+- [x] Configurable empty state message (rich text)
+- [x] Button elements using Divi button elementType for styling consistency
 
 ### Skills List Module
 - [ ] Create PHP module class and traits
@@ -134,11 +139,13 @@ Now that data layer exists, build the UI modules.
 - [ ] Add view definition modal
 - [ ] Add download functionality
 
-### Lesson Meta Module (COMPLETED)
-- [x] Create PHP module class and traits
-- [x] Create TypeScript/React edit component
+### Lesson Meta Module (REWRITTEN)
+- [x] Create PHP module class and traits (following PostTitle pattern)
+- [x] Create TypeScript/React edit component (with StyleContainer)
 - [x] Display duration, objectives, model info
 - [x] Add visibility toggles and configurable labels in Content tab
+- [x] Use Style::add() wrapper in PHP
+- [x] Use toggle attributes in element.advanced.show pattern (like PostTitle)
 
 ---
 
@@ -271,6 +278,67 @@ Brief notes from each development session:
 - Rewrote `docs/divi-modules.md` as a bootstrap guide pointing to references, NOT summaries
 - **Next session MUST:** Read `docs/divi-modules.md` and clone example repo before coding
 
+### Session 6 (2026-01-29)
+- **Deep dive into Divi 5 module architecture**
+- Identified three distinct module patterns:
+  1. **Theme Builder Module** (PostTitle, PostContent) - displays current post data via `get_queried_object_id()`
+  2. **Dynamic Query Module** (Blog, Portfolio) - queries multiple posts via REST controller
+  3. **Static Module** - user-entered content only
+- **Context Library should use Theme Builder pattern** - it displays data from the current lesson
+- Surveyed all 70+ core Divi modules to understand available patterns
+- Key discoveries:
+  - Core modules only ship JSON (no TypeScript source) - use example repo for TS patterns
+  - `PostTitleModule.php` is the best reference for Theme Builder modules
+  - REST controllers are registered centrally in `RESTRegistration.php`, not in module classes
+  - `module.json` is the authoritative source for attributes, settings, and styling options
+- Documented where to find specific implementations:
+  - Field types (text, toggle, select, color picker)
+  - Styling options (font, spacing, border, background)
+  - PHP patterns (render callback, styles, classnames)
+  - TypeScript patterns (edit.tsx, styles.tsx, types.ts)
+- **Completely rewrote `docs/divi-modules.md`** as a pure reference guide:
+  - Points to specific files for each pattern
+  - No summaries or code examples that could drift from source
+  - Clear "start with core modules, then example repo" hierarchy
+- **Next: Build Context Library module using Theme Builder pattern**
+
+### Session 7 (2026-01-30)
+- **Rewrote LessonMeta module from scratch** following correct patterns
+- Identified antipatterns in previous implementation:
+  - Missing `Style::add()` wrapper in PHP ModuleStylesTrait
+  - Missing `StyleContainer` wrapper in TypeScript styles.tsx
+  - Toggle attributes at wrong level (should be `element.advanced.show` not root-level `showX`)
+  - Missing `CustomCssTrait` with proper block type registry reference
+- New implementation follows PostTitleModule pattern exactly:
+  - PHP: `LessonMeta.php` + 4 traits (RenderCallback, ModuleStyles, ModuleClassnames, CustomCss)
+  - TypeScript: 10 files including proper `StyleContainer`, `cssFields`, types
+  - module.json: Toggle attributes in `duration.advanced.show`, `objectives.advanced.show`, `model.advanced.show`
+  - Labels use `elements.render()` with proper element definitions
+- Build verified successful
+
+### Session 8 (2026-01-30)
+- **Built Context Library module** using Theme Builder pattern
+- Architecture decisions:
+  - **Theme Builder pattern** - uses `get_queried_object_id()` to get current lesson's context files
+  - **Compound elements** (not child modules) - context items are data-driven from ACF, not user-added in VB
+  - **Custom modal** for View Content - Divi's lightbox is image-only; Canvases are VB layout feature
+  - **Divi button elementType** for buttons - ensures styling consistency via `decoration.button`
+  - **Responsive card grid** - CSS `auto-fill` with `minmax(280px, 1fr)`
+- Files created:
+  - PHP: `modules/ContextLibrary/` - main class + 4 traits (RenderCallback, ModuleStyles, ModuleClassnames, CustomCss)
+  - TypeScript: `src/components/context-library/` - 9 files (edit, styles, types, custom-css, etc.)
+  - Assets: `assets/js/context-modal.js`, `assets/css/context-modal.css`
+- Features:
+  - Displays context files from `chatbot_context_files` ACF relationship field
+  - Visibility toggles: description, file type badge, view button, download button
+  - Configurable title and empty state message (rich text)
+  - Styling: module background/border, item cards, item titles, descriptions, badges, buttons
+  - Custom CSS fields for all elements
+- Build verified successful
+- **Bug fix:** `CssStyle` must be imported from `@divi/module`, not `@divi/module-library` (causes React error #130)
+- VB and frontend rendering verified working
+- **Next: Build Skills List module (similar pattern)**
+
 ---
 
 ## Quick Reference for Next Session
@@ -289,40 +357,53 @@ Brief notes from each development session:
 modules/
 ├── Modules.php              # PHP module registration (add new modules here)
 ├── HelloModule/             # Simple reference implementation
-├── LessonMeta/              # Full working module with ACF integration
-│   ├── LessonMeta.php       # Main class implementing DependencyInterface
-│   └── LessonMetaTrait/     # Traits: RenderCallback, ModuleClassnames, ModuleStyles
+├── LessonMeta/              # Theme Builder pattern - displays ACF data from current lesson
+├── ContextLibrary/          # Theme Builder pattern - compound elements, modal, buttons
+│   ├── ContextLibrary.php   # Main class implementing DependencyInterface
+│   └── ContextLibraryTrait/ # Traits: RenderCallback, ModuleClassnames, ModuleStyles, CustomCss
 src/
 ├── index.ts                 # JS module registration (add registerModule() here)
 └── components/
     ├── hello-module/        # Simple reference
-    └── lesson-meta/         # Full working module
+    ├── lesson-meta/         # Theme Builder pattern
+    └── context-library/     # Theme Builder pattern with compound elements
         ├── index.ts         # Module export with metadata + renderers
         ├── edit.tsx         # Visual Builder React component
         ├── module.json      # Module schema (attributes, settings groups)
-        ├── types.ts         # TypeScript interfaces
-        ├── styles.tsx       # VB styles component
+        ├── types.ts         # TypeScript interfaces (extends InternalAttrs)
+        ├── styles.tsx       # VB styles component with StyleContainer
+        ├── custom-css.ts    # CSS fields definition
         ├── module-classnames.ts
         ├── placeholder-content.ts
         └── style.scss       # BEM CSS
+assets/
+├── js/context-modal.js      # Modal JavaScript for View Content
+└── css/context-modal.css    # Modal styles
 ```
 
 ### Divi 5 Module Development - CRITICAL
 
 **Before writing ANY module code:**
-1. Read `docs/divi-modules.md` for bootstrap instructions
-2. Clone official example repo: `git clone https://github.com/elegantthemes/d5-extension-example-modules.git /private/tmp/d5-extension-example-modules`
-3. Review core Divi modules at: `/wp-content/themes/Divi/includes/builder-5/`
+1. Read `docs/divi-modules.md` for bootstrap instructions and file locations
+2. Verify example repo exists: `ls /private/tmp/d5-extension-example-modules || git clone https://github.com/elegantthemes/d5-extension-example-modules.git /private/tmp/d5-extension-example-modules`
+3. Start with core Divi modules (primary), then example repo (secondary)
 
-**Key reference files for common patterns:**
-| Pattern | Example Repo File | Core Divi File |
-|---------|------------------|----------------|
-| Basic module | `modules/StaticModule/` | - |
-| Settings tabs | `src/components/static-module/module.json` | `blog/module.json` |
-| Toggle show/hide | - | `blog/module.json` → `image.advanced.enable` |
-| Repeated item styling | - | `blog/module.json` → `post`, `masonry` attrs |
-| Icon picker | `src/components/child-module/edit.tsx` | - |
-| Button element | - | `button/module.json` |
+**Module Pattern Selection:**
+| Use Case | Pattern | Primary Reference |
+|----------|---------|-------------------|
+| Current post data (lesson meta, context) | Theme Builder | `PostTitle/PostTitleModule.php` |
+| Query multiple posts | Dynamic Query | `Blog/BlogController.php` |
+| User-entered content only | Static | Example repo `StaticModule/` |
+
+**Key reference files:**
+| What You Need | Where to Look |
+|---------------|---------------|
+| Module schema, attributes, settings | Core `{module}/module.json` |
+| PHP render, styles, classnames | Core `{Module}Module.php` or example repo traits |
+| TypeScript edit component | Example repo `src/components/{module}/edit.tsx` |
+| TypeScript styles component | Example repo `src/components/{module}/styles.tsx` |
+| Toggle/select field definitions | `post-title/module.json` |
+| Color picker, custom styling | `static-module/module.json` |
 
 **Do NOT guess at patterns. Read the actual source code.**
 

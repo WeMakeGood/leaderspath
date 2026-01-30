@@ -1,38 +1,47 @@
 /**
- * Type definitions for Lesson Meta Module.
+ * Lesson Meta Module TypeScript type definitions.
  *
  * @package LeadersPath
  * @since 0.1.0
  */
 
-import { type ModuleLibrary } from '@divi/types';
-
-/**
- * Toggle attribute interface for on/off controls.
- */
-export interface ToggleAttribute {
-  innerContent?: {
-    desktop?: {
-      value?: string;
-    };
-  };
-}
+import {
+  type Module,
+  type ModuleLibrary,
+} from '@divi/types';
 
 /**
  * Lesson Meta Module attributes interface.
+ *
+ * @since 0.1.0
  */
-export interface LessonMetaAttrs {
-  module: ModuleLibrary.Module.Attributes.Module;
-  title: ModuleLibrary.Module.Attributes.Element;
-  showDuration: ToggleAttribute;
-  durationLabel: ModuleLibrary.Module.Attributes.Element;
-  showObjectives: ToggleAttribute;
-  objectivesLabel: ModuleLibrary.Module.Attributes.Element;
-  showModel: ToggleAttribute;
-  modelLabel: ModuleLibrary.Module.Attributes.Element;
+export interface LessonMetaAttrs extends Module.Attributes.Base {
+  module?: Module.Element.Attrs;
+  title?: Module.Element.Attrs;
+  duration?: {
+    advanced?: {
+      show?: Module.Attributes.Attribute;
+    };
+  };
+  durationLabel?: Module.Element.Attrs;
+  objectives?: {
+    advanced?: {
+      show?: Module.Attributes.Attribute;
+    };
+  };
+  objectivesLabel?: Module.Element.Attrs;
+  model?: {
+    advanced?: {
+      show?: Module.Attributes.Attribute;
+    };
+  };
+  modelLabel?: Module.Element.Attrs;
+  css?: Module.Options.Css.Attr;
 }
 
 /**
- * Props for Lesson Meta Module edit component.
+ * Lesson Meta Module edit component props.
+ *
+ * @since 0.1.0
  */
-export interface LessonMetaEditProps extends ModuleLibrary.Module.Edit.ComponentProps<LessonMetaAttrs> {}
+export type LessonMetaEditProps = ModuleLibrary.Module.EditProps<LessonMetaAttrs>;
