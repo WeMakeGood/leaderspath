@@ -254,6 +254,23 @@ Brief notes from each development session:
 - Build and frontend render verified working
 - **Next: Context Library Module or Skills List Module**
 
+### Session 5 (2026-01-29)
+- **IMPORTANT: Divi 5 documentation overhaul**
+- Previous documentation was inaccurate/incomplete, leading to failed module builds
+- Researched and documented proper reference sources:
+  1. **Official Example Repo:** https://github.com/elegantthemes/d5-extension-example-modules
+     - Clone to `/private/tmp/d5-extension-example-modules/`
+     - Contains 5 example modules: Static, Dynamic, Parent, Child, D4
+  2. **Divi Core Modules:** `/wp-content/themes/Divi/includes/builder-5/`
+     - `server/Packages/ModuleLibrary/` - PHP module classes
+     - `visual-builder/packages/module-library/src/components/` - TypeScript/JSON
+- Key patterns learned from studying Blog module (`module.json`):
+  - **Toggles for show/hide** go in Content tab under "Elements" group (`groupSlug: "contentElements"`)
+  - **Styling repeated items** requires separate attributes with specific selectors
+  - **Settings organization:** `panel: "content"` vs `panel: "design"` in group definitions
+- Rewrote `docs/divi-modules.md` as a bootstrap guide pointing to references, NOT summaries
+- **Next session MUST:** Read `docs/divi-modules.md` and clone example repo before coding
+
 ---
 
 ## Quick Reference for Next Session
@@ -290,12 +307,24 @@ src/
         └── style.scss       # BEM CSS
 ```
 
-### Critical Divi 5 Module Patterns
-- **See `docs/divi-modules.md`** for complete reference with code examples
-- **Theme Builder templates:** Use `get_queried_object_id()` not `get_the_ID()`
-- **Null safety:** Use `$args['selector'] ?? ''` in ModuleStylesTrait
-- **Toggle values:** `'on'`/`'off'` strings (not booleans)
-- **Attribute path:** `$attrs['name']['innerContent']['desktop']['value']`
+### Divi 5 Module Development - CRITICAL
+
+**Before writing ANY module code:**
+1. Read `docs/divi-modules.md` for bootstrap instructions
+2. Clone official example repo: `git clone https://github.com/elegantthemes/d5-extension-example-modules.git /private/tmp/d5-extension-example-modules`
+3. Review core Divi modules at: `/wp-content/themes/Divi/includes/builder-5/`
+
+**Key reference files for common patterns:**
+| Pattern | Example Repo File | Core Divi File |
+|---------|------------------|----------------|
+| Basic module | `modules/StaticModule/` | - |
+| Settings tabs | `src/components/static-module/module.json` | `blog/module.json` |
+| Toggle show/hide | - | `blog/module.json` → `image.advanced.enable` |
+| Repeated item styling | - | `blog/module.json` → `post`, `masonry` attrs |
+| Icon picker | `src/components/child-module/edit.tsx` | - |
+| Button element | - | `button/module.json` |
+
+**Do NOT guess at patterns. Read the actual source code.**
 
 ### REST Endpoints Available
 - `POST /leaderspath/v1/chat` - Chat with Claude (needs lesson_id, message, optional history/model)
