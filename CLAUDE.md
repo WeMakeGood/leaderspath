@@ -1,4 +1,4 @@
-# Leaders Path WordPress Plugin
+# LeadersPath WordPress Plugin
 
 ---
 
@@ -26,7 +26,7 @@
 
 ## Project Overview
 
-Leaders Path is a WordPress plugin developed by WeMakeGood that powers an interactive AI learning community. The plugin provides chatbot-powered lesson experiences where learners interact with Claude AI to understand the difference between raw LLM interactions and context-enhanced AI implementations.
+LeadersPath is a WordPress plugin developed by WeMakeGood that powers an interactive AI learning community. The plugin provides chatbot-powered lesson experiences where learners interact with Claude AI to understand the difference between raw LLM interactions and context-enhanced AI implementations.
 
 **Key Features:**
 - Custom post types for Lessons, Courses, Cohorts, Context Files, and Skills

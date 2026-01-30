@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:     Leaders Path
+ * Plugin Name:     LeadersPath
  * Plugin URI:      https://leaderspath.wemakegood.org
  * Description:     AI-powered learning community plugin with interactive chatbot lessons.
  * Author:          WeMakeGood
