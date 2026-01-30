@@ -1,0 +1,31 @@
+{
+    "name": "wemakegood/leaderspath",
+    "description": "LeadersPath WordPress Plugin - AI Learning Community",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "WeMakeGood",
+            "email": "hello@wemakegood.org"
+        }
+    ],
+    "require": {
+        "php": ">=8.2"
+    },
+    "require-dev": {
+        "wp-cli/i18n-command": "^2"
+    },
+    "autoload": {
+        "psr-4": {
+            "LeadersPath\\": "includes/",
+            "LeadersPath\\Modules\\": "modules/"
+        }
+    },
+    "scripts": {
+        "makepot": "wp i18n make-pot ."
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}
