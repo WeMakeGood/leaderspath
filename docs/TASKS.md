@@ -83,7 +83,9 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 
 ---
 
-## Phase 4: REST API & Claude Integration (COMPLETED)
+## Phase 4: REST API & Claude Integration (IN PROGRESS)
+
+**Reference:** See `docs/claude-api-integration.md` for full API documentation.
 
 ### REST API Endpoints
 - [x] Create `includes/class-rest-api.php`
@@ -93,15 +95,45 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 - [x] `GET /wp-json/leaderspath/v1/context/{id}/download` - Download context file
 - [x] `GET /wp-json/leaderspath/v1/skills/{id}/download` - Download skill definition
 - [x] Implement authentication (nonce for logged-in, capability checks)
+- [ ] Update chat endpoint for container API response format
+- [ ] Handle pause_turn responses
+- [ ] Handle file outputs from code execution
 
-### Claude API Handler
+### Claude API Handler (NEEDS REWORK)
 - [x] Create `includes/class-claude-api.php`
-- [x] Implement Messages API integration
+- [~] Implement Messages API integration (needs container + code execution)
 - [x] Context assembly from lesson files
 - [x] Model selection (dynamic from API, with fallbacks)
 - [x] Error handling and logging
 - [x] Test connection button in settings (queries available models)
+- [ ] Add container parameter with skills array
+- [ ] Add code execution tool to requests
+- [ ] Handle pause_turn stop reason
+- [ ] Implement container reuse within session
 - [ ] Optional: Streaming response support (SSE)
+
+### Skill Library Handler (Upload to Anthropic)
+Skills must be uploaded to Anthropic's Skills API for code execution to work.
+Context files remain WordPress-only (embedded in system prompt).
+
+- [x] Create `includes/class-skill-processor.php` (local validation only)
+- [ ] Add `skill_anthropic_id` ACF field (stores returned skill_id)
+- [ ] Add `skill_anthropic_version` ACF field (stores version timestamp)
+- [ ] Add `skill_sync_status` ACF field (pending/synced/error)
+- [ ] Add `skill_sync_error` ACF field (last error message)
+- [ ] Implement `upload_to_anthropic()` method in Skill_Processor
+- [ ] Upload skill ZIP to `POST /v1/skills` on first save
+- [ ] Create new version via `POST /v1/skills/{id}/versions` on update
+- [ ] Store returned skill_id and version in ACF fields
+- [ ] Add admin notice for sync status (success/error)
+- [ ] Add "Re-sync" button for failed uploads
+- [ ] Handle skill deletion (delete from Anthropic when trashed?)
+
+### Settings Updates
+- [ ] Add beta header version fields (configurable, not hardcoded)
+- [ ] Add tool type version field
+- [ ] Add "Test Skills API" button
+- [ ] Document version update process in admin
 
 ---
 
@@ -389,7 +421,30 @@ Brief notes from each development session:
   - Removed taxonomy filter from ACF relationship fields (was causing empty results when no terms assigned)
   - Added `Capabilities::maybe_add_caps()` on `admin_init` to auto-fix missing capabilities during development
 - Skill package upload tested and working - fields auto-populate from SKILL.md frontmatter
-- **Next: Build Chatbot module (interactive chat UI)**
+- **Next: Implement full Claude API integration with container and skills**
+
+### Session 11 (2026-01-30)
+- **Discovered critical gap in Claude API integration**
+- Current implementation only uses simple Messages API
+- Full skill support requires:
+  - **Container API** with code execution for script execution
+  - **Skills API** to upload skills to Anthropic (`POST /v1/skills`)
+  - **Beta headers**: `code-execution-2025-08-25`, `skills-2025-10-02`
+  - **Code execution tool** in requests
+- Created `docs/claude-api-integration.md` documenting:
+  - All required API endpoints
+  - Beta headers and versioning strategy (configurable, not hardcoded)
+  - Request/response structures
+  - Skill lifecycle (WordPress upload → Anthropic upload → chat usage)
+  - Container management
+  - Error handling
+  - Implementation checklist
+- **Key insight**: Skills in system prompt are for **discovery only** (name + description)
+  - Actual skill instructions and scripts load via container when triggered
+  - Context files remain fully embedded in system prompt
+- Created CLI test scripts: `bin/test-chat.php`, `bin/show-system-prompt.php`
+- **Phase 4 marked as IN PROGRESS** - needs container + code execution rework
+- **Next: Implement Anthropic Skills API upload in Skill_Processor**
 
 ---
 
@@ -461,12 +516,48 @@ assets/
 
 **Do NOT guess at patterns. Read the actual source code.**
 
-### REST Endpoints Available
+### Claude API Integration - CRITICAL
+
+**Read `docs/claude-api-integration.md` before modifying API code.**
+
+**Current Status:** Simple Messages API (needs upgrade to container + code execution)
+
+**Required for Full Skills:**
+```
+Beta Headers:
+- code-execution-2025-08-25
+- skills-2025-10-02
+- files-api-2025-04-14 (for file handling)
+
+Tools:
+- code_execution_20250825
+
+Container:
+- skills array with type, skill_id, version
+- container.id for session reuse
+```
+
+**Anthropic API Endpoints:**
+- `POST /v1/messages` - Chat with container + code execution
+- `POST /v1/skills` - Upload skill package
+- `GET /v1/skills` - List skills (includes skill_id)
+- `POST /v1/skills/{id}/versions` - Create new version
+
+### WordPress REST Endpoints
 - `POST /leaderspath/v1/chat` - Chat with Claude (needs lesson_id, message, optional history/model)
 - `GET /leaderspath/v1/lessons/{id}/context` - Get context files for lesson
 - `GET /leaderspath/v1/lessons/{id}/skills` - Get skills for lesson
 - `GET /leaderspath/v1/context/{id}/download` - Get context file content
 - `GET /leaderspath/v1/skills/{id}/download` - Get skill definition
+
+### CLI Test Scripts
+```bash
+# Full chat system test (API, context assembly, conversation)
+wp eval-file wp-content/plugins/leaderspath/bin/test-chat.php [lesson_id] [message]
+
+# Show assembled system prompt for a lesson
+wp eval-file wp-content/plugins/leaderspath/bin/show-system-prompt.php [lesson_id]
+```
 
 ### Build Commands
 ```bash

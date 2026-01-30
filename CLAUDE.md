@@ -107,6 +107,7 @@ All documentation lives in the `docs/` folder:
 | [plugin-design.md](docs/plugin-design.md) | Architecture overview, design decisions |
 | [cpt-schema.md](docs/cpt-schema.md) | Custom post types, taxonomies, ACF fields |
 | [divi-modules.md](docs/divi-modules.md) | Divi 5 module development guide |
+| [claude-api-integration.md](docs/claude-api-integration.md) | **Claude API integration (CRITICAL)** |
 | [api-reference.md](docs/api-reference.md) | REST API endpoints (TODO) |
 
 ## External Dependencies
@@ -471,13 +472,53 @@ See `docs/TASKS.md` for current task list.
 
 | Decision | Details |
 |----------|---------|
-| **Context Storage** | Use CPTs (`leaderspath_context`, `leaderspath_skill`) for revision history and familiar admin UI |
+| **Context Files** | WordPress-only storage (post_content), embedded in system prompt |
+| **Skills** | Uploaded to Anthropic Skills API for code execution, referenced by skill_id |
+| **Claude API** | Container API with code execution enabled (not simple Messages API) |
 | **Conversation Persistence** | None - page reload clears conversation to enable experimentation |
 | **API Key** | Single plugin-wide key stored in WordPress options |
 | **Rate Limiting** | None initially - paid service, add later if abuse occurs |
 | **Chat UI** | Standard bubble layout (user right, assistant left), configurable colors |
 | **Error Display** | Inline in chat conversation |
 | **Streaming** | Optional enhancement, not required for MVP |
+
+## Claude API Architecture (CRITICAL)
+
+**Read `docs/claude-api-integration.md` before modifying API code.**
+
+### Context Files vs Skills
+
+| Aspect | Context Files | Skills |
+|--------|---------------|--------|
+| **Purpose** | Reference material (guidelines, standards) | Executable capabilities (scripts, workflows) |
+| **Storage** | WordPress post_content only | Anthropic Skills API + WordPress metadata |
+| **Delivery** | Embedded in system prompt | Via `container.skills` array |
+| **Code execution** | No | Yes (Python, bash) |
+| **API upload** | Not required | Required for code execution |
+
+### Required API Features
+
+```
+Beta Headers:
+- code-execution-2025-08-25
+- skills-2025-10-02
+- files-api-2025-04-14 (for file handling)
+
+Tools:
+- code_execution_20250825
+
+Container:
+- skills: [{type, skill_id, version}, ...]
+- id: reuse for session continuity
+```
+
+### Skill Lifecycle
+
+1. **WordPress upload** → ZIP validated locally, frontmatter parsed
+2. **Anthropic upload** → `POST /v1/skills` returns `skill_id`
+3. **WordPress stores** → `skill_anthropic_id`, `skill_anthropic_version`
+4. **Chat request** → skill_id included in `container.skills` array
+5. **Update** → New ZIP creates version via `POST /v1/skills/{id}/versions`
 
 ## Module Registration Pattern
 
