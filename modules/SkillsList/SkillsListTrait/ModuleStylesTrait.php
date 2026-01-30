@@ -14,8 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access forbidden.' );
 }
 
-use ET\Builder\Packages\Module\Module;
 use ET\Builder\Packages\Module\Options\Css\CssStyle;
+use ET\Builder\FrontEnd\Module\Style;
+use LeadersPath\Modules\SkillsList\SkillsList;
 
 /**
  * Module styles trait for SkillsList.
@@ -25,25 +26,23 @@ use ET\Builder\Packages\Module\Options\Css\CssStyle;
 trait ModuleStylesTrait {
 
 	/**
-	 * Skills List Module's style components.
+	 * Generate styles for Skills List Module.
 	 *
-	 * This function is equivalent to JS function ModuleStyles located in
-	 * src/components/skills-list/styles.tsx.
+	 * This function uses Style::add() wrapper which is required for Divi 5 modules.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param array $args {
-	 *     An array of arguments.
+	 *     Styles arguments.
 	 *
-	 *     @type string         $id                Module ID.
-	 *     @type string         $name              Module name.
-	 *     @type array          $attrs             Module attributes.
-	 *     @type callable       $selector          Selector function.
-	 *     @type object         $elements          Module elements.
-	 *     @type array          $settings          Module settings.
-	 *     @type string         $orderClass        Order class name.
-	 *     @type string         $storeInstance     Store instance.
-	 *     @type ModuleElements $elements          ModuleElements instance.
+	 *     @type string $id            Module ID.
+	 *     @type string $name          Module name.
+	 *     @type array  $attrs         Block attributes.
+	 *     @type object $settings      Module settings.
+	 *     @type string $orderClass    Module order class.
+	 *     @type object $elements      ModuleElements instance.
+	 *     @type int    $orderIndex    Module order index.
+	 *     @type string $storeInstance Store instance.
 	 * }
 	 *
 	 * @return void
@@ -51,76 +50,85 @@ trait ModuleStylesTrait {
 	public static function module_styles( array $args ): void {
 		$attrs       = $args['attrs'] ?? [];
 		$elements    = $args['elements'];
-		$settings    = $args['settings'] ?? [];
 		$order_class = $args['orderClass'] ?? '';
 
-		// Module.
-		$elements->style(
+		Style::add(
 			[
-				'attrName'   => 'module',
-				'styleProps' => [
-					'disabledOn' => [
-						'disabledModuleVisibility' => $settings['disabledModuleVisibility'] ?? null,
-					],
+				'id'            => $args['id'],
+				'name'          => $args['name'],
+				'orderIndex'    => $args['orderIndex'],
+				'storeInstance' => $args['storeInstance'],
+				'styles'        => [
+					// Module container styles.
+					$elements->style(
+						[
+							'attrName'   => 'module',
+							'styleProps' => [
+								'disabledOn' => [
+									'disabledModuleVisibility' => $args['settings']->disabledModuleVisibility ?? null,
+								],
+							],
+						]
+					),
+
+					// Module title styles.
+					$elements->style(
+						[
+							'attrName' => 'title',
+						]
+					),
+
+					// Empty state message styles.
+					$elements->style(
+						[
+							'attrName' => 'emptyState',
+						]
+					),
+
+					// Item container styles.
+					$elements->style(
+						[
+							'attrName' => 'item',
+						]
+					),
+
+					// Item title styles.
+					$elements->style(
+						[
+							'attrName' => 'itemTitle',
+						]
+					),
+
+					// Item description styles.
+					$elements->style(
+						[
+							'attrName' => 'itemDescription',
+						]
+					),
+
+					// Item badge styles.
+					$elements->style(
+						[
+							'attrName' => 'itemBadge',
+						]
+					),
+
+					// Download button styles.
+					$elements->style(
+						[
+							'attrName' => 'downloadButton',
+						]
+					),
+
+					// Custom CSS.
+					CssStyle::style(
+						[
+							'selector'  => $order_class,
+							'attr'      => $attrs['css'] ?? [],
+							'cssFields' => SkillsList::custom_css(),
+						]
+					),
 				],
-			]
-		);
-
-		// Title.
-		$elements->style(
-			[
-				'attrName' => 'title',
-			]
-		);
-
-		// Empty state.
-		$elements->style(
-			[
-				'attrName' => 'emptyState',
-			]
-		);
-
-		// Item container.
-		$elements->style(
-			[
-				'attrName' => 'item',
-			]
-		);
-
-		// Item title.
-		$elements->style(
-			[
-				'attrName' => 'itemTitle',
-			]
-		);
-
-		// Item description.
-		$elements->style(
-			[
-				'attrName' => 'itemDescription',
-			]
-		);
-
-		// Item badge.
-		$elements->style(
-			[
-				'attrName' => 'itemBadge',
-			]
-		);
-
-		// Download button.
-		$elements->style(
-			[
-				'attrName' => 'downloadButton',
-			]
-		);
-
-		// Custom CSS.
-		CssStyle::style(
-			[
-				'selector'  => $order_class,
-				'attr'      => $attrs['css'] ?? [],
-				'cssFields' => self::custom_css(),
 			]
 		);
 	}
