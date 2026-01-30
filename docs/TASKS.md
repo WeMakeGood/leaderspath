@@ -113,6 +113,7 @@ Now that data layer exists, build the UI modules.
 **Working Examples:**
 - `modules/LessonMeta/` - Theme Builder pattern (ACF data from current lesson)
 - `modules/ContextLibrary/` - Theme Builder pattern with compound elements and modal
+- `modules/SkillsList/` - Theme Builder pattern (similar to Context Library, no modal)
 
 ### Chatbot Module
 - [ ] Create PHP module class and traits
@@ -132,12 +133,14 @@ Now that data layer exists, build the UI modules.
 - [x] Configurable empty state message (rich text)
 - [x] Button elements using Divi button elementType for styling consistency
 
-### Skills List Module
-- [ ] Create PHP module class and traits
-- [ ] Create TypeScript/React edit component
-- [ ] Implement skills display
-- [ ] Add view definition modal
-- [ ] Add download functionality
+### Skills List Module (COMPLETED)
+- [x] Create PHP module class and traits (Theme Builder pattern)
+- [x] Create TypeScript/React edit component with proper types
+- [x] Implement responsive card grid layout (same as Context Library)
+- [x] Visibility toggles for description, compatibility badge, version badge, download button
+- [x] Download links directly to attachment URL (ZIP package)
+- [x] Configurable empty state message (rich text)
+- [x] Button element using Divi button elementType for styling consistency
 
 ### Lesson Meta Module (REWRITTEN)
 - [x] Create PHP module class and traits (following PostTitle pattern)
@@ -337,7 +340,30 @@ Brief notes from each development session:
 - Build verified successful
 - **Bug fix:** `CssStyle` must be imported from `@divi/module`, not `@divi/module-library` (causes React error #130)
 - VB and frontend rendering verified working
-- **Next: Build Skills List module (similar pattern)**
+
+### Session 9 (2026-01-30)
+- **Built Skills List module** using same Theme Builder pattern as Context Library
+- Design decisions:
+  - **No modal** - Skills are complex ZIP packages; description + download is sufficient
+  - **Two badges** - Compatibility (e.g., "Python 3.9+") and Version (e.g., "v1.2.0") as toggleable elements
+  - **Direct attachment URL** - Download links directly to ZIP attachment, not via REST endpoint
+  - **Same grid layout** - Responsive card grid with `auto-fill` matching Context Library
+- Files created:
+  - PHP: `modules/SkillsList/` - main class + 4 traits (same structure as ContextLibrary)
+  - TypeScript: `src/components/skills-list/` - 9 files (edit, styles, types, custom-css, etc.)
+- Features:
+  - Displays skills from `chatbot_skills` ACF relationship field
+  - Visibility toggles: description, compatibility badge, version badge, download button
+  - Configurable title and empty state message (rich text)
+  - Styling: module background/border, item cards, item titles, descriptions, badges, button
+  - Custom CSS fields for all elements
+- **Bug fixes during development:**
+  - **placeholder-content.ts**: Must NOT wrap attrs in `{ attrs: {...} }` - export attributes directly
+  - **placeholder-content.ts**: Don't use `placeholder.title` from `@divi/module` - use string directly
+  - **ModuleClassnamesTrait.php**: Use `TextClassnames::text_options_classnames()` and `ElementClassnames::classnames()`, NOT `Module::process_classnames()` (doesn't exist)
+  - **CustomCssTrait.php**: Use `WP_Block_Type_Registry` to get CSS fields, NOT `CssStyle::custom_css_fields()` (doesn't exist)
+- Build and frontend verified successful
+- **Next: Build Chatbot module (interactive chat UI)**
 
 ---
 
@@ -359,14 +385,16 @@ modules/
 ├── HelloModule/             # Simple reference implementation
 ├── LessonMeta/              # Theme Builder pattern - displays ACF data from current lesson
 ├── ContextLibrary/          # Theme Builder pattern - compound elements, modal, buttons
-│   ├── ContextLibrary.php   # Main class implementing DependencyInterface
-│   └── ContextLibraryTrait/ # Traits: RenderCallback, ModuleClassnames, ModuleStyles, CustomCss
+├── SkillsList/              # Theme Builder pattern - similar to ContextLibrary, no modal
+│   ├── SkillsList.php       # Main class implementing DependencyInterface
+│   └── SkillsListTrait/     # Traits: RenderCallback, ModuleClassnames, ModuleStyles, CustomCss
 src/
 ├── index.ts                 # JS module registration (add registerModule() here)
 └── components/
     ├── hello-module/        # Simple reference
     ├── lesson-meta/         # Theme Builder pattern
-    └── context-library/     # Theme Builder pattern with compound elements
+    ├── context-library/     # Theme Builder pattern with compound elements + modal
+    └── skills-list/         # Theme Builder pattern (same structure, no modal)
         ├── index.ts         # Module export with metadata + renderers
         ├── edit.tsx         # Visual Builder React component
         ├── module.json      # Module schema (attributes, settings groups)
@@ -377,7 +405,7 @@ src/
         ├── placeholder-content.ts
         └── style.scss       # BEM CSS
 assets/
-├── js/context-modal.js      # Modal JavaScript for View Content
+├── js/context-modal.js      # Modal JavaScript for View Content (Context Library only)
 └── css/context-modal.css    # Modal styles
 ```
 

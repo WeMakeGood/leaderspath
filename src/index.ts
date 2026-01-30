@@ -15,6 +15,7 @@ import { registerModule } from '@divi/module-library';
 import { helloModule } from './components/hello-module';
 import { lessonMetaModule } from './components/lesson-meta';
 import { contextLibraryModule } from './components/context-library';
+import { skillsListModule } from './components/skills-list';
 
 /**
  * Register all LeadersPath modules with Divi.
@@ -36,5 +37,8 @@ addAction(
 
     // Register Context Library Module
     registerModule(contextLibraryModule.metadata, omit(contextLibraryModule, 'metadata'));
+
+    // Register Skills List Module
+    registerModule(skillsListModule.metadata, omit(skillsListModule, 'metadata'));
   }
 );
