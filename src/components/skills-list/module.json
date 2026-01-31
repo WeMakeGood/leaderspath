@@ -1,8 +1,8 @@
 {
   "name": "leaderspath/skills-list",
   "d4Shortcode": "",
-  "title": "Skills List",
-  "titles": "Skills Lists",
+  "title": "LeadersPath Skills List",
+  "titles": "LeadersPath Skills Lists",
   "moduleIcon": "divi/module-code",
   "moduleClassName": "leaderspath_skills_list",
   "moduleOrderClassName": "leaderspath_skills_list",

@@ -1,8 +1,8 @@
 {
   "name": "leaderspath/hello-module",
   "d4Shortcode": "",
-  "title": "Hello Module",
-  "titles": "Hello Modules",
+  "title": "LeadersPath Hello Module",
+  "titles": "LeadersPath Hello Modules",
   "moduleIcon": "divi/module",
   "moduleClassName": "leaderspath-hello",
   "moduleOrderClassName": "leaderspath-hello",
