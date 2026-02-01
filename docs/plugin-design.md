@@ -1,388 +1,465 @@
 # LeadersPath Plugin Design Document
 
 **Version:** 0.1.0
-**Last Updated:** 2026-01-29
-**Status:** Draft
+**Last Updated:** 2026-02-01
+**Status:** Implemented
 
 ## Executive Summary
 
-LeadersPath is a WordPress plugin that powers an interactive AI learning community. The plugin provides chatbot-powered lesson experiences where learners interact with Claude AI to understand the difference between raw LLM interactions and context-enhanced AI implementations.
+LeadersPath is a WordPress plugin that powers an interactive AI learning community. Learners interact with Claude AI chatbots that have been enhanced with lesson-specific context files and executable skills, demonstrating the difference between raw LLM interactions and context-enhanced AI implementations.
 
-## Core Objectives
+## Core Architecture
 
-1. **Interactive Learning** - Embed AI chatbots within lessons that demonstrate AI capabilities
-2. **Context Management** - Manage and expose context libraries (markdown files, skills) per lesson
-3. **Transparency** - Allow learners to view and download the context files and skills used by chatbots
-4. **Visual Builder Integration** - Provide Divi 5 modules for flexible lesson template design
-5. **Access Control** - Manage content access based on WordPress user roles
+### Design Philosophy
 
-## Architecture Overview
+1. **Transparency First** - Learners can always see and download the context and skills powering the AI
+2. **WordPress Native** - Uses CPTs, taxonomies, ACF, and standard WordPress patterns
+3. **Divi Integration** - Visual Builder modules for flexible page design
+4. **Stateless Conversations** - No persistence; page reload clears history for experimentation
+5. **Context vs Skills** - Clear separation between reference material (context) and capabilities (skills)
+
+### High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        WordPress                                 │
-├─────────────────────────────────────────────────────────────────┤
-│  LeadersPath Plugin                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
-│  │   Custom    │  │   Context   │  │      Divi 5 Modules     │ │
-│  │ Post Types  │  │   Library   │  │  ┌───────┐ ┌─────────┐  │ │
-│  │             │  │             │  │  │Chatbot│ │ Context │  │ │
-│  │ - Lessons   │  │ - MD Files  │  │  │       │ │  List   │  │ │
-│  │ - Courses   │  │ - Skills    │  │  └───────┘ └─────────┘  │ │
-│  │ - Cohorts   │  │             │  │  ┌───────┐ ┌─────────┐  │ │
-│  └─────────────┘  └─────────────┘  │  │Skills │ │ Lesson  │  │ │
-│                                     │  │ List  │ │  Meta   │  │ │
-│  ┌─────────────┐  ┌─────────────┐  │  └───────┘ └─────────┘  │ │
-│  │   Claude    │  │   Access    │  └─────────────────────────┘ │
-│  │     API     │  │   Control   │                               │
-│  │  Interface  │  │             │                               │
-│  └─────────────┘  └─────────────┘                               │
-├─────────────────────────────────────────────────────────────────┤
-│  External Dependencies                                           │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐                   │
-│  │  ACF Pro  │  │  Divi 5   │  │WooCommerce│                   │
-│  └───────────┘  └───────────┘  └───────────┘                   │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                          WordPress                                   │
+├─────────────────────────────────────────────────────────────────────┤
+│  LeadersPath Plugin                                                  │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────┐│
+│  │                    Custom Post Types                             ││
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐ ┌─────────┐││
+│  │  │ Lessons  │ │ Courses  │ │ Cohorts  │ │ Context │ │ Skills  │││
+│  │  └──────────┘ └──────────┘ └──────────┘ └─────────┘ └─────────┘││
+│  └─────────────────────────────────────────────────────────────────┘│
+│                                                                      │
+│  ┌──────────────────────┐  ┌────────────────────────────────────┐  │
+│  │    Claude API        │  │         Divi 5 Modules             │  │
+│  │  ┌────────────────┐  │  │  ┌──────────┐  ┌────────────────┐  │  │
+│  │  │ Messages API   │  │  │  │ Chatbot  │  │ Context Library│  │  │
+│  │  │ + Container    │  │  │  └──────────┘  └────────────────┘  │  │
+│  │  │ + Code Exec    │  │  │  ┌──────────┐  ┌────────────────┐  │  │
+│  │  └────────────────┘  │  │  │Skills    │  │  Lesson Meta   │  │  │
+│  │  ┌────────────────┐  │  │  │List      │  │                │  │  │
+│  │  │  Skills API    │  │  │  └──────────┘  └────────────────┘  │  │
+│  │  │  (Upload/Sync) │  │  └────────────────────────────────────┘  │
+│  │  └────────────────┘  │                                          │
+│  └──────────────────────┘                                          │
+│                                                                      │
+│  ┌──────────────────────┐  ┌────────────────────────────────────┐  │
+│  │   REST API           │  │         Admin Interface            │  │
+│  │  /leaderspath/v1/    │  │  Settings, Columns, Quick Edit     │  │
+│  └──────────────────────┘  └────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│  Required Dependencies                                               │
+│  ┌───────────────────┐  ┌───────────────────┐                       │
+│  │  ACF Pro          │  │  Divi 5           │                       │
+│  │  (Field Groups)   │  │  (Module System)  │                       │
+│  └───────────────────┘  └───────────────────┘                       │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Custom Post Types
+## Content Model
 
-### Lesson (`leaderspath_lesson`)
+### Lesson (Primary Content Unit)
 
-The primary content unit. Each lesson contains:
+A Lesson is the central content type. It contains:
 
-- **Content** - Lesson directions, learning objectives, duration
-- **Chatbot Configuration** - Model selection, system prompt, behavior flags
-- **Context Library** - Associated markdown files for API context injection
-- **Skills** - Associated agentic skills definitions
-- **References** - Links to additional resources
+**Core Content:**
+- Title and rich text body (standard WordPress)
+- Featured image (thumbnail)
+- Excerpt for summaries
 
-### Course (`leaderspath_course`)
+**Lesson Settings (ACF):**
+- Duration (minutes)
+- Learning Objectives (repeater: objective text)
+- Prerequisites (relationship to other lessons)
+- References (repeater: title, URL, description)
 
-A container for ordered lessons:
+**Chatbot Configuration (ACF):**
+- Chatbot Enabled (true/false)
+- Model Selection (opus-4.5, sonnet, haiku)
+- Allow Model Switch (true/false)
+- Custom System Prompt (textarea)
+- Context Files (relationship to Context CPT)
+- Skills (relationship to Skill CPT)
+- Max Tokens (number, default 4096)
+- Temperature (number, 0-1, default 0.7)
 
-- **Title & Description**
-- **Lesson Order** - Ordered list of associated lessons
-- **Access Requirements** - User role requirements
+### Context File
 
-### Cohort (`leaderspath_cohort`)
+Reference documents embedded in Claude's system prompt:
 
-Groups of learners working through courses together:
+**Storage:**
+- Title in `post_title`
+- Full markdown content in `post_content`
 
-- **Associated Course**
-- **Date/Time Information**
-- **Instructor**
-- **Language**
+**Metadata (ACF):**
+- Description (purpose and usage notes)
+- Version (semantic version string)
+- File Type (System Prompt, Knowledge Base, Instructions, Guidelines, Examples, Other)
 
-## Taxonomies
+**Taxonomy:**
+- Context Category (`leaderspath_context_cat`)
 
-### Skill Category (`leaderspath_skill_cat`)
+**Key Point:** Context files are NOT uploaded to Anthropic. Their full content is embedded directly in the system prompt for every chat request.
 
-Categorizes skills for organization and filtering.
+### Skill
 
-### Topic (`leaderspath_topic`)
+Executable packages uploaded to Anthropic's Skills API:
 
-Cross-cutting topics that can apply to lessons and courses.
+**Storage:**
+- Title in `post_title`
+- ZIP package as ACF file field
 
-## Context Library System
+**Metadata (ACF):**
+- skill_package (file upload, ZIP only)
+- skill_name (auto-populated from SKILL.md frontmatter, read-only)
+- skill_description (auto-populated from SKILL.md frontmatter, read-only)
+- skill_compatibility (auto-populated from SKILL.md frontmatter, read-only)
+- skill_version (user-managed semantic version)
+- skill_notes (WYSIWYG, admin notes)
+- skill_anthropic_id (returned from Skills API, read-only)
+- skill_anthropic_version (returned from Skills API, read-only)
+- skill_sync_status (pending/synced/error)
+- skill_sync_error (last error message)
+- skill_last_synced (timestamp)
 
-### Storage Options
+**Taxonomy:**
+- Skill Category (`leaderspath_skill_cat`)
 
-**Option A: Custom Database Tables**
-- `leaderspath_context_files` - Stores markdown content
-- `leaderspath_skills` - Stores skill definitions
-- Provides version history and metadata
+**Key Point:** Skills ARE uploaded to Anthropic. Only their name and description appear in the system prompt; the actual instructions and scripts are loaded by Anthropic's container when triggered.
 
-**Option B: Custom Post Type**
-- `leaderspath_context` CPT for files
-- `leaderspath_skill` CPT for skills
-- Leverages WordPress revision system
+### Course
 
-**Option C: File-Based with Registry**
-- Files stored in `wp-content/uploads/leaderspath/`
-- Metadata stored in custom table or post meta
-- Direct file editing possible
+Container for organizing lessons:
 
-**Recommended: Option B (Custom Post Types)**
-- Familiar WordPress admin interface
-- Built-in revision history
-- ACF Pro integration for metadata
-- Easy association with lessons via relationship fields
+**Metadata (ACF):**
+- Ordered Lessons (relationship, sortable)
+- Difficulty (Beginner/Intermediate/Advanced)
+- Access Roles (checkboxes)
 
-### Context File Structure
+### Cohort
 
-Each context file includes:
-- **Title** - Human-readable name
-- **Content** - Markdown content (stored in post_content)
-- **Description** - Purpose and usage notes
-- **Version** - Semantic version number
-- **Category** - Organization taxonomy
+Scheduled learning groups:
 
-### Skill Structure
+**Metadata (ACF):**
+- Associated Course (post object)
+- Start/End Dates
+- Instructor (user)
+- Language, Timezone
+- Max Participants
+- Status (Upcoming/Active/Completed/Cancelled)
 
-Each skill includes:
-- **Title** - Skill name
-- **Definition** - Skill JSON/YAML definition
-- **Description** - What the skill does
-- **Documentation** - Usage instructions
-- **Version** - Semantic version number
+## Context vs Skills: The Critical Distinction
 
-## Divi 5 Modules
+This is the most important architectural concept in LeadersPath:
 
-### Chatbot Module (`leaderspath/chatbot`)
+### Context Files
 
-Embeds an interactive Claude-powered chatbot.
+| Aspect | Details |
+|--------|---------|
+| Purpose | Reference material - knowledge, guidelines, examples |
+| Storage | WordPress only (`post_content`) |
+| Delivery | Full content embedded in system prompt |
+| API Upload | Not required |
+| Capabilities | None - just information |
+| Token Cost | Full content counted every request |
 
-**Settings:**
-- Model selection (Opus 4.5, Sonnet, Haiku) or inherit from lesson
-- System prompt override
-- Allow model switching (boolean)
-- Context files (relationship to context CPT)
-- Skills (relationship to skills CPT)
-- UI customization (height, placeholder text, etc.)
+**When to use:** Brand guidelines, writing standards, process documentation, example content, knowledge bases, FAQ documents.
 
-**Behavior:**
-- Streams responses from Claude API
-- Handles conversation history
-- Logs interactions (optional)
+### Skills
 
-### Context Library Module (`leaderspath/context-library`)
+| Aspect | Details |
+|--------|---------|
+| Purpose | Executable capabilities - scripts, workflows |
+| Storage | Anthropic Skills API + WordPress metadata |
+| Delivery | Name/description in prompt; full content loaded on-demand by container |
+| API Upload | Required (via `POST /v1/skills`) |
+| Capabilities | Python execution, file generation, data processing |
+| Token Cost | Minimal in prompt; loaded progressively when used |
 
-Displays context files associated with a lesson.
+**When to use:** Data analysis scripts, document generation, API integrations, file processing, complex multi-step workflows.
 
-**Settings:**
-- Source: Current lesson or manual selection
-- Display format: List, cards, accordion
-- Show descriptions (boolean)
-- Allow download (boolean)
-- Allow view content (boolean)
+### System Prompt Assembly
 
-### Skills List Module (`leaderspath/skills-list`)
+```
+[Custom System Prompt OR Default]
 
-Displays skills associated with a lesson.
+--- Lesson Content ---
+[Lesson post_content - the lesson instructions]
 
-**Settings:**
-- Source: Current lesson or manual selection
-- Display format: List, cards
-- Show documentation (boolean)
-- Allow download (boolean)
+--- Reference Materials ---
+### [Context File 1 Title]
+[Context File 1 Full Content - embedded]
 
-### Lesson Meta Module (`leaderspath/lesson-meta`)
+### [Context File 2 Title]
+[Context File 2 Full Content - embedded]
+
+--- Available Skills ---
+### [Skill 1 Name]
+[Skill 1 Description - for discovery only]
+
+### [Skill 2 Name]
+[Skill 2 Description - for discovery only]
+```
+
+## Divi 5 Module Architecture
+
+All modules use the **Theme Builder Pattern** - they read data from the current post (lesson) using `get_queried_object_id()`.
+
+### Module Registration
+
+**PHP Side:** `modules/{ModuleName}/{ModuleName}.php`
+- Implements `DependencyInterface`
+- Registers via `ModuleRegistration::register_module()`
+- Uses traits: RenderCallbackTrait, ModuleStylesTrait, ModuleClassnamesTrait, CustomCssTrait
+
+**JavaScript Side:** `src/components/{module-name}/`
+- `module.json` - Attribute schema and settings
+- `edit.tsx` - Visual Builder preview
+- `styles.tsx` - Dynamic styles
+- `index.ts` - Module export
+
+### LeadersPath Chatbot Module
+
+**Files:**
+- `modules/Chatbot/Chatbot.php` + 4 traits
+- `src/components/chatbot/` (8 TypeScript files)
+- `assets/js/chatbot.js` (frontend interactivity)
+- `assets/css/chatbot.css` (runtime styles)
+
+**Dependencies:**
+- TinyMCE (from wp-includes, custom handle to avoid CSS conflicts)
+- marked.js (CDN, for markdown rendering)
+
+**Features:**
+- Rich text input with keyboard shortcuts (Ctrl+B, Ctrl+I, etc.)
+- Markdown rendering with GitHub Flavored Markdown
+- Smart scroll (new messages appear at top of visible area)
+- Loading indicators (animated dots)
+- Error display in conversation
+- Configurable styling for all elements
+
+### LeadersPath Context Library Module
+
+Displays context files attached to current lesson.
+
+**Features:**
+- Responsive card grid (auto-fill, min 280px)
+- View content modal (custom implementation)
+- Download buttons
+- Visibility toggles for all elements
+- Styling options for cards, titles, descriptions, badges, buttons
+
+### LeadersPath Skills List Module
+
+Displays skills attached to current lesson.
+
+**Features:**
+- Responsive card grid (same as Context Library)
+- Compatibility badge (e.g., "Python 3.9+")
+- Version badge (e.g., "v1.2.0")
+- Download links to ZIP packages
+- Visibility toggles for all elements
+
+### LeadersPath Lesson Meta Module
 
 Displays lesson metadata.
 
-**Settings:**
-- Fields to display: Duration, objectives, model, prerequisites
-- Layout: Inline, stacked, custom
+**Features:**
+- Duration display with configurable label
+- Learning objectives list
+- AI model indicator
+- Visibility toggles for each section
 
 ## Claude API Integration
-
-### Configuration
-
-Stored in WordPress options:
-- `leaderspath_claude_api_key` - Encrypted API key
-- `leaderspath_default_model` - Default model (sonnet recommended)
-- `leaderspath_max_tokens` - Default max response tokens
-- `leaderspath_rate_limits` - Per-user rate limiting config
 
 ### Request Flow
 
 ```
-User Input
+User Message
     │
-    ▼
-┌─────────────────┐
-│  Validate User  │ ← Check logged in, role permissions
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Build Context  │ ← Gather lesson context files, skills
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Assemble Prompt │ ← System prompt + context + user message
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Claude API    │ ← Stream response
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Return Response │ ← Via Server-Sent Events or chunked
-└─────────────────┘
+    ├── Validate: Logged in? Has capability?
+    │
+    ├── Build Context:
+    │   ├── Get lesson's custom system prompt OR default
+    │   ├── Get lesson post_content
+    │   ├── Get linked context files → embed full content
+    │   └── Get linked skills → include name/description only
+    │
+    ├── Build Request:
+    │   ├── model (from lesson or default)
+    │   ├── system (assembled prompt)
+    │   ├── messages (conversation history)
+    │   ├── container.skills (skill_ids from synced skills)
+    │   └── tools (code_execution if skills present)
+    │
+    ├── Send to Anthropic
+    │   └── Handle pause_turn responses (loop until end_turn)
+    │
+    └── Return Response
+        ├── content (text blocks)
+        └── container.id (for session reuse)
 ```
 
-### Endpoints
+### Beta Headers
 
-**REST API:**
-- `POST /wp-json/leaderspath/v1/chat` - Send message, receive response
-- `GET /wp-json/leaderspath/v1/lesson/{id}/context` - Get lesson context files
-- `GET /wp-json/leaderspath/v1/lesson/{id}/skills` - Get lesson skills
+Configurable in Settings > LeadersPath:
 
-**Admin AJAX (fallback):**
-- `wp_ajax_leaderspath_chat` - For non-REST environments
+| Feature | Header | Default |
+|---------|--------|---------|
+| Code Execution | `anthropic-beta` | `code-execution-2025-08-25` |
+| Skills | `anthropic-beta` | `skills-2025-10-02` |
+| Files | `anthropic-beta` | `files-api-2025-04-14` |
 
-## Access Control
+### Skill Sync Lifecycle
 
-### Strategy
+1. **Upload ZIP** via ACF file field
+2. **Parse frontmatter** - Extract name, description, compatibility from SKILL.md
+3. **Validate** - Name must be lowercase/hyphens, 1-64 chars; description 1-1024 chars
+4. **Upload to Anthropic** - `POST /v1/skills` with multipart/form-data
+5. **Store skill_id** - Save in `skill_anthropic_id` field
+6. **Mark synced** - Set `skill_sync_status` to "synced"
 
-Use WordPress native capabilities with custom roles/caps:
+**On update:** `POST /v1/skills/{skill_id}/versions` creates new version.
 
-**Capabilities:**
-- `leaderspath_access_lessons` - Can view lesson content
-- `leaderspath_access_chatbot` - Can use chatbot feature
-- `leaderspath_view_context` - Can view context files
-- `leaderspath_download_context` - Can download context files
-- `leaderspath_manage_content` - Admin: manage lessons/courses
+## REST API Endpoints
 
-**Integration with Divi 5:**
-- Modules check capabilities before rendering
-- Provide "Access Denied" state for unauthorized users
-- Hook into Divi's condition system if available
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/leaderspath/v1/chat` | POST | Send message, receive Claude response |
+| `/leaderspath/v1/lessons/{id}/context` | GET | Get lesson's context files |
+| `/leaderspath/v1/lessons/{id}/skills` | GET | Get lesson's skills |
+| `/leaderspath/v1/context/{id}/download` | GET | Download context file content |
+| `/leaderspath/v1/skills/{id}/download` | GET | Download skill ZIP package |
 
-### Admin Settings
+All endpoints require authentication (logged in + appropriate capability).
 
-- Select which user roles have each capability
-- Per-lesson access overrides (optional)
-- Integration with WooCommerce customer role
+## Security Model
+
+### Capabilities
+
+| Capability | Description |
+|------------|-------------|
+| `leaderspath_access_lessons` | View published lessons |
+| `leaderspath_access_chatbot` | Use chatbot feature |
+| `leaderspath_view_context` | View context file contents |
+| `leaderspath_download_context` | Download context files |
+| `leaderspath_download_skills` | Download skill packages |
+| `edit_leaderspath_lessons` | Edit lessons (editors) |
+| `edit_leaderspath_contexts` | Edit context files (editors) |
+| `edit_leaderspath_skills` | Edit skills (editors) |
+
+### Roles
+
+**Administrator:** All capabilities
+**Editor:** All edit capabilities, read-only for cohorts
+**LeadersPath Student:** Access lessons, use chatbot, view/download content
+
+### Security Measures
+
+1. **API Key:** Encrypted at rest using WordPress salt
+2. **Nonces:** All REST/AJAX requests verified
+3. **Capability Checks:** Every endpoint validates permissions
+4. **Input Sanitization:** All user input sanitized before processing
+5. **Output Escaping:** All output escaped appropriately
 
 ## File Structure
 
 ```
 leaderspath/
-├── leaderspath.php              # Main plugin file, bootstrap
-├── composer.json                # PHP dependencies
-├── package.json                 # Node dependencies (Divi modules)
+├── leaderspath.php              # Bootstrap, constants, autoloader
+├── composer.json                # PHP dependencies (symfony/yaml)
+├── package.json                 # Node dependencies (Divi build tools)
 │
 ├── includes/
 │   ├── class-leaderspath.php    # Main plugin class
 │   ├── class-post-types.php     # CPT registration
 │   ├── class-taxonomies.php     # Taxonomy registration
-│   ├── class-capabilities.php   # Capabilities management
-│   ├── class-api-handler.php    # Claude API wrapper
-│   └── class-rest-api.php       # REST endpoints
+│   ├── class-capabilities.php   # Roles and capabilities
+│   ├── class-acf-fields.php     # ACF field group registration
+│   ├── class-claude-api.php     # Claude API wrapper
+│   ├── class-rest-api.php       # REST endpoints
+│   └── class-skill-processor.php # Skill validation and sync
 │
-├── modules/                     # Divi 5 modules (PHP)
+├── admin/
+│   └── class-settings.php       # Settings page
+│   └── class-admin-columns.php  # Custom admin columns
+│
+├── modules/                     # Divi 5 PHP modules
+│   ├── Modules.php              # Module registration hub
 │   ├── Chatbot/
 │   │   ├── Chatbot.php
-│   │   └── traits/
+│   │   └── ChatbotTrait/
+│   │       ├── RenderCallbackTrait.php
+│   │       ├── ModuleStylesTrait.php
+│   │       ├── ModuleClassnamesTrait.php
+│   │       └── CustomCssTrait.php
 │   ├── ContextLibrary/
-│   │   ├── ContextLibrary.php
-│   │   └── traits/
 │   ├── SkillsList/
-│   │   ├── SkillsList.php
-│   │   └── traits/
 │   └── LessonMeta/
-│       ├── LessonMeta.php
-│       └── traits/
 │
-├── src/                         # Divi 5 modules (TypeScript/React)
+├── src/                         # Divi 5 TypeScript modules
+│   ├── index.ts                 # Module registration
 │   └── components/
 │       ├── chatbot/
+│       │   ├── module.json
 │       │   ├── edit.tsx
-│       │   ├── settings-content.tsx
-│       │   ├── settings-design.tsx
 │       │   ├── styles.tsx
 │       │   ├── types.ts
-│       │   └── module.json
+│       │   └── ...
 │       ├── context-library/
 │       ├── skills-list/
 │       └── lesson-meta/
 │
-├── admin/
-│   ├── class-admin.php          # Admin functionality
-│   ├── class-settings.php       # Settings page
-│   └── views/
-│       └── settings.php
-│
 ├── assets/
-│   ├── css/
-│   │   └── frontend.css
-│   └── js/
-│       └── chatbot.js           # Frontend chatbot JS
+│   ├── js/
+│   │   ├── chatbot.js           # Frontend chat interactivity
+│   │   └── context-modal.js     # Modal for viewing content
+│   └── css/
+│       ├── chatbot.css
+│       └── context-modal.css
 │
-├── templates/                   # Template overrides (if needed)
+├── modules-json/                # Built module.json files
+├── scripts/bundle.js            # Built VB JavaScript
+├── styles/bundle.css            # Built styles
 │
-├── languages/                   # Translation files
+├── docs/
+│   ├── plugin-design.md         # This file
+│   ├── cpt-schema.md            # CPT and ACF field details
+│   ├── claude-api-integration.md # API integration guide
+│   ├── divi-modules.md          # Module development guide
+│   └── content-creation-guide.md # Content authoring guide
 │
-├── docs/                        # Documentation
-│   ├── plugin-design.md
-│   ├── cpt-schema.md
-│   ├── api-reference.md
-│   └── divi-modules.md
+├── bin/
+│   ├── create-test-data.php     # Test data generator
+│   ├── test-chat.php            # CLI chat tester
+│   └── show-system-prompt.php   # View assembled prompts
 │
-├── tests/                       # PHPUnit tests
-│   ├── bootstrap.php
-│   └── test-*.php
-│
-└── bin/                         # Build/utility scripts
-    └── install-wp-tests.sh
+└── tests/                       # PHPUnit tests
 ```
 
-## Dependencies
+## Design Decisions
 
-### Required Plugins
-
-- **Advanced Custom Fields Pro** - Field management for CPTs
-- **Divi 5** - Visual builder and module system
-
-### Optional Plugins
-
-- **WooCommerce** - For e-commerce integration (user roles on purchase)
-
-### Composer Dependencies
-
-- `anthropic/sdk` - Official Claude API SDK (if available) or custom implementation
-- `monolog/monolog` - Logging (optional)
-
-### npm Dependencies
-
-- Divi 5 extension build tools
-- TypeScript
-- React (provided by Divi)
-
-## Security Considerations
-
-1. **API Key Storage** - Encrypt at rest, never expose to frontend
-2. **Input Sanitization** - Sanitize all user inputs before API calls
-3. **Rate Limiting** - Prevent API abuse per user/IP
-4. **Nonce Verification** - All AJAX/REST requests verified
-5. **Capability Checks** - Verify permissions on every request
-6. **Output Escaping** - Escape all output, especially API responses
-7. **Content Security Policy** - Consider CSP for chatbot iframe if used
-
-## Performance Considerations
-
-1. **Streaming Responses** - Use SSE for real-time chatbot responses
-2. **Context Caching** - Cache assembled context per lesson
-3. **Lazy Loading** - Load chatbot JS only when module present
-4. **Database Queries** - Optimize relationship queries with proper indexing
+| Decision | Rationale |
+|----------|-----------|
+| CPTs for Context/Skills | WordPress admin UI, revision history, ACF integration |
+| No conversation persistence | Fresh start enables experimentation without baggage |
+| Single plugin-wide API key | Simpler management; billing at org level |
+| No rate limiting (initially) | Paid service, trust users; add later if needed |
+| Streaming optional | Nice UX but adds complexity; implement if time permits |
+| Context files in system prompt | Simple, reliable; no additional API calls |
+| Skills uploaded to Anthropic | Required for code execution; progressive loading |
+| TinyMCE without toolbar | Clean UI; keyboard shortcuts are sufficient |
+| marked.js from CDN | Lightweight, reliable markdown parsing |
 
 ## Future Considerations
 
-- Analytics/tracking of lesson completion
-- Conversation history persistence
-- Multi-language support for lessons
-- Webhooks for external integrations
-- Bulk import/export of context files
+- Analytics/tracking of lesson completion and chat metrics
+- Conversation history persistence (opt-in per lesson)
+- Multi-language lesson support
+- Bulk import/export of context files and skills
 - AI-assisted content creation tools
-
-## Open Questions
-
-1. Should conversation history persist across sessions?
-2. What level of interaction logging is needed for analytics?
-3. Should there be a "sandbox" mode for testing without API calls?
-4. How should we handle API errors gracefully in the chatbot?
-5. Do we need offline/fallback functionality?
-
-## References
-
-- [Divi 5 Module Examples](https://github.com/elegantthemes/d5-extension-example-modules)
-- [Divi 5 Core Module Examples](https://github.com/elegantthemes/d5-example-core-modules)
-- [Claude API Documentation](https://docs.anthropic.com/en/api/getting-started)
-- [Agent Skills Specification](https://agentskills.io/home)
-- [Interview Synthesis](./website-planning-interview-synthesis-2026-01-26.md)
+- Integration with LMS plugins (LearnDash, LifterLMS)
+- Webhook notifications for external systems
