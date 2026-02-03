@@ -390,32 +390,31 @@ Lessons are the primary content unit where learners interact with AI.
 
 ### Writing Lesson Content
 
-The lesson body (in WordPress editor) becomes part of Claude's system prompt. Write it as instructions for Claude, not for the learner.
+The lesson body (in the WordPress editor) is what **learners see on the page** - it is NOT sent to Claude. Use this area to:
 
-**Structure:**
+- Introduce the lesson topic to learners
+- Explain what they'll learn
+- Provide instructions for the exercise
+- Give context before they interact with the chatbot
+
+**Example structure:**
 ```markdown
-# Lesson Instructions
+# Introduction to [Topic]
 
-## Lesson Context
-[Background information for Claude about this lesson's purpose]
+In this lesson, you'll explore [concept] by chatting with an AI assistant
+that has been configured with [context/skills].
 
-## Learning Objectives
-The learner should be able to:
-- [Objective 1]
-- [Objective 2]
+## What You'll Learn
+- [Learning point 1]
+- [Learning point 2]
 
-## Interaction Guidelines
-- [How Claude should engage with the learner]
-- [Topics to focus on]
-- [Topics to avoid or redirect]
+## Instructions
+1. Review the Context Library to see what reference materials the AI has
+2. Ask the chatbot about [topic]
+3. Try [specific exercise]
 
-## Exercise Flow
-1. [First interaction point]
-2. [Second interaction point]
-3. [Conclusion/wrap-up]
-
-## Assessment Criteria
-[How to recognize if the learner is grasping the concepts]
+## Tips
+- [Helpful tip for the learner]
 ```
 
 ### Writing Effective System Prompts

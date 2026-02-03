@@ -186,9 +186,6 @@ This is the most important architectural concept in LeadersPath:
 ```
 [Custom System Prompt OR Default]
 
---- Lesson Content ---
-[Lesson post_content - the lesson instructions]
-
 --- Reference Materials ---
 ### [Context File 1 Title]
 [Context File 1 Full Content - embedded]
@@ -203,6 +200,8 @@ This is the most important architectural concept in LeadersPath:
 ### [Skill 2 Name]
 [Skill 2 Description - for discovery only]
 ```
+
+**Note:** The lesson's `post_content` (what learners see on the page) is NOT included in the system prompt. Only the Custom System Prompt field and attached Context Files define Claude's behavior.
 
 ## Divi 5 Module Architecture
 

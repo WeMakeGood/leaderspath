@@ -398,11 +398,6 @@ class Claude_API {
 			);
 		}
 
-		// Add lesson content as context.
-		if ( ! empty( $lesson->post_content ) ) {
-			$parts[] = "\n\n--- Lesson Content ---\n" . wp_strip_all_tags( $lesson->post_content );
-		}
-
 		// Add context files.
 		$context_files = get_field( 'chatbot_context_files', $lesson_id ) ?: [];
 		if ( ! empty( $context_files ) ) {

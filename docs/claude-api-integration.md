@@ -260,11 +260,11 @@ The system prompt is assembled from multiple sources:
 
 ### Assembly Order
 
-1. **Custom System Prompt** (if set on lesson)
-2. **Default System Prompt** (fallback)
-3. **Lesson Content** - The lesson's post_content
-4. **Context Files** - Full content of linked Context CPTs (embedded)
-5. **Skills Metadata** - Name and description only (for discovery)
+1. **Custom System Prompt** (if set on lesson) OR **Default System Prompt** (fallback)
+2. **Context Files** - Full content of linked Context CPTs (embedded)
+3. **Skills Metadata** - Name and description only (for discovery)
+
+**Important:** The lesson's `post_content` (what learners see on the page) is NOT included in the system prompt. Only the Custom System Prompt field and attached Context Files define Claude's behavior.
 
 ### Progressive Loading for Skills
 
@@ -279,9 +279,6 @@ The actual skill instructions and scripts are NOT in the system prompt - they're
 
 ```
 [Custom System Prompt OR Default]
-
---- Lesson Content ---
-[Lesson post_content]
 
 --- Reference Materials ---
 ### [Context File 1 Title]
