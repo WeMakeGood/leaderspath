@@ -1,22 +1,22 @@
 /**
- * Lesson Meta Module placeholder content.
+ * Activity Meta Module placeholder content.
  *
  * @package LeadersPath
  * @since 0.1.0
  */
 
-import { LessonMetaAttrs } from './types';
+import { ActivityMetaAttrs } from './types';
 
 /**
- * Default placeholder content for Lesson Meta module.
+ * Default placeholder content for Activity Meta module.
  *
  * @since 0.1.0
  */
-export const placeholderContent: LessonMetaAttrs = {
+export const placeholderContent: ActivityMetaAttrs = {
   title: {
     innerContent: {
       desktop: {
-        value: 'Lesson Details',
+        value: 'Activity Details',
       },
     },
   },

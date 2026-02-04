@@ -445,13 +445,13 @@ Maintain `CHANGELOG.md` using [Keep a Changelog](https://keepachangelog.com/) fo
 do_action('leaderspath_loaded');
 
 // Before chatbot renders
-apply_filters('leaderspath_chatbot_system_prompt', $prompt, $lesson_id);
+apply_filters('leaderspath_chatbot_system_prompt', $prompt, $activity_id);
 
 // After chat message sent
 do_action('leaderspath_chat_message_sent', $message, $response, $user_id);
 
-// Filter context files for a lesson
-apply_filters('leaderspath_lesson_context_files', $files, $lesson_id);
+// Filter context files for an activity
+apply_filters('leaderspath_activity_context_files', $files, $activity_id);
 ```
 
 ---

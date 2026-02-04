@@ -2,7 +2,7 @@
 
 AI-powered interactive learning platform with Claude chatbot integration for WordPress and Divi 5.
 
-**Version:** 0.1.0
+**Version:** 0.2.0
 **Requires:** WordPress 6.4+, PHP 8.2+, Divi 5, ACF Pro
 **License:** GPLv2 or later
 
@@ -10,27 +10,28 @@ AI-powered interactive learning platform with Claude chatbot integration for Wor
 
 ## Overview
 
-LeadersPath is a WordPress plugin that powers an interactive AI learning community. Learners interact with Claude AI chatbots that have been enhanced with lesson-specific context files and executable skills, demonstrating the difference between raw LLM interactions and context-enhanced AI implementations.
+LeadersPath is a WordPress plugin that powers an interactive AI learning community. It supports **facilitated cohort learning** where learners interact with Claude AI chatbots that have been enhanced with context files and executable skills.
+
+### Key Concept
+
+LeadersPath is a **facilitated cohort learning experience**, not a self-paced lesson platform:
+
+| Component | Purpose |
+|-----------|---------|
+| **Course** | The atomic teaching unit, taught as a cohesive whole by a facilitator |
+| **Activity** | An AI sandbox experiment within a Course (what learners DO, not what they LEARN) |
+| **Facilitator Guide** | The central teaching document (what to present, when to run activities, discussion prompts) |
+| **Course Q&A Bot** | Optional helpful assistant for answering questions about course content |
+
+The facilitator presents concepts, learners experiment in AI sandboxes (Activities), and discussion happens human-to-human in the cohort.
 
 ### Key Features
 
-- **5 Custom Post Types:** Lessons, Courses, Cohorts, Context Files, Skills
-- **4 Divi 5 Modules:** Chatbot, Context Library, Skills List, Lesson Meta
+- **5 Custom Post Types:** Activities, Courses, Cohorts, Context Files, Skills
+- **4 Divi 5 Modules:** Chatbot, Context Library, Skills List, Activity Meta
+- **Dual Chatbot Modes:** Activity sandboxes (demonstrate behaviors) + Course Q&A (answer questions)
 - **Claude API Integration:** Container-based API with code execution and skills support
 - **Transparency:** Learners can view and download the exact context and skills powering the AI
-
----
-
-## Core Concept
-
-LeadersPath teaches AI concepts through hands-on experience:
-
-| Component | Purpose | Storage |
-|-----------|---------|---------|
-| **Context Files** | Reference documents (guidelines, knowledge bases) that provide Claude with background information | WordPress only - embedded in system prompt |
-| **Skills** | Executable capabilities (Python scripts, workflows) that give Claude new abilities | Uploaded to Anthropic Skills API |
-
-Learners see exactly what context and skills are available to the chatbot, making the AI's behavior transparent and educational.
 
 ---
 
@@ -45,7 +46,7 @@ Learners see exactly what context and skills are available to the chatbot, makin
 │  ┌─────────────────────────────────────────────────────────────┐│
 │  │                   Custom Post Types                          ││
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐ ┌─────┐ ││
-│  │  │ Lessons  │ │ Courses  │ │ Cohorts  │ │ Context │ │Skills│ ││
+│  │  │Activities│ │ Courses  │ │ Cohorts  │ │ Context │ │Skills│ ││
 │  │  └──────────┘ └──────────┘ └──────────┘ └─────────┘ └─────┘ ││
 │  └─────────────────────────────────────────────────────────────┘│
 │                                                                  │
@@ -55,7 +56,7 @@ Learners see exactly what context and skills are available to the chatbot, makin
 │  │  │ Messages API   │  │  │  │ Chatbot  │  │Context Library│  │ │
 │  │  │ + Container    │  │  │  └──────────┘  └──────────────┘  │ │
 │  │  │ + Code Exec    │  │  │  ┌──────────┐  ┌──────────────┐  │ │
-│  │  └────────────────┘  │  │  │Skills List│  │ Lesson Meta  │  │ │
+│  │  └────────────────┘  │  │  │Skills List│  │Activity Meta │  │ │
 │  │  ┌────────────────┐  │  │  └──────────┘  └──────────────┘  │ │
 │  │  │  Skills API    │  │  └──────────────────────────────────┘ │
 │  │  └────────────────┘  │                                       │
@@ -90,7 +91,7 @@ Learners see exactly what context and skills are available to the chatbot, makin
 
 ### 1. Create a Context File
 
-**Add > Context Files > New**
+**Add > Activities > Context Files > New**
 
 Write markdown content that you want Claude to reference:
 
@@ -107,27 +108,34 @@ Write markdown content that you want Claude to reference:
 - Transparency in AI is educational and empowering
 ```
 
-### 2. Create a Lesson
+### 2. Create an Activity
 
-**Add > Lessons > New**
+**Add > Activities > New**
 
-- Fill in learning objectives and duration
-- Enable the chatbot
-- Attach your context file
-- Optionally write a custom system prompt
+Activities are AI sandbox experiments. Configure:
+- Title: What learners will experience (e.g., "Experience Sycophantic AI")
+- Content: "Try this, notice that" instructions for learners
+- AI Sandbox Configuration: System prompt defining the AI behavior
+- Attach context files and skills as needed
 
-### 3. Build the Lesson Page
+### 3. Create a Course
+
+**Add > Courses > New**
+
+Courses are the teaching unit:
+- Add learning objectives (what learners will achieve)
+- Write a facilitator guide (teaching script with timing and discussion prompts)
+- Add activities in order
+- Optionally enable a Course Q&A chatbot
+
+### 4. Build Pages with Divi
 
 Use Divi's Visual Builder to add LeadersPath modules:
 
-- **LeadersPath Chatbot** - The interactive chat interface
+- **LeadersPath Chatbot** - Works on both Activity pages (sandbox) and Course pages (Q&A)
 - **LeadersPath Context Library** - Shows attached context files
 - **LeadersPath Skills List** - Shows available skills
-- **LeadersPath Lesson Meta** - Displays duration, objectives, model info
-
-### 4. Test
-
-Visit the lesson page and chat with the AI. It will have access to your context file.
+- **LeadersPath Activity Meta** - Displays duration and AI model info
 
 ---
 
@@ -136,6 +144,10 @@ Visit the lesson page and chat with the AI. It will have access to your context 
 ### LeadersPath Chatbot
 
 Interactive chat interface connected to Claude API.
+
+**Two Modes:**
+- **Activity Sandbox** (on Activity pages): AI configured to demonstrate specific behaviors
+- **Course Q&A** (on Course pages): Helpful assistant for answering questions
 
 **Features:**
 - Rich text input with keyboard shortcuts (Ctrl+B, Ctrl+I, etc.)
@@ -146,7 +158,7 @@ Interactive chat interface connected to Claude API.
 
 ### LeadersPath Context Library
 
-Displays context files attached to the current lesson.
+Displays context files attached to the current activity.
 
 **Features:**
 - Responsive card grid layout
@@ -156,16 +168,31 @@ Displays context files attached to the current lesson.
 
 ### LeadersPath Skills List
 
-Displays skills attached to the current lesson.
+Displays skills attached to the current activity.
 
 **Features:**
 - Responsive card grid layout
 - Compatibility and version badges
 - Download buttons for skill packages
 
-### LeadersPath Lesson Meta
+### LeadersPath Activity Meta
 
-Displays lesson metadata: duration, learning objectives, AI model info.
+Displays activity metadata: duration and AI model info.
+
+**Note:** Learning objectives are now displayed at the Course level, not Activity level.
+
+---
+
+## Chatbot Configuration: Activity vs Course
+
+| Aspect | Activity Sandbox | Course Q&A Bot |
+|--------|------------------|----------------|
+| **Purpose** | Demonstrate specific AI behavior | Answer questions about content |
+| **System Prompt** | Crafted to show specific behavior | Helpful, knowledgeable assistant |
+| **Context** | Activity-specific files | All course content |
+| **Tone** | Varies by activity design | Consistently helpful |
+| **Placement** | Activity page | Course page |
+| **Privacy** | Complete sandbox (no logging) | Complete sandbox (no logging) |
 
 ---
 
@@ -175,6 +202,7 @@ LeadersPath uses Anthropic's container-based API with code execution support.
 
 ### System Prompt Assembly
 
+For Activities:
 ```
 [Custom System Prompt OR Default]
 
@@ -182,15 +210,26 @@ LeadersPath uses Anthropic's container-based API with code execution support.
 ### [Context File 1 Title]
 [Context File 1 Full Content]
 
-### [Context File 2 Title]
-[Context File 2 Full Content]
-
 --- Available Skills ---
 ### [Skill 1 Name]
 [Skill 1 Description]
 ```
 
-**Note:** The lesson's page content (what learners see) is NOT included in the system prompt. Only the Custom System Prompt field and attached Context Files define Claude's behavior.
+For Course Q&A:
+```
+[Custom Q&A System Prompt OR Default Helpful Assistant]
+
+--- Course Learning Objectives ---
+1. [Objective 1]
+2. [Objective 2]
+
+--- Course Overview ---
+[Learner Overview Content]
+
+--- Reference Materials ---
+### [Context File 1 Title]
+[Context File 1 Full Content]
+```
 
 ### Context Files vs Skills
 
@@ -214,7 +253,7 @@ Full documentation is available in the [`docs/`](docs/) folder:
 | [cpt-schema.md](docs/cpt-schema.md) | Custom post types, taxonomies, and ACF fields |
 | [claude-api-integration.md](docs/claude-api-integration.md) | Claude API integration details |
 | [divi-modules.md](docs/divi-modules.md) | Divi 5 module development guide |
-| [content-creation-guide.md](docs/content-creation-guide.md) | Guide for creating lessons, context files, and skills |
+| [content-creation-guide.md](docs/content-creation-guide.md) | Guide for creating activities, context files, and skills |
 
 ---
 
@@ -262,6 +301,17 @@ leaderspath/
 ---
 
 ## Changelog
+
+### 0.2.0
+
+- **Breaking:** Renamed "Lessons" to "Activities" throughout the UI
+- **Breaking:** Moved learning objectives from Activity to Course level
+- Added Course Q&A chatbot (optional helpful assistant)
+- Added Course facilitator guide field
+- Added Course learner overview field
+- Updated Chatbot module to support both Activity and Course modes
+- REST API now supports `course_id` parameter for Course Q&A
+- Updated documentation to reflect facilitated learning model
 
 ### 0.1.0
 

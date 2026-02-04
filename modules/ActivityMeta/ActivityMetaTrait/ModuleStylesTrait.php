@@ -1,14 +1,14 @@
 <?php
 /**
- * LessonMeta::module_styles()
+ * ActivityMeta::module_styles()
  *
- * @package LeadersPath\Modules\LessonMeta
+ * @package LeadersPath\Modules\ActivityMeta
  * @since 0.1.0
  */
 
 declare(strict_types=1);
 
-namespace LeadersPath\Modules\LessonMeta\LessonMetaTrait;
+namespace LeadersPath\Modules\ActivityMeta\ActivityMetaTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access forbidden.' );
@@ -16,20 +16,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use ET\Builder\FrontEnd\Module\Style;
 use ET\Builder\Packages\Module\Options\Css\CssStyle;
-use LeadersPath\Modules\LessonMeta\LessonMeta;
+use LeadersPath\Modules\ActivityMeta\ActivityMeta;
 
 /**
- * Module styles trait for LessonMeta.
+ * Module styles trait for ActivityMeta.
  *
  * @since 0.1.0
  */
 trait ModuleStylesTrait {
 
 	/**
-	 * LessonMeta Module's style components.
+	 * ActivityMeta Module's style components.
 	 *
 	 * This function is equivalent of JS function ModuleStyles located in
-	 * src/components/lesson-meta/styles.tsx.
+	 * src/components/activity-meta/styles.tsx.
 	 *
 	 * @since 0.1.0
 	 *
@@ -71,7 +71,7 @@ trait ModuleStylesTrait {
 									[
 										'componentName' => 'divi/text',
 										'props'         => [
-											'selector' => "{$order_class} .leaderspath-lesson-meta__content",
+											'selector' => "{$order_class} .leaderspath-activity-meta__content",
 											'attr'     => $attrs['module']['advanced']['text'] ?? [],
 										],
 									],
@@ -113,7 +113,7 @@ trait ModuleStylesTrait {
 						[
 							'selector'  => $order_class,
 							'attr'      => $attrs['css'] ?? [],
-							'cssFields' => LessonMeta::custom_css(),
+							'cssFields' => ActivityMeta::custom_css(),
 						]
 					),
 				],

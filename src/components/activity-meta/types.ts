@@ -1,5 +1,5 @@
 /**
- * Lesson Meta Module TypeScript type definitions.
+ * Activity Meta Module TypeScript type definitions.
  *
  * @package LeadersPath
  * @since 0.1.0
@@ -11,11 +11,11 @@ import {
 } from '@divi/types';
 
 /**
- * Lesson Meta Module attributes interface.
+ * Activity Meta Module attributes interface.
  *
  * @since 0.1.0
  */
-export interface LessonMetaAttrs extends Module.Attributes.Base {
+export interface ActivityMetaAttrs extends Module.Attributes.Base {
   module?: Module.Element.Attrs;
   title?: Module.Element.Attrs;
   duration?: {
@@ -40,8 +40,8 @@ export interface LessonMetaAttrs extends Module.Attributes.Base {
 }
 
 /**
- * Lesson Meta Module edit component props.
+ * Activity Meta Module edit component props.
  *
  * @since 0.1.0
  */
-export type LessonMetaEditProps = ModuleLibrary.Module.EditProps<LessonMetaAttrs>;
+export type ActivityMetaEditProps = ModuleLibrary.Module.EditProps<ActivityMetaAttrs>;

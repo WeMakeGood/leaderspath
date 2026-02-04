@@ -1,11 +1,11 @@
 {
-  "name": "leaderspath/lesson-meta",
+  "name": "leaderspath/activity-meta",
   "d4Shortcode": "",
-  "title": "LeadersPath Lesson Meta",
-  "titles": "LeadersPath Lesson Meta Modules",
+  "title": "LeadersPath Activity Meta",
+  "titles": "LeadersPath Activity Meta Modules",
   "moduleIcon": "divi/module",
-  "moduleClassName": "leaderspath-lesson-meta",
-  "moduleOrderClassName": "leaderspath-lesson-meta",
+  "moduleClassName": "leaderspath-activity-meta",
+  "moduleOrderClassName": "leaderspath-activity-meta",
   "category": "module",
   "attributes": {
     "module": {
@@ -61,10 +61,10 @@
     },
     "title": {
       "type": "object",
-      "selector": "{{selector}} .leaderspath-lesson-meta__title",
+      "selector": "{{selector}} .leaderspath-activity-meta__title",
       "tagName": "h3",
       "attributes": {
-        "class": "leaderspath-lesson-meta__title"
+        "class": "leaderspath-activity-meta__title"
       },
       "inlineEditor": "plainText",
       "elementType": "heading",
@@ -91,7 +91,7 @@
             "render": true,
             "attrName": "title.innerContent",
             "label": "Title",
-            "description": "Enter a title for this module (e.g., \"Lesson Details\").",
+            "description": "Enter a title for this module (e.g., \"Activity Details\").",
             "features": {
               "sticky": false,
               "dynamicContent": false
@@ -131,7 +131,7 @@
               "priority": 10,
               "render": true,
               "label": "Show Duration",
-              "description": "Show or hide the lesson duration.",
+              "description": "Show or hide the activity duration.",
               "category": "configuration",
               "features": {
                 "sticky": false,
@@ -150,10 +150,10 @@
     },
     "durationLabel": {
       "type": "object",
-      "selector": "{{selector}} .leaderspath-lesson-meta__duration .leaderspath-lesson-meta__label",
+      "selector": "{{selector}} .leaderspath-activity-meta__duration .leaderspath-activity-meta__label",
       "tagName": "span",
       "attributes": {
-        "class": "leaderspath-lesson-meta__label"
+        "class": "leaderspath-activity-meta__label"
       },
       "childrenSanitizer": "esc_html",
       "default": {
@@ -241,10 +241,10 @@
     },
     "objectivesLabel": {
       "type": "object",
-      "selector": "{{selector}} .leaderspath-lesson-meta__objectives .leaderspath-lesson-meta__label",
+      "selector": "{{selector}} .leaderspath-activity-meta__objectives .leaderspath-activity-meta__label",
       "tagName": "span",
       "attributes": {
-        "class": "leaderspath-lesson-meta__label"
+        "class": "leaderspath-activity-meta__label"
       },
       "childrenSanitizer": "esc_html",
       "default": {
@@ -321,10 +321,10 @@
     },
     "modelLabel": {
       "type": "object",
-      "selector": "{{selector}} .leaderspath-lesson-meta__model .leaderspath-lesson-meta__label",
+      "selector": "{{selector}} .leaderspath-activity-meta__model .leaderspath-activity-meta__label",
       "tagName": "span",
       "attributes": {
-        "class": "leaderspath-lesson-meta__label"
+        "class": "leaderspath-activity-meta__label"
       },
       "childrenSanitizer": "esc_html",
       "default": {
@@ -375,32 +375,32 @@
   "customCssFields": {
     "title": {
       "subName": "title",
-      "selectorSuffix": " .leaderspath-lesson-meta__title",
+      "selectorSuffix": " .leaderspath-activity-meta__title",
       "label": "Title"
     },
     "section": {
       "subName": "section",
-      "selectorSuffix": " .leaderspath-lesson-meta__section",
+      "selectorSuffix": " .leaderspath-activity-meta__section",
       "label": "Section"
     },
     "label": {
       "subName": "label",
-      "selectorSuffix": " .leaderspath-lesson-meta__label",
+      "selectorSuffix": " .leaderspath-activity-meta__label",
       "label": "Label"
     },
     "value": {
       "subName": "value",
-      "selectorSuffix": " .leaderspath-lesson-meta__value",
+      "selectorSuffix": " .leaderspath-activity-meta__value",
       "label": "Value"
     },
     "list": {
       "subName": "list",
-      "selectorSuffix": " .leaderspath-lesson-meta__list",
+      "selectorSuffix": " .leaderspath-activity-meta__list",
       "label": "List"
     },
     "badge": {
       "subName": "badge",
-      "selectorSuffix": " .leaderspath-lesson-meta__badge",
+      "selectorSuffix": " .leaderspath-activity-meta__badge",
       "label": "Badge"
     }
   },

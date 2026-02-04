@@ -1,22 +1,23 @@
 # LeadersPath Plugin Design Document
 
-**Version:** 0.1.0
-**Last Updated:** 2026-02-01
+**Version:** 0.2.0
+**Last Updated:** 2026-02-04
 **Status:** Implemented
 
 ## Executive Summary
 
-LeadersPath is a WordPress plugin that powers an interactive AI learning community. Learners interact with Claude AI chatbots that have been enhanced with lesson-specific context files and executable skills, demonstrating the difference between raw LLM interactions and context-enhanced AI implementations.
+LeadersPath is a WordPress plugin that powers a **facilitated cohort learning experience**. Facilitators present concepts while learners experiment with AI sandboxes (Activities) to experience specific AI behaviors. The plugin demonstrates the difference between raw LLM interactions and context-enhanced AI implementations.
 
 ## Core Architecture
 
 ### Design Philosophy
 
-1. **Transparency First** - Learners can always see and download the context and skills powering the AI
-2. **WordPress Native** - Uses CPTs, taxonomies, ACF, and standard WordPress patterns
-3. **Divi Integration** - Visual Builder modules for flexible page design
-4. **Stateless Conversations** - No persistence; page reload clears history for experimentation
-5. **Context vs Skills** - Clear separation between reference material (context) and capabilities (skills)
+1. **Facilitated Learning** - Courses are taught by facilitators; activities let learners experiment
+2. **Transparency First** - Learners can always see and download the context and skills powering the AI
+3. **WordPress Native** - Uses CPTs, taxonomies, ACF, and standard WordPress patterns
+4. **Divi Integration** - Visual Builder modules for flexible page design
+5. **Stateless Conversations** - No persistence; page reload clears history for experimentation
+6. **Context vs Skills** - Clear separation between reference material (context) and capabilities (skills)
 
 ### High-Level Architecture
 
@@ -29,7 +30,7 @@ LeadersPath is a WordPress plugin that powers an interactive AI learning communi
 │  ┌─────────────────────────────────────────────────────────────────┐│
 │  │                    Custom Post Types                             ││
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐ ┌─────────┐││
-│  │  │ Lessons  │ │ Courses  │ │ Cohorts  │ │ Context │ │ Skills  │││
+│  │  │Activities│ │ Courses  │ │ Cohorts  │ │ Context │ │ Skills  │││
 │  │  └──────────┘ └──────────┘ └──────────┘ └─────────┘ └─────────┘││
 │  └─────────────────────────────────────────────────────────────────┘│
 │                                                                      │
@@ -39,7 +40,7 @@ LeadersPath is a WordPress plugin that powers an interactive AI learning communi
 │  │  │ Messages API   │  │  │  │ Chatbot  │  │ Context Library│  │  │
 │  │  │ + Container    │  │  │  └──────────┘  └────────────────┘  │  │
 │  │  │ + Code Exec    │  │  │  ┌──────────┐  ┌────────────────┐  │  │
-│  │  └────────────────┘  │  │  │Skills    │  │  Lesson Meta   │  │  │
+│  │  └────────────────┘  │  │  │Skills    │  │  Activity Meta │  │  │
 │  │  ┌────────────────┐  │  │  │List      │  │                │  │  │
 │  │  │  Skills API    │  │  │  └──────────┘  └────────────────┘  │  │
 │  │  │  (Upload/Sync) │  │  └────────────────────────────────────┘  │
@@ -61,26 +62,37 @@ LeadersPath is a WordPress plugin that powers an interactive AI learning communi
 
 ## Content Model
 
-### Lesson (Primary Content Unit)
+### Pedagogical Model
 
-A Lesson is the central content type. It contains:
+LeadersPath is a **facilitated cohort learning experience**, not a self-paced platform:
+
+| Term | Definition |
+|------|------------|
+| **Course** | The atomic teaching unit, taught as a cohesive whole by a facilitator |
+| **Activity** | An AI sandbox experiment within a Course (what learners DO, not what they LEARN) |
+| **Facilitator Guide** | The central teaching document (what to present, when to run activities, discussion prompts) |
+| **Context Files** | Reference documents that provide Claude with background information |
+| **Skills** | Executable capabilities (Python scripts, workflows) uploaded to Anthropic |
+
+### Activity (AI Sandbox Experiment)
+
+Activities are AI sandbox experiments where learners experience specific AI behaviors.
 
 **Core Content:**
-- Title and rich text body (standard WordPress)
-- Featured image (thumbnail)
+- Title (`post_title`): Activity name (e.g., "Experience Sycophantic AI")
+- Content (`post_content`): Instructions for learners ("Try this, notice that")
 - Excerpt for summaries
 
-**Lesson Settings (ACF):**
+**Activity Settings (ACF):**
 - Duration (minutes)
-- Learning Objectives (repeater: objective text)
-- Prerequisites (relationship to other lessons)
+- Prerequisites (relationship to other activities)
 - References (repeater: title, URL, description)
 
-**Chatbot Configuration (ACF):**
+**AI Sandbox Configuration (ACF):**
 - Chatbot Enabled (true/false)
 - Model Selection (opus-4.5, sonnet, haiku)
 - Allow Model Switch (true/false)
-- Custom System Prompt (textarea)
+- Custom System Prompt (textarea) - defines the AI behavior learners will experience
 - Context Files (relationship to Context CPT)
 - Skills (relationship to Skill CPT)
 - Max Tokens (number, default 4096)
@@ -130,14 +142,33 @@ Executable packages uploaded to Anthropic's Skills API:
 
 **Key Point:** Skills ARE uploaded to Anthropic. Only their name and description appear in the system prompt; the actual instructions and scripts are loaded by Anthropic's container when triggered.
 
-### Course
+### Course (Atomic Teaching Unit)
 
-Container for organizing lessons:
+The course is the atomic teaching unit, taught as a cohesive whole by a facilitator:
 
-**Metadata (ACF):**
-- Ordered Lessons (relationship, sortable)
-- Difficulty (Beginner/Intermediate/Advanced)
-- Access Roles (checkboxes)
+**Core Content:**
+- Title and description (standard WordPress)
+- Featured image
+- Excerpt for marketing
+
+**Course Settings (ACF):**
+- `course_activities` - Ordered activities (relationship, sortable)
+- `course_difficulty` - Beginner/Intermediate/Advanced
+- `course_total_duration` - Total facilitation time (e.g., "90 minutes")
+- `course_objectives` - Learning objectives for the course
+- `course_access_roles` - User roles that can access
+
+**Facilitator Content (ACF):**
+- `course_facilitator_guide` - Complete teaching script with timing, activity transitions, discussion prompts
+
+**Learner Content (ACF):**
+- `course_learner_overview` - What learners will experience (context, not teaching content)
+
+**Optional Course Q&A Chatbot (ACF):**
+- `course_chatbot_enabled` - Enable Q&A chatbot (different from activity sandboxes)
+- `course_chatbot_model` - Claude model
+- `course_chatbot_system_prompt` - Should be configured as helpful assistant
+- `course_chatbot_context_files` - Context for Q&A
 
 ### Cohort
 
@@ -201,11 +232,11 @@ This is the most important architectural concept in LeadersPath:
 [Skill 2 Description - for discovery only]
 ```
 
-**Note:** The lesson's `post_content` (what learners see on the page) is NOT included in the system prompt. Only the Custom System Prompt field and attached Context Files define Claude's behavior.
+**Note:** The activity's `post_content` (what learners see on the page) is NOT included in the system prompt. Only the Custom System Prompt field and attached Context Files define Claude's behavior.
 
 ## Divi 5 Module Architecture
 
-All modules use the **Theme Builder Pattern** - they read data from the current post (lesson) using `get_queried_object_id()`.
+All modules use the **Theme Builder Pattern** - they read data from the current post (activity) using `get_queried_object_id()`.
 
 ### Module Registration
 
@@ -242,7 +273,7 @@ All modules use the **Theme Builder Pattern** - they read data from the current 
 
 ### LeadersPath Context Library Module
 
-Displays context files attached to current lesson.
+Displays context files attached to current activity.
 
 **Features:**
 - Responsive card grid (auto-fill, min 280px)
@@ -253,7 +284,7 @@ Displays context files attached to current lesson.
 
 ### LeadersPath Skills List Module
 
-Displays skills attached to current lesson.
+Displays skills attached to current activity.
 
 **Features:**
 - Responsive card grid (same as Context Library)
@@ -262,13 +293,12 @@ Displays skills attached to current lesson.
 - Download links to ZIP packages
 - Visibility toggles for all elements
 
-### LeadersPath Lesson Meta Module
+### LeadersPath Activity Meta Module
 
-Displays lesson metadata.
+Displays activity metadata.
 
 **Features:**
 - Duration display with configurable label
-- Learning objectives list
 - AI model indicator
 - Visibility toggles for each section
 
@@ -282,13 +312,12 @@ User Message
     ├── Validate: Logged in? Has capability?
     │
     ├── Build Context:
-    │   ├── Get lesson's custom system prompt OR default
-    │   ├── Get lesson post_content
+    │   ├── Get activity's custom system prompt OR default
     │   ├── Get linked context files → embed full content
     │   └── Get linked skills → include name/description only
     │
     ├── Build Request:
-    │   ├── model (from lesson or default)
+    │   ├── model (from activity or default)
     │   ├── system (assembled prompt)
     │   ├── messages (conversation history)
     │   ├── container.skills (skill_ids from synced skills)
@@ -328,8 +357,9 @@ Configurable in Settings > LeadersPath:
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/leaderspath/v1/chat` | POST | Send message, receive Claude response |
-| `/leaderspath/v1/lessons/{id}/context` | GET | Get lesson's context files |
-| `/leaderspath/v1/lessons/{id}/skills` | GET | Get lesson's skills |
+| `/leaderspath/v1/activities/{id}/context` | GET | Get activity's context files |
+| `/leaderspath/v1/activities/{id}/skills` | GET | Get activity's skills |
+| `/leaderspath/v1/courses/{id}/context` | GET | Get course Q&A chatbot's context files |
 | `/leaderspath/v1/context/{id}/download` | GET | Download context file content |
 | `/leaderspath/v1/skills/{id}/download` | GET | Download skill ZIP package |
 
@@ -341,12 +371,12 @@ All endpoints require authentication (logged in + appropriate capability).
 
 | Capability | Description |
 |------------|-------------|
-| `leaderspath_access_lessons` | View published lessons |
+| `leaderspath_access_activities` | View published activities |
 | `leaderspath_access_chatbot` | Use chatbot feature |
 | `leaderspath_view_context` | View context file contents |
 | `leaderspath_download_context` | Download context files |
 | `leaderspath_download_skills` | Download skill packages |
-| `edit_leaderspath_lessons` | Edit lessons (editors) |
+| `edit_leaderspath_activities` | Edit activities (editors) |
 | `edit_leaderspath_contexts` | Edit context files (editors) |
 | `edit_leaderspath_skills` | Edit skills (editors) |
 
@@ -354,7 +384,7 @@ All endpoints require authentication (logged in + appropriate capability).
 
 **Administrator:** All capabilities
 **Editor:** All edit capabilities, read-only for cohorts
-**LeadersPath Student:** Access lessons, use chatbot, view/download content
+**LeadersPath Student:** Access activities, use chatbot, view/download content
 
 ### Security Measures
 
@@ -373,7 +403,6 @@ leaderspath/
 ├── package.json                 # Node dependencies (Divi build tools)
 │
 ├── includes/
-│   ├── class-leaderspath.php    # Main plugin class
 │   ├── class-post-types.php     # CPT registration
 │   ├── class-taxonomies.php     # Taxonomy registration
 │   ├── class-capabilities.php   # Roles and capabilities
@@ -383,7 +412,8 @@ leaderspath/
 │   └── class-skill-processor.php # Skill validation and sync
 │
 ├── admin/
-│   └── class-settings.php       # Settings page
+│   ├── class-admin-menu.php     # Admin menu registration
+│   ├── class-settings.php       # Settings page
 │   └── class-admin-columns.php  # Custom admin columns
 │
 ├── modules/                     # Divi 5 PHP modules
@@ -397,7 +427,7 @@ leaderspath/
 │   │       └── CustomCssTrait.php
 │   ├── ContextLibrary/
 │   ├── SkillsList/
-│   └── LessonMeta/
+│   └── LessonMeta/              # (To be renamed ActivityMeta)
 │
 ├── src/                         # Divi 5 TypeScript modules
 │   ├── index.ts                 # Module registration
@@ -410,7 +440,7 @@ leaderspath/
 │       │   └── ...
 │       ├── context-library/
 │       ├── skills-list/
-│       └── lesson-meta/
+│       └── activity-meta/
 │
 ├── assets/
 │   ├── js/
@@ -455,9 +485,9 @@ leaderspath/
 
 ## Future Considerations
 
-- Analytics/tracking of lesson completion and chat metrics
-- Conversation history persistence (opt-in per lesson)
-- Multi-language lesson support
+- Analytics/tracking of activity completion and chat metrics
+- Conversation history persistence (opt-in per activity)
+- Multi-language activity support
 - Bulk import/export of context files and skills
 - AI-assisted content creation tools
 - Integration with LMS plugins (LearnDash, LifterLMS)

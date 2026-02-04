@@ -2,7 +2,7 @@
 /**
  * Test the LeadersPath chat system via WP-CLI.
  *
- * Usage: wp eval-file wp-content/plugins/leaderspath/bin/test-chat.php [lesson_id] [message]
+ * Usage: wp eval-file wp-content/plugins/leaderspath/bin/test-chat.php [activity_id] [message]
  *
  * Examples:
  *   wp eval-file wp-content/plugins/leaderspath/bin/test-chat.php
@@ -16,8 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Get arguments.
-$lesson_id = isset( $args[0] ) ? (int) $args[0] : 0;
-$message   = isset( $args[1] ) ? $args[1] : '';
+$activity_id = isset( $args[0] ) ? (int) $args[0] : 0;
+$message     = isset( $args[1] ) ? $args[1] : '';
 
 echo "\n=== LeadersPath Chat System Test ===\n\n";
 
@@ -43,19 +43,19 @@ foreach ( $connection_result['models'] as $model ) {
 }
 echo "   Model families: " . implode( ', ', array_keys( $families ) ) . "\n\n";
 
-// 2. Find or use specified lesson.
-echo "2. Finding test lesson...\n";
+// 2. Find or use specified activity.
+echo "2. Finding test activity...\n";
 
-if ( $lesson_id ) {
-	$lesson = get_post( $lesson_id );
-	if ( ! $lesson || 'leaderspath_lesson' !== $lesson->post_type ) {
-		echo "   ERROR: Lesson ID $lesson_id not found\n";
+if ( $activity_id ) {
+	$activity = get_post( $activity_id );
+	if ( ! $activity || 'leaderspath_activity' !== $activity->post_type ) {
+		echo "   ERROR: Activity ID $activity_id not found\n";
 		exit( 1 );
 	}
 } else {
-	// Find a lesson with chatbot enabled.
-	$lessons = get_posts( [
-		'post_type'      => 'leaderspath_lesson',
+	// Find an activity with chatbot enabled.
+	$activities = get_posts( [
+		'post_type'      => 'leaderspath_activity',
 		'post_status'    => 'publish',
 		'posts_per_page' => 1,
 		'meta_query'     => [
@@ -67,21 +67,21 @@ if ( $lesson_id ) {
 		],
 	] );
 
-	if ( empty( $lessons ) ) {
-		echo "   ERROR: No lessons with chatbot enabled found\n";
+	if ( empty( $activities ) ) {
+		echo "   ERROR: No activities with chatbot enabled found\n";
 		exit( 1 );
 	}
 
-	$lesson    = $lessons[0];
-	$lesson_id = $lesson->ID;
+	$activity    = $activities[0];
+	$activity_id = $activity->ID;
 }
 
-echo "   Using lesson: {$lesson->post_title} (ID: {$lesson_id})\n";
+echo "   Using activity: {$activity->post_title} (ID: {$activity_id})\n";
 
 // Check chatbot settings.
-$chatbot_enabled = get_field( 'chatbot_enabled', $lesson_id );
-$chatbot_model   = get_field( 'chatbot_model', $lesson_id ) ?: LeadersPath\Admin\Settings::get_default_model();
-$system_prompt   = get_field( 'chatbot_system_prompt', $lesson_id );
+$chatbot_enabled = get_field( 'chatbot_enabled', $activity_id );
+$chatbot_model   = get_field( 'chatbot_model', $activity_id ) ?: LeadersPath\Admin\Settings::get_default_model();
+$system_prompt   = get_field( 'chatbot_system_prompt', $activity_id );
 
 echo "   Chatbot enabled: " . ( $chatbot_enabled ? 'Yes' : 'No' ) . "\n";
 echo "   Model: $chatbot_model\n";
@@ -89,7 +89,7 @@ echo "   Has custom system prompt: " . ( ! empty( $system_prompt ) ? 'Yes (' . s
 
 // 3. Show context files.
 echo "3. Context Files...\n";
-$context_files = get_field( 'chatbot_context_files', $lesson_id ) ?: [];
+$context_files = get_field( 'chatbot_context_files', $activity_id ) ?: [];
 
 if ( empty( $context_files ) ) {
 	echo "   No context files attached\n";
@@ -106,7 +106,7 @@ echo "\n";
 
 // 4. Show skills.
 echo "4. Skills...\n";
-$skills = get_field( 'chatbot_skills', $lesson_id ) ?: [];
+$skills = get_field( 'chatbot_skills', $activity_id ) ?: [];
 
 if ( empty( $skills ) ) {
 	echo "   No skills attached\n";
@@ -139,7 +139,7 @@ $original_debug = $options['debug_mode'] ?? false;
 $options['debug_mode'] = true;
 update_option( 'leaderspath_options', $options );
 
-$result = $claude->send_message( $lesson_id, $message, [], $chatbot_model );
+$result = $claude->send_message( $activity_id, $message, [], $chatbot_model );
 
 // Restore debug mode.
 $options['debug_mode'] = $original_debug;
@@ -183,7 +183,7 @@ $history = [
 $follow_up = "Can you summarize what you just told me in one sentence?";
 echo "   Sending follow-up: \"$follow_up\"\n\n";
 
-$result2 = $claude->send_message( $lesson_id, $follow_up, $history, $chatbot_model );
+$result2 = $claude->send_message( $activity_id, $follow_up, $history, $chatbot_model );
 
 if ( is_wp_error( $result2 ) ) {
 	echo "   ERROR: " . $result2->get_error_message() . "\n";

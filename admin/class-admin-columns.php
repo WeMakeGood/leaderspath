@@ -11,7 +11,7 @@ declare(strict_types=1);
 namespace LeadersPath\Admin;
 
 /**
- * Manages custom admin columns for Lessons and Courses.
+ * Manages custom admin columns for Activities and Courses.
  *
  * @since 0.1.0
  */
@@ -23,10 +23,10 @@ class Admin_Columns {
 	 * @since 0.1.0
 	 */
 	public function __construct() {
-		// Lesson columns.
-		add_filter( 'manage_leaderspath_lesson_posts_columns', [ $this, 'lesson_columns' ] );
-		add_action( 'manage_leaderspath_lesson_posts_custom_column', [ $this, 'lesson_column_content' ], 10, 2 );
-		add_filter( 'manage_edit-leaderspath_lesson_sortable_columns', [ $this, 'lesson_sortable_columns' ] );
+		// Activity columns.
+		add_filter( 'manage_leaderspath_activity_posts_columns', [ $this, 'activity_columns' ] );
+		add_action( 'manage_leaderspath_activity_posts_custom_column', [ $this, 'activity_column_content' ], 10, 2 );
+		add_filter( 'manage_edit-leaderspath_activity_sortable_columns', [ $this, 'activity_sortable_columns' ] );
 
 		// Course columns.
 		add_filter( 'manage_leaderspath_course_posts_columns', [ $this, 'course_columns' ] );
@@ -43,14 +43,14 @@ class Admin_Columns {
 	}
 
 	/**
-	 * Define custom columns for Lessons.
+	 * Define custom columns for Activities.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param array<string, string> $columns Existing columns.
 	 * @return array<string, string> Modified columns.
 	 */
-	public function lesson_columns( array $columns ): array {
+	public function activity_columns( array $columns ): array {
 		$new_columns = [];
 
 		foreach ( $columns as $key => $value ) {
@@ -68,38 +68,38 @@ class Admin_Columns {
 	}
 
 	/**
-	 * Render content for custom Lesson columns.
+	 * Render content for custom Activity columns.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param string $column  Column name.
 	 * @param int    $post_id Post ID.
 	 */
-	public function lesson_column_content( string $column, int $post_id ): void {
+	public function activity_column_content( string $column, int $post_id ): void {
 		switch ( $column ) {
 			case 'leaderspath_course':
-				$this->render_lesson_course( $post_id );
+				$this->render_activity_course( $post_id );
 				break;
 
 			case 'leaderspath_duration':
-				$this->render_lesson_duration( $post_id );
+				$this->render_activity_duration( $post_id );
 				break;
 
 			case 'leaderspath_chatbot':
-				$this->render_lesson_chatbot_status( $post_id );
+				$this->render_activity_chatbot_status( $post_id );
 				break;
 		}
 	}
 
 	/**
-	 * Define sortable columns for Lessons.
+	 * Define sortable columns for Activities.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param array<string, string> $columns Sortable columns.
 	 * @return array<string, string> Modified sortable columns.
 	 */
-	public function lesson_sortable_columns( array $columns ): array {
+	public function activity_sortable_columns( array $columns ): array {
 		$columns['leaderspath_duration'] = 'leaderspath_duration';
 		return $columns;
 	}
@@ -120,7 +120,7 @@ class Admin_Columns {
 
 			// Insert custom columns after title.
 			if ( 'title' === $key ) {
-				$new_columns['leaderspath_lesson_count'] = __( 'Lessons', 'leaderspath' );
+				$new_columns['leaderspath_activity_count'] = __( 'Activities', 'leaderspath' );
 				$new_columns['leaderspath_difficulty']   = __( 'Difficulty', 'leaderspath' );
 				$new_columns['leaderspath_total_duration'] = __( 'Total Duration', 'leaderspath' );
 			}
@@ -139,8 +139,8 @@ class Admin_Columns {
 	 */
 	public function course_column_content( string $column, int $post_id ): void {
 		switch ( $column ) {
-			case 'leaderspath_lesson_count':
-				$this->render_course_lesson_count( $post_id );
+			case 'leaderspath_activity_count':
+				$this->render_course_activity_count( $post_id );
 				break;
 
 			case 'leaderspath_difficulty':
@@ -162,7 +162,7 @@ class Admin_Columns {
 	 * @return array<string, string> Modified sortable columns.
 	 */
 	public function course_sortable_columns( array $columns ): array {
-		$columns['leaderspath_lesson_count'] = 'leaderspath_lesson_count';
+		$columns['leaderspath_activity_count'] = 'leaderspath_activity_count';
 		return $columns;
 	}
 
@@ -181,33 +181,33 @@ class Admin_Columns {
 		$orderby = $query->get( 'orderby' );
 
 		if ( 'leaderspath_duration' === $orderby ) {
-			$query->set( 'meta_key', 'lesson_duration' );
+			$query->set( 'meta_key', 'activity_duration' );
 			$query->set( 'orderby', 'meta_value_num' );
 		}
 
-		// Note: lesson_count sorting would require a custom query/subquery.
+		// Note: activity_count sorting would require a custom query/subquery.
 		// For now, we'll sort by the stored total_duration instead.
-		if ( 'leaderspath_lesson_count' === $orderby ) {
+		if ( 'leaderspath_activity_count' === $orderby ) {
 			$query->set( 'meta_key', 'course_total_duration' );
 			$query->set( 'orderby', 'meta_value_num' );
 		}
 	}
 
 	/**
-	 * Render the course(s) a lesson belongs to.
+	 * Render the course(s) an activity belongs to.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int $post_id Lesson post ID.
+	 * @param int $post_id Activity post ID.
 	 */
-	private function render_lesson_course( int $post_id ): void {
-		// Find courses that include this lesson.
+	private function render_activity_course( int $post_id ): void {
+		// Find courses that include this activity.
 		$courses = get_posts( [
 			'post_type'      => 'leaderspath_course',
 			'posts_per_page' => -1,
 			'meta_query'     => [
 				[
-					'key'     => 'course_lessons',
+					'key'     => 'course_activities',
 					'value'   => sprintf( '"%d"', $post_id ),
 					'compare' => 'LIKE',
 				],
@@ -234,14 +234,14 @@ class Admin_Columns {
 	}
 
 	/**
-	 * Render the lesson duration.
+	 * Render the activity duration.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int $post_id Lesson post ID.
+	 * @param int $post_id Activity post ID.
 	 */
-	private function render_lesson_duration( int $post_id ): void {
-		$duration = get_field( 'lesson_duration', $post_id );
+	private function render_activity_duration( int $post_id ): void {
+		$duration = get_field( 'activity_duration', $post_id );
 
 		// Hidden value for quick edit.
 		echo '<span class="leaderspath-duration-value hidden">' . esc_html( (string) $duration ) . '</span>';
@@ -260,13 +260,13 @@ class Admin_Columns {
 	}
 
 	/**
-	 * Render the chatbot status for a lesson.
+	 * Render the chatbot status for an activity.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int $post_id Lesson post ID.
+	 * @param int $post_id Activity post ID.
 	 */
-	private function render_lesson_chatbot_status( int $post_id ): void {
+	private function render_activity_chatbot_status( int $post_id ): void {
 		$enabled = get_field( 'chatbot_enabled', $post_id );
 		$model   = get_field( 'chatbot_model', $post_id );
 
@@ -293,25 +293,25 @@ class Admin_Columns {
 	}
 
 	/**
-	 * Render the lesson count for a course.
+	 * Render the activity count for a course.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param int $post_id Course post ID.
 	 */
-	private function render_course_lesson_count( int $post_id ): void {
-		$lessons = get_field( 'course_lessons', $post_id );
-		$count   = is_array( $lessons ) ? count( $lessons ) : 0;
+	private function render_course_activity_count( int $post_id ): void {
+		$activities = get_field( 'course_activities', $post_id );
+		$count      = is_array( $activities ) ? count( $activities ) : 0;
 
 		if ( 0 === $count ) {
 			echo '<span class="dashicons dashicons-minus" aria-hidden="true"></span>';
-			echo '<span class="screen-reader-text">' . esc_html__( 'No lessons', 'leaderspath' ) . '</span>';
+			echo '<span class="screen-reader-text">' . esc_html__( 'No activities', 'leaderspath' ) . '</span>';
 			return;
 		}
 
 		printf(
-			/* translators: %d: number of lessons */
-			esc_html( _n( '%d lesson', '%d lessons', $count, 'leaderspath' ) ),
+			/* translators: %d: number of activities */
+			esc_html( _n( '%d activity', '%d activities', $count, 'leaderspath' ) ),
 			$count
 		);
 	}
@@ -365,13 +365,13 @@ class Admin_Columns {
 	 * @param int $post_id Course post ID.
 	 */
 	private function render_course_total_duration( int $post_id ): void {
-		// Calculate total duration from lessons.
-		$lessons        = get_field( 'course_lessons', $post_id );
+		// Calculate total duration from activities.
+		$activities     = get_field( 'course_activities', $post_id );
 		$total_duration = 0;
 
-		if ( is_array( $lessons ) ) {
-			foreach ( $lessons as $lesson_id ) {
-				$duration = get_field( 'lesson_duration', $lesson_id );
+		if ( is_array( $activities ) ) {
+			foreach ( $activities as $activity_id ) {
+				$duration = get_field( 'activity_duration', $activity_id );
 				if ( ! empty( $duration ) ) {
 					$total_duration += (int) $duration;
 				}
@@ -421,8 +421,8 @@ class Admin_Columns {
 	 * @param string $post_type   Post type.
 	 */
 	public function quick_edit_fields( string $column_name, string $post_type ): void {
-		// Lesson quick edit fields.
-		if ( 'leaderspath_lesson' === $post_type ) {
+		// Activity quick edit fields.
+		if ( 'leaderspath_activity' === $post_type ) {
 			if ( 'leaderspath_duration' === $column_name ) {
 				?>
 				<fieldset class="inline-edit-col-right">
@@ -430,7 +430,7 @@ class Admin_Columns {
 						<label>
 							<span class="title"><?php esc_html_e( 'Duration', 'leaderspath' ); ?></span>
 							<span class="input-text-wrap">
-								<input type="number" name="leaderspath_lesson_duration" class="leaderspath-lesson-duration" min="1" max="480" step="1" />
+								<input type="number" name="leaderspath_activity_duration" class="leaderspath-activity-duration" min="1" max="480" step="1" />
 								<span class="description"><?php esc_html_e( 'minutes', 'leaderspath' ); ?></span>
 							</span>
 						</label>
@@ -501,15 +501,15 @@ class Admin_Columns {
 			return;
 		}
 
-		// Save lesson fields.
-		if ( 'leaderspath_lesson' === $post->post_type ) {
+		// Save activity fields.
+		if ( 'leaderspath_activity' === $post->post_type ) {
 			// Duration.
-			if ( isset( $_POST['leaderspath_lesson_duration'] ) ) {
-				$duration = absint( $_POST['leaderspath_lesson_duration'] );
+			if ( isset( $_POST['leaderspath_activity_duration'] ) ) {
+				$duration = absint( $_POST['leaderspath_activity_duration'] );
 				if ( $duration > 0 && $duration <= 480 ) {
-					update_field( 'lesson_duration', $duration, $post_id );
-				} elseif ( '' === $_POST['leaderspath_lesson_duration'] ) {
-					delete_field( 'lesson_duration', $post_id );
+					update_field( 'activity_duration', $duration, $post_id );
+				} elseif ( '' === $_POST['leaderspath_activity_duration'] ) {
+					delete_field( 'activity_duration', $post_id );
 				}
 			}
 
@@ -543,7 +543,7 @@ class Admin_Columns {
 		}
 
 		$screen = get_current_screen();
-		if ( ! $screen || ! in_array( $screen->post_type, [ 'leaderspath_lesson', 'leaderspath_course' ], true ) ) {
+		if ( ! $screen || ! in_array( $screen->post_type, [ 'leaderspath_activity', 'leaderspath_course' ], true ) ) {
 			return;
 		}
 
@@ -564,10 +564,10 @@ class Admin_Columns {
 			var $row = $('#post-' + postId);
 			var $editRow = $('#edit-' + postId);
 
-			// Lesson duration.
+			// Activity duration.
 			var duration = $row.find('.leaderspath-duration-value').text();
 			if (duration) {
-				$editRow.find('input.leaderspath-lesson-duration').val(duration);
+				$editRow.find('input.leaderspath-activity-duration').val(duration);
 			}
 
 			// Chatbot enabled.

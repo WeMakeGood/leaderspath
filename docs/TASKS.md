@@ -1,6 +1,6 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-01-30
+**Last Updated:** 2026-02-04
 **Current Phase:** Phase 6 - Polish & Testing
 
 This file tracks all development tasks across Claude Code sessions. Each session should read this file at startup and update it when tasks are completed or new tasks are discovered.
@@ -35,7 +35,7 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 
 ### Custom Post Types
 - [x] Create `includes/class-post-types.php`
-- [x] Register `leaderspath_lesson` CPT
+- [x] Register `leaderspath_activity` CPT
 - [x] Register `leaderspath_course` CPT
 - [x] Register `leaderspath_cohort` CPT
 - [x] Register `leaderspath_context` CPT (context files)
@@ -234,6 +234,11 @@ Key decisions made during development:
 | 2026-01-29 | Inside-out development order | Build data layer first (CPTs, ACF), then admin, then frontend modules |
 | 2026-01-29 | ACF fields via PHP API | Programmatic registration for version control, but uses ACF Pro UI/rendering |
 | 2026-01-29 | Skills as ZIP packages | Skills follow Agent Skills Spec - directories with SKILL.md, references/, scripts/, assets/. Upload ZIP, extract frontmatter for metadata. |
+| 2026-02-03 | Facilitated cohort learning model | LeadersPath is facilitator-led, not self-paced. Course = atomic unit, Activities = AI sandboxes |
+| 2026-02-03 | Rename Lessons to Activities | Full migration to `leaderspath_activity` CPT slug |
+| 2026-02-03 | Learning objectives at Course level | Moved from Activity to Course since Course is the teaching unit |
+| 2026-02-03 | Dual chatbot modes | Activity Sandbox (demonstrate behaviors) vs Course Q&A (helpful assistant) |
+| 2026-02-03 | Privacy-first Q&A bot | No logging, no access restrictions - maintains sandbox trust |
 
 ---
 
@@ -496,7 +501,7 @@ Brief notes from each development session:
   - `assets/js/chatbot.js` - IIFE pattern, fetch API to REST endpoint, DOM manipulation
   - `assets/css/chatbot.css` - Additional runtime styles (scrollbar, focus states, animations)
 - Module features:
-  - Theme Builder pattern (uses `get_queried_object_id()` for lesson_id)
+  - Theme Builder pattern (uses `get_queried_object_id()` for activity_id)
   - Configurable user/assistant bubble colors, fonts, backgrounds
   - Chat area with configurable height
   - Input field with placeholder text
@@ -537,6 +542,77 @@ Brief notes from each development session:
   - marked.js needs `gfm: true` and `breaks: true` for proper block element parsing
   - Use `scrollIntoView({ block: 'start' })` to show new messages at top, not bottom
 
+### Session 15 (2026-02-03)
+- **Major pedagogical model update: Facilitated Cohort Learning**
+- LeadersPath is now understood as a **facilitated cohort learning experience**, NOT a self-paced lesson platform
+- Key conceptual changes:
+  - **Course** = atomic teaching unit (taught as cohesive whole by facilitator)
+  - **Activity** = AI sandbox experiment (what learners DO, not what they LEARN)
+  - **Facilitator** = human who presents concepts, manages discussion, runs activities
+- **Terminology update: "Lessons" → "Activities"**
+  - Full migration to `leaderspath_activity` CPT slug
+  - Updated rest_base from 'lessons' to 'activities'
+  - Updated rewrite slug from 'lesson' to 'activity'
+- **Moved learning objectives to Course level**
+  - Removed `lesson_objectives` repeater from Activity Settings
+  - Added `course_objectives` repeater to new Course Settings field group
+- **Added Course facilitator and learner content fields**
+  - `course_facilitator_guide` (WYSIWYG) - teaching script for facilitator
+  - `course_learner_overview` (WYSIWYG) - content visible to learners
+- **Added Course Q&A Chatbot** (separate from Activity sandboxes)
+  - New ACF field group: `course_chatbot_enabled`, `course_chatbot_model`, `course_chatbot_system_prompt`, etc.
+  - Updated REST API to support `course_id` parameter alongside `activity_id`
+  - Added `send_course_message()` and `build_course_system_prompt()` to Claude_API
+  - Updated Chatbot module to auto-detect Activity vs Course mode via post type
+  - Updated chatbot.js to send appropriate context ID based on mode
+- **Privacy-first design decisions:**
+  - NO logging of Q&A conversations
+  - NO access restrictions on Q&A bot (available without cohort enrollment)
+  - Both chatbot modes maintain complete sandbox isolation
+- **Documentation updates:**
+  - Rewrote `docs/cpt-schema.md` with new pedagogical model and relationship diagram
+  - Updated `README.md` to version 0.2.0 with Activity terminology and dual chatbot modes
+- **Files modified:**
+  - `includes/class-acf-fields.php` - Activity fields, new Course field groups
+  - `includes/class-post-types.php` - Activity labels
+  - `includes/class-rest-api.php` - course_id support, handle_course_chat()
+  - `includes/class-claude-api.php` - send_course_message(), build_course_system_prompt()
+  - `modules/Chatbot/ChatbotTrait/RenderCallbackTrait.php` - dual mode detection
+  - `assets/js/chatbot.js` - mode-aware API calls
+  - `modules/LessonMeta/LessonMetaTrait/RenderCallbackTrait.php` - removed objectives
+  - `docs/cpt-schema.md` - complete rewrite
+  - `README.md` - version 0.2.0 update
+- Build verified successful (webpack compiled with only Sass deprecation warnings)
+
+### Session 16 (2026-02-04)
+- **Completed Lesson → Activity migration**
+  - Fixed plural capability issue: `leaderspath_activities` (not `leaderspath_activitys`)
+  - Updated `CPT_CAPS` constant to use associative array mapping singular to plural
+  - Ran WP-CLI to remove old lesson capabilities and add correct activity capabilities
+  - Renamed LessonMeta module to ActivityMeta throughout codebase
+- **Updated all documentation to match actual schema**
+  - Verified create-test-data.php against class-acf-fields.php
+  - Removed dead `objectives` data from activity definitions (no `activity_objectives` ACF field)
+  - Fixed cpt-schema.md: removed incorrect `context_category` ACF field reference (it's a taxonomy)
+  - Updated activity content language ("In this activity" not "In this lesson")
+- **Enhanced test data with complete Course fields**
+  - Added `course_total_duration` (e.g., "90 minutes")
+  - Added `course_objectives` repeater with learning objectives
+  - Added `course_facilitator_guide` with full teaching scripts
+  - Added `course_learner_overview` with learner-facing content
+  - Added Course Q&A Chatbot configuration (enabled, model, system prompt, context files)
+  - Updated function signature to pass context_ids for course chatbot references
+- **Fixed ACF relationship field issue**
+  - Course Activities relationship field was showing empty list
+  - Removed `taxonomy` filter that was pre-filtering by unassigned terms
+- **Test data created successfully:**
+  - 3 Context Files (IDs 69-71)
+  - 2 Skills (IDs 72-73)
+  - 4 Activities (IDs 74-77)
+  - 2 Courses (IDs 78-79) with full facilitator guides and Q&A chatbots
+  - 1 Cohort (ID 80)
+- Build verified successful
+
 ---
 
 ## Quick Reference for Next Session
@@ -544,18 +620,18 @@ Brief notes from each development session:
 ### Test Data Available
 | Type | IDs | Notes |
 |------|-----|-------|
-| Lessons | 97-100 | All have chatbot enabled, various context/skills |
-| Courses | 101-102 | AI Fundamentals (3 lessons), AI in Practice (1 lesson) |
-| Context Files | 92-94 | Ethics, Prompt Engineering, Conversation Flows |
-| Skills | 95-96 | Code Review, Writing Editor |
-| Cohort | 103 | Spring 2026, linked to Course 101 |
+| Activities | 74-77 | All have chatbot enabled, various context/skills |
+| Courses | 78-79 | AI Fundamentals (3 activities), AI in Practice (1 activity) |
+| Context Files | 69-71 | Ethics, Prompt Engineering, Conversation Flows |
+| Skills | 72-73 | Code Review, Writing Editor |
+| Cohort | 80 | Spring 2026, linked to Course 78 |
 
 ### Key Files for Module Development
 ```
 modules/
 ├── Modules.php              # PHP module registration (add new modules here)
 ├── HelloModule/             # Simple reference implementation
-├── LessonMeta/              # Theme Builder pattern - displays ACF data from current lesson
+├── ActivityMeta/            # Theme Builder pattern - displays ACF data from current activity
 ├── ContextLibrary/          # Theme Builder pattern - compound elements, modal, buttons
 ├── SkillsList/              # Theme Builder pattern - similar to ContextLibrary, no modal
 ├── Chatbot/                 # Theme Builder pattern - interactive frontend JavaScript
@@ -565,7 +641,7 @@ src/
 ├── index.ts                 # JS module registration (add registerModule() here)
 └── components/
     ├── hello-module/        # Simple reference
-    ├── lesson-meta/         # Theme Builder pattern
+    ├── activity-meta/       # Theme Builder pattern
     ├── context-library/     # Theme Builder pattern with compound elements + modal
     ├── skills-list/         # Theme Builder pattern (same structure, no modal)
     └── chatbot/             # Theme Builder pattern with interactive chat
@@ -645,19 +721,19 @@ Container:
 - `POST /v1/skills/{id}/versions` - Create new version
 
 ### WordPress REST Endpoints
-- `POST /leaderspath/v1/chat` - Chat with Claude (needs lesson_id, message, optional history/model)
-- `GET /leaderspath/v1/lessons/{id}/context` - Get context files for lesson
-- `GET /leaderspath/v1/lessons/{id}/skills` - Get skills for lesson
+- `POST /leaderspath/v1/chat` - Chat with Claude (needs activity_id or course_id, message, optional history/model)
+- `GET /leaderspath/v1/activities/{id}/context` - Get context files for activity
+- `GET /leaderspath/v1/activities/{id}/skills` - Get skills for activity
 - `GET /leaderspath/v1/context/{id}/download` - Get context file content
 - `GET /leaderspath/v1/skills/{id}/download` - Get skill definition
 
 ### CLI Test Scripts
 ```bash
 # Full chat system test (API, context assembly, conversation)
-wp eval-file wp-content/plugins/leaderspath/bin/test-chat.php [lesson_id] [message]
+wp eval-file wp-content/plugins/leaderspath/bin/test-chat.php [activity_id] [message]
 
-# Show assembled system prompt for a lesson
-wp eval-file wp-content/plugins/leaderspath/bin/show-system-prompt.php [lesson_id]
+# Show assembled system prompt for an activity
+wp eval-file wp-content/plugins/leaderspath/bin/show-system-prompt.php [activity_id]
 ```
 
 ### Build Commands

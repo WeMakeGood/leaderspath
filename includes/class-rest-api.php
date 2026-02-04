@@ -56,39 +56,39 @@ class REST_API {
 			]
 		);
 
-		// Get lesson context files.
+		// Get activity context files.
 		register_rest_route(
 			self::NAMESPACE,
-			'/lessons/(?P<id>\d+)/context',
+			'/activities/(?P<id>\d+)/context',
 			[
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => [ $this, 'get_lesson_context' ],
+				'callback'            => [ $this, 'get_activity_context' ],
 				'permission_callback' => [ $this, 'check_read_permission' ],
 				'args'                => [
 					'id' => [
-						'description'       => __( 'Lesson ID.', 'leaderspath' ),
+						'description'       => __( 'Activity ID.', 'leaderspath' ),
 						'type'              => 'integer',
 						'required'          => true,
-						'validate_callback' => [ $this, 'validate_lesson_id' ],
+						'validate_callback' => [ $this, 'validate_activity_id' ],
 					],
 				],
 			]
 		);
 
-		// Get lesson skills.
+		// Get activity skills.
 		register_rest_route(
 			self::NAMESPACE,
-			'/lessons/(?P<id>\d+)/skills',
+			'/activities/(?P<id>\d+)/skills',
 			[
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => [ $this, 'get_lesson_skills' ],
+				'callback'            => [ $this, 'get_activity_skills' ],
 				'permission_callback' => [ $this, 'check_read_permission' ],
 				'args'                => [
 					'id' => [
-						'description'       => __( 'Lesson ID.', 'leaderspath' ),
+						'description'       => __( 'Activity ID.', 'leaderspath' ),
 						'type'              => 'integer',
 						'required'          => true,
-						'validate_callback' => [ $this, 'validate_lesson_id' ],
+						'validate_callback' => [ $this, 'validate_activity_id' ],
 					],
 				],
 			]
@@ -136,17 +136,26 @@ class REST_API {
 	/**
 	 * Get chat endpoint arguments.
 	 *
+	 * Supports both activity-level (activity_id) and course-level (course_id) chatbots.
+	 * One of activity_id or course_id must be provided.
+	 *
 	 * @since 0.1.0
 	 *
 	 * @return array<string, array<string, mixed>> Argument definitions.
 	 */
 	private function get_chat_args(): array {
 		return [
-			'lesson_id' => [
-				'description'       => __( 'The lesson ID for context.', 'leaderspath' ),
+			'activity_id' => [
+				'description'       => __( 'The activity ID for context (activity sandbox).', 'leaderspath' ),
 				'type'              => 'integer',
-				'required'          => true,
-				'validate_callback' => [ $this, 'validate_lesson_id' ],
+				'required'          => false,
+				'validate_callback' => [ $this, 'validate_activity_id' ],
+			],
+			'course_id' => [
+				'description'       => __( 'The course ID for context (course Q&A chatbot).', 'leaderspath' ),
+				'type'              => 'integer',
+				'required'          => false,
+				'validate_callback' => [ $this, 'validate_course_id' ],
 			],
 			'message'   => [
 				'description'       => __( 'The user message to send to Claude.', 'leaderspath' ),
@@ -249,20 +258,25 @@ class REST_API {
 	}
 
 	/**
-	 * Validate lesson ID.
+	 * Validate activity ID.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param mixed $value Lesson ID.
+	 * @param mixed $value Activity ID.
 	 * @return bool|WP_Error True if valid, WP_Error otherwise.
 	 */
-	public function validate_lesson_id( $value ) {
+	public function validate_activity_id( $value ) {
+		// Allow null/empty for optional parameter.
+		if ( empty( $value ) ) {
+			return true;
+		}
+
 		$post = get_post( (int) $value );
 
-		if ( ! $post || 'leaderspath_lesson' !== $post->post_type ) {
+		if ( ! $post || 'leaderspath_activity' !== $post->post_type ) {
 			return new WP_Error(
 				'rest_invalid_param',
-				__( 'Invalid lesson ID.', 'leaderspath' ),
+				__( 'Invalid activity ID.', 'leaderspath' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -270,7 +284,42 @@ class REST_API {
 		if ( 'publish' !== $post->post_status && ! current_user_can( 'edit_post', $post->ID ) ) {
 			return new WP_Error(
 				'rest_forbidden',
-				__( 'You cannot access this lesson.', 'leaderspath' ),
+				__( 'You cannot access this activity.', 'leaderspath' ),
+				[ 'status' => 403 ]
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Validate course ID.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param mixed $value Course ID.
+	 * @return bool|WP_Error True if valid, WP_Error otherwise.
+	 */
+	public function validate_course_id( $value ) {
+		// Allow null/empty for optional parameter.
+		if ( empty( $value ) ) {
+			return true;
+		}
+
+		$post = get_post( (int) $value );
+
+		if ( ! $post || 'leaderspath_course' !== $post->post_type ) {
+			return new WP_Error(
+				'rest_invalid_param',
+				__( 'Invalid course ID.', 'leaderspath' ),
+				[ 'status' => 404 ]
+			);
+		}
+
+		if ( 'publish' !== $post->post_status && ! current_user_can( 'edit_post', $post->ID ) ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'You cannot access this course.', 'leaderspath' ),
 				[ 'status' => 403 ]
 			);
 		}
@@ -371,43 +420,77 @@ class REST_API {
 	/**
 	 * Handle chat request.
 	 *
+	 * Supports both activity-level (activity_id) and course-level (course_id) chatbots.
+	 *
 	 * @since 0.1.0
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
 	public function handle_chat( WP_REST_Request $request ) {
-		$lesson_id = (int) $request->get_param( 'lesson_id' );
-		$message   = $request->get_param( 'message' );
-		$history   = $request->get_param( 'history' ) ?? [];
-		$model     = $request->get_param( 'model' );
+		$activity_id = $request->get_param( 'activity_id' );
+		$course_id   = $request->get_param( 'course_id' );
+		$message     = $request->get_param( 'message' );
+		$history     = $request->get_param( 'history' ) ?? [];
+		$model       = $request->get_param( 'model' );
 
-		// Check if chatbot is enabled for this lesson.
-		$chatbot_enabled = get_field( 'chatbot_enabled', $lesson_id );
+		// Must have either activity_id or course_id.
+		if ( empty( $activity_id ) && empty( $course_id ) ) {
+			return new WP_Error(
+				'missing_context',
+				__( 'Either activity_id (for activity sandbox) or course_id (for course Q&A) is required.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		// Determine which chatbot mode we're in.
+		if ( ! empty( $course_id ) ) {
+			// Course Q&A chatbot mode.
+			return $this->handle_course_chat( (int) $course_id, $message, $history, $model );
+		}
+
+		// Activity sandbox mode.
+		return $this->handle_activity_chat( (int) $activity_id, $message, $history, $model );
+	}
+
+	/**
+	 * Handle activity sandbox chat.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int         $activity_id Activity ID.
+	 * @param string      $message     User message.
+	 * @param array       $history     Conversation history.
+	 * @param string|null $model       Model override.
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	private function handle_activity_chat( int $activity_id, string $message, array $history, ?string $model ) {
+		// Check if chatbot is enabled for this activity.
+		$chatbot_enabled = get_field( 'chatbot_enabled', $activity_id );
 		if ( ! $chatbot_enabled ) {
 			return new WP_Error(
 				'chatbot_disabled',
-				__( 'Chatbot is not enabled for this lesson.', 'leaderspath' ),
+				__( 'AI sandbox is not enabled for this activity.', 'leaderspath' ),
 				[ 'status' => 400 ]
 			);
 		}
 
 		// Determine model to use.
 		if ( empty( $model ) ) {
-			$model = get_field( 'chatbot_model', $lesson_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
+			$model = get_field( 'chatbot_model', $activity_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
 		} else {
 			// Check if model switching is allowed.
-			$allow_switch = get_field( 'chatbot_allow_model_switch', $lesson_id );
+			$allow_switch = get_field( 'chatbot_allow_model_switch', $activity_id );
 			if ( ! $allow_switch ) {
-				$model = get_field( 'chatbot_model', $lesson_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
+				$model = get_field( 'chatbot_model', $activity_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
 			}
 		}
 
 		// Get Claude API handler.
 		$claude = new Claude_API();
 
-		// Send message.
-		$response = $claude->send_message( $lesson_id, $message, $history, $model );
+		// Send message (activity mode).
+		$response = $claude->send_message( $activity_id, $message, $history, $model );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -417,16 +500,56 @@ class REST_API {
 	}
 
 	/**
-	 * Get context files for a lesson.
+	 * Handle course Q&A chat.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int         $course_id Course ID.
+	 * @param string      $message   User message.
+	 * @param array       $history   Conversation history.
+	 * @param string|null $model     Model override.
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	private function handle_course_chat( int $course_id, string $message, array $history, ?string $model ) {
+		// Check if Q&A chatbot is enabled for this course.
+		$chatbot_enabled = get_field( 'course_chatbot_enabled', $course_id );
+		if ( ! $chatbot_enabled ) {
+			return new WP_Error(
+				'chatbot_disabled',
+				__( 'Q&A chatbot is not enabled for this course.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		// Determine model to use (course chatbot doesn't support model switching).
+		if ( empty( $model ) ) {
+			$model = get_field( 'course_chatbot_model', $course_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
+		}
+
+		// Get Claude API handler.
+		$claude = new Claude_API();
+
+		// Send message (course mode).
+		$response = $claude->send_course_message( $course_id, $message, $history, $model );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return new WP_REST_Response( $response, 200 );
+	}
+
+	/**
+	 * Get context files for an activity.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	public function get_lesson_context( WP_REST_Request $request ) {
-		$lesson_id     = (int) $request->get_param( 'id' );
-		$context_files = get_field( 'chatbot_context_files', $lesson_id ) ?: [];
+	public function get_activity_context( WP_REST_Request $request ) {
+		$activity_id   = (int) $request->get_param( 'id' );
+		$context_files = get_field( 'chatbot_context_files', $activity_id ) ?: [];
 
 		$data = [];
 
@@ -450,16 +573,16 @@ class REST_API {
 	}
 
 	/**
-	 * Get skills for a lesson.
+	 * Get skills for an activity.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	public function get_lesson_skills( WP_REST_Request $request ) {
-		$lesson_id = (int) $request->get_param( 'id' );
-		$skills    = get_field( 'chatbot_skills', $lesson_id ) ?: [];
+	public function get_activity_skills( WP_REST_Request $request ) {
+		$activity_id = (int) $request->get_param( 'id' );
+		$skills      = get_field( 'chatbot_skills', $activity_id ) ?: [];
 
 		$data = [];
 

@@ -1,6 +1,6 @@
 # Claude API Integration
 
-**Last Updated:** 2026-01-30
+**Last Updated:** 2026-02-04
 
 This document describes how LeadersPath integrates with the Anthropic Claude API, including the full skill system with code execution support.
 
@@ -184,15 +184,15 @@ $version  = $data['latest_version'];
 
 ### 3. Use Skill in Chat
 
-When chat is initiated for a lesson:
+When chat is initiated for an activity:
 
-1. **Get lesson's skills** - Query ACF relationship field
+1. **Get activity's skills** - Query ACF relationship field
 2. **Build skills array** - Map WordPress skill IDs to Anthropic skill_ids
 3. **Include in container** - Add to request
 
 ```php
 $skills_for_api = [];
-foreach ( $lesson_skills as $wp_skill_id ) {
+foreach ( $activity_skills as $wp_skill_id ) {
     $anthropic_id = get_field( 'skill_anthropic_id', $wp_skill_id );
     if ( $anthropic_id ) {
         $skills_for_api[] = [
@@ -260,11 +260,11 @@ The system prompt is assembled from multiple sources:
 
 ### Assembly Order
 
-1. **Custom System Prompt** (if set on lesson) OR **Default System Prompt** (fallback)
+1. **Custom System Prompt** (if set on activity) OR **Default System Prompt** (fallback)
 2. **Context Files** - Full content of linked Context CPTs (embedded)
 3. **Skills Metadata** - Name and description only (for discovery)
 
-**Important:** The lesson's `post_content` (what learners see on the page) is NOT included in the system prompt. Only the Custom System Prompt field and attached Context Files define Claude's behavior.
+**Important:** The activity's `post_content` (what learners see on the page) is NOT included in the system prompt. Only the Custom System Prompt field and attached Context Files define Claude's behavior.
 
 ### Progressive Loading for Skills
 
@@ -403,11 +403,11 @@ foreach ( $response['content'] as $block ) {
 
 ```php
 // First message - container created
-$response1 = $this->send_message( $lesson_id, $message1 );
+$response1 = $this->send_message( $activity_id, $message1 );
 $container_id = $response1['container']['id'];
 
 // Subsequent messages - reuse container
-$response2 = $this->send_message( $lesson_id, $message2, $history, $container_id );
+$response2 = $this->send_message( $activity_id, $message2, $history, $container_id );
 ```
 
 ### Session Strategy
@@ -488,7 +488,7 @@ Consider adding:
 
 - [ ] Update Claude_API to use container parameter
 - [ ] Add code execution tool to requests
-- [ ] Build skills array from lesson's linked skills
+- [ ] Build skills array from activity's linked skills
 - [ ] Handle pause_turn responses
 - [ ] Store container_id in session for reuse
 

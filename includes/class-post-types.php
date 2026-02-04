@@ -32,7 +32,7 @@ class Post_Types {
 	 * @since 0.1.0
 	 */
 	public function register_post_types(): void {
-		$this->register_lesson();
+		$this->register_activity();
 		$this->register_course();
 		$this->register_cohort();
 		$this->register_context();
@@ -40,36 +40,38 @@ class Post_Types {
 	}
 
 	/**
-	 * Register the Lesson post type.
+	 * Register the Activity post type.
+	 *
+	 * Activities are AI sandbox experiments within a facilitated Course.
 	 *
 	 * @since 0.1.0
 	 */
-	private function register_lesson(): void {
+	private function register_activity(): void {
 		$labels = [
-			'name'                  => _x( 'Lessons', 'Post type general name', 'leaderspath' ),
-			'singular_name'         => _x( 'Lesson', 'Post type singular name', 'leaderspath' ),
-			'menu_name'             => _x( 'Lessons', 'Admin Menu text', 'leaderspath' ),
-			'name_admin_bar'        => _x( 'Lesson', 'Add New on Toolbar', 'leaderspath' ),
+			'name'                  => _x( 'Activities', 'Post type general name', 'leaderspath' ),
+			'singular_name'         => _x( 'Activity', 'Post type singular name', 'leaderspath' ),
+			'menu_name'             => _x( 'Activities', 'Admin Menu text', 'leaderspath' ),
+			'name_admin_bar'        => _x( 'Activity', 'Add New on Toolbar', 'leaderspath' ),
 			'add_new'               => __( 'Add New', 'leaderspath' ),
-			'add_new_item'          => __( 'Add New Lesson', 'leaderspath' ),
-			'new_item'              => __( 'New Lesson', 'leaderspath' ),
-			'edit_item'             => __( 'Edit Lesson', 'leaderspath' ),
-			'view_item'             => __( 'View Lesson', 'leaderspath' ),
-			'all_items'             => __( 'All Lessons', 'leaderspath' ),
-			'search_items'          => __( 'Search Lessons', 'leaderspath' ),
-			'parent_item_colon'     => __( 'Parent Lessons:', 'leaderspath' ),
-			'not_found'             => __( 'No lessons found.', 'leaderspath' ),
-			'not_found_in_trash'    => __( 'No lessons found in Trash.', 'leaderspath' ),
-			'featured_image'        => _x( 'Lesson Cover Image', 'Overrides the "Featured Image" phrase', 'leaderspath' ),
+			'add_new_item'          => __( 'Add New Activity', 'leaderspath' ),
+			'new_item'              => __( 'New Activity', 'leaderspath' ),
+			'edit_item'             => __( 'Edit Activity', 'leaderspath' ),
+			'view_item'             => __( 'View Activity', 'leaderspath' ),
+			'all_items'             => __( 'All Activities', 'leaderspath' ),
+			'search_items'          => __( 'Search Activities', 'leaderspath' ),
+			'parent_item_colon'     => __( 'Parent Activities:', 'leaderspath' ),
+			'not_found'             => __( 'No activities found.', 'leaderspath' ),
+			'not_found_in_trash'    => __( 'No activities found in Trash.', 'leaderspath' ),
+			'featured_image'        => _x( 'Activity Cover Image', 'Overrides the "Featured Image" phrase', 'leaderspath' ),
 			'set_featured_image'    => _x( 'Set cover image', 'Overrides the "Set featured image" phrase', 'leaderspath' ),
 			'remove_featured_image' => _x( 'Remove cover image', 'Overrides the "Remove featured image" phrase', 'leaderspath' ),
 			'use_featured_image'    => _x( 'Use as cover image', 'Overrides the "Use as featured image" phrase', 'leaderspath' ),
-			'archives'              => _x( 'Lesson archives', 'The post type archive label', 'leaderspath' ),
-			'insert_into_item'      => _x( 'Insert into lesson', 'Overrides the "Insert into post" phrase', 'leaderspath' ),
-			'uploaded_to_this_item' => _x( 'Uploaded to this lesson', 'Overrides the "Uploaded to this post" phrase', 'leaderspath' ),
-			'filter_items_list'     => _x( 'Filter lessons list', 'Screen reader text', 'leaderspath' ),
-			'items_list_navigation' => _x( 'Lessons list navigation', 'Screen reader text', 'leaderspath' ),
-			'items_list'            => _x( 'Lessons list', 'Screen reader text', 'leaderspath' ),
+			'archives'              => _x( 'Activity archives', 'The post type archive label', 'leaderspath' ),
+			'insert_into_item'      => _x( 'Insert into activity', 'Overrides the "Insert into post" phrase', 'leaderspath' ),
+			'uploaded_to_this_item' => _x( 'Uploaded to this activity', 'Overrides the "Uploaded to this post" phrase', 'leaderspath' ),
+			'filter_items_list'     => _x( 'Filter activities list', 'Screen reader text', 'leaderspath' ),
+			'items_list_navigation' => _x( 'Activities list navigation', 'Screen reader text', 'leaderspath' ),
+			'items_list'            => _x( 'Activities list', 'Screen reader text', 'leaderspath' ),
 		];
 
 		$args = [
@@ -77,22 +79,20 @@ class Post_Types {
 			'public'              => true,
 			'publicly_queryable'  => true,
 			'show_ui'             => true,
-			'show_in_menu'        => true,
+			'show_in_menu'        => \LeadersPath\Admin\Admin_Menu::MENU_SLUG,
 			'show_in_rest'        => true,
-			'rest_base'           => 'lessons',
+			'rest_base'           => 'activities',
 			'rest_namespace'      => 'wp/v2',
 			'query_var'           => true,
-			'rewrite'             => [ 'slug' => 'lesson', 'with_front' => false ],
-			'capability_type'     => [ 'leaderspath_lesson', 'leaderspath_lessons' ],
+			'rewrite'             => [ 'slug' => 'activity', 'with_front' => false ],
+			'capability_type'     => [ 'leaderspath_activity', 'leaderspath_activities' ],
 			'map_meta_cap'        => true,
 			'has_archive'         => true,
 			'hierarchical'        => false,
-			'menu_position'       => 25,
-			'menu_icon'           => 'dashicons-welcome-learn-more',
 			'supports'            => [ 'title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields' ],
 		];
 
-		register_post_type( 'leaderspath_lesson', $args );
+		register_post_type( 'leaderspath_activity', $args );
 	}
 
 	/**
@@ -133,7 +133,7 @@ class Post_Types {
 			'public'              => true,
 			'publicly_queryable'  => true,
 			'show_ui'             => true,
-			'show_in_menu'        => true,
+			'show_in_menu'        => \LeadersPath\Admin\Admin_Menu::MENU_SLUG,
 			'show_in_rest'        => true,
 			'rest_base'           => 'courses',
 			'rest_namespace'      => 'wp/v2',
@@ -143,8 +143,6 @@ class Post_Types {
 			'map_meta_cap'        => true,
 			'has_archive'         => true,
 			'hierarchical'        => false,
-			'menu_position'       => 26,
-			'menu_icon'           => 'dashicons-book-alt',
 			'supports'            => [ 'title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields' ],
 		];
 
@@ -185,7 +183,7 @@ class Post_Types {
 			'public'              => false,
 			'publicly_queryable'  => false,
 			'show_ui'             => true,
-			'show_in_menu'        => true,
+			'show_in_menu'        => \LeadersPath\Admin\Admin_Menu::MENU_SLUG,
 			'show_in_rest'        => true,
 			'rest_base'           => 'cohorts',
 			'rest_namespace'      => 'wp/v2',
@@ -195,8 +193,6 @@ class Post_Types {
 			'map_meta_cap'        => true,
 			'has_archive'         => false,
 			'hierarchical'        => false,
-			'menu_position'       => 27,
-			'menu_icon'           => 'dashicons-groups',
 			'supports'            => [ 'title', 'revisions', 'custom-fields' ],
 		];
 
@@ -238,7 +234,7 @@ class Post_Types {
 			'publicly_queryable'  => true,
 			'exclude_from_search' => false, // Required for ACF relationship field search.
 			'show_ui'             => true,
-			'show_in_menu'        => 'edit.php?post_type=leaderspath_lesson',
+			'show_in_menu'        => \LeadersPath\Admin\Admin_Menu::MENU_SLUG,
 			'show_in_rest'        => true,
 			'rest_base'           => 'context-files',
 			'rest_namespace'      => 'wp/v2',
@@ -248,7 +244,6 @@ class Post_Types {
 			'map_meta_cap'        => true,
 			'has_archive'         => false,
 			'hierarchical'        => false,
-			'menu_icon'           => 'dashicons-media-text',
 			'supports'            => [ 'title', 'editor', 'revisions', 'custom-fields' ],
 		];
 
@@ -290,7 +285,7 @@ class Post_Types {
 			'publicly_queryable'  => true,
 			'exclude_from_search' => false, // Required for ACF relationship field search.
 			'show_ui'             => true,
-			'show_in_menu'        => 'edit.php?post_type=leaderspath_lesson',
+			'show_in_menu'        => \LeadersPath\Admin\Admin_Menu::MENU_SLUG,
 			'show_in_rest'        => true,
 			'rest_base'           => 'skills',
 			'rest_namespace'      => 'wp/v2',
@@ -300,7 +295,6 @@ class Post_Types {
 			'map_meta_cap'        => true,
 			'has_archive'         => false,
 			'hierarchical'        => false,
-			'menu_icon'           => 'dashicons-admin-tools',
 			'supports'            => [ 'title', 'revisions', 'custom-fields' ],
 		];
 

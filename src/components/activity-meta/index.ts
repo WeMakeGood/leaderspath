@@ -1,5 +1,5 @@
 /**
- * Lesson Meta Module entry point.
+ * Activity Meta Module entry point.
  *
  * @package LeadersPath
  * @since 0.1.0
@@ -8,23 +8,23 @@
 import { type Metadata, type ModuleLibrary } from '@divi/types';
 
 import metadata from './module.json';
-import { LessonMetaEdit } from './edit';
-import { LessonMetaAttrs } from './types';
+import { ActivityMetaEdit } from './edit';
+import { ActivityMetaAttrs } from './types';
 import { placeholderContent } from './placeholder-content';
 
 // Styles.
 import './style.scss';
 
 /**
- * Lesson Meta Module registration definition.
+ * Activity Meta Module registration definition.
  *
  * @since 0.1.0
  */
-export const lessonMetaModule: ModuleLibrary.Module.RegisterDefinition<LessonMetaAttrs> = {
+export const activityMetaModule: ModuleLibrary.Module.RegisterDefinition<ActivityMetaAttrs> = {
   // Imported json has no inferred type hence type-cast is necessary.
-  metadata: metadata as Metadata.Values<LessonMetaAttrs>,
+  metadata: metadata as Metadata.Values<ActivityMetaAttrs>,
   placeholderContent,
   renderers: {
-    edit: LessonMetaEdit,
+    edit: ActivityMetaEdit,
   },
 };

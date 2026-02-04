@@ -63,9 +63,10 @@ class Settings {
 	 * @since 0.1.0
 	 */
 	public function add_settings_page(): void {
-		add_options_page(
-			__( 'LeadersPath Settings', 'leaderspath' ),
-			__( 'LeadersPath', 'leaderspath' ),
+		add_submenu_page(
+			Admin_Menu::MENU_SLUG,
+			__( 'Settings', 'leaderspath' ),
+			__( 'Settings', 'leaderspath' ),
 			'manage_options',
 			self::PAGE_SLUG,
 			[ $this, 'render_settings_page' ]
@@ -534,14 +535,17 @@ class Settings {
 		}
 
 		$show_on_screens = [
-			'leaderspath_lesson',
+			'leaderspath_activity',
 			'leaderspath_course',
 			'leaderspath_cohort',
 			'leaderspath_context',
 			'leaderspath_skill',
-			'edit-leaderspath_lesson',
+			'edit-leaderspath_activity',
 			'edit-leaderspath_course',
-			'settings_page_' . self::PAGE_SLUG,
+			'edit-leaderspath_cohort',
+			'edit-leaderspath_context',
+			'edit-leaderspath_skill',
+			'leaderspath_page_' . self::PAGE_SLUG,
 		];
 
 		if ( ! in_array( $screen->id, $show_on_screens, true ) ) {
@@ -558,7 +562,7 @@ class Settings {
 					printf(
 						/* translators: %s: Settings page URL */
 						esc_html__( 'LeadersPath: Claude API key is not configured. Chatbot features will not work until you %s.', 'leaderspath' ),
-						'<a href="' . esc_url( admin_url( 'options-general.php?page=' . self::PAGE_SLUG ) ) . '">' . esc_html__( 'add your API key', 'leaderspath' ) . '</a>'
+						'<a href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '">' . esc_html__( 'add your API key', 'leaderspath' ) . '</a>'
 					);
 					?>
 				</p>

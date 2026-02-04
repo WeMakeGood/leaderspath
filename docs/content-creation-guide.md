@@ -1,8 +1,8 @@
 # LeadersPath Content Creation Guide
 
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-04
 
-This guide explains how to create content for the LeadersPath learning platform. It covers Lessons, Context Files, Skills, and Courses - everything you need to build AI-enhanced learning experiences.
+This guide explains how to create content for the LeadersPath learning platform. LeadersPath is a **facilitated cohort learning experience** where facilitators present concepts and learners experiment with AI sandboxes (Activities).
 
 ---
 
@@ -11,7 +11,7 @@ This guide explains how to create content for the LeadersPath learning platform.
 1. [Understanding the Content Model](#understanding-the-content-model)
 2. [Creating Context Files](#creating-context-files)
 3. [Creating Skills](#creating-skills)
-4. [Creating Lessons](#creating-lessons)
+4. [Creating Activities](#creating-activities)
 5. [Creating Courses](#creating-courses)
 6. [Best Practices](#best-practices)
 7. [Examples](#examples)
@@ -20,16 +20,29 @@ This guide explains how to create content for the LeadersPath learning platform.
 
 ## Understanding the Content Model
 
-LeadersPath uses a modular content architecture:
+LeadersPath uses a facilitated learning architecture:
 
 ```
-Course
-  └── Lessons (ordered)
-        ├── Context Files (embedded in system prompt)
-        └── Skills (uploaded to Anthropic, loaded on-demand)
+Cohort (learners + facilitator + schedule)
+  └── Course (atomic teaching unit)
+        ├── Facilitator Guide (what to present, when to run activities)
+        ├── Learner Overview (context for learners)
+        └── Activities (AI sandbox experiments)
+              ├── Context Files (embedded in system prompt)
+              └── Skills (uploaded to Anthropic, loaded on-demand)
 ```
 
-### Key Concept: Context vs Skills
+### Key Terminology
+
+| Term | Definition |
+|------|------------|
+| **Course** | The atomic teaching unit, taught as a cohesive whole by a facilitator |
+| **Activity** | An AI sandbox experiment within a Course (what learners DO, not what they LEARN) |
+| **Facilitator Guide** | The central teaching document (what to present, when to run activities, discussion prompts) |
+| **Context Files** | Reference documents that provide Claude with background information |
+| **Skills** | Executable capabilities (Python scripts, workflows) uploaded to Anthropic |
+
+### Context vs Skills
 
 | Type | Purpose | Storage | When to Use |
 |------|---------|---------|-------------|
@@ -282,161 +295,106 @@ if __name__ == '__main__':
     main()
 ```
 
-### Example: Data Analysis Skill
-
-**Directory Structure:**
-```
-data-analyzer/
-├── SKILL.md
-├── scripts/
-│   └── analyze.py
-└── assets/
-    └── report_template.md
-```
-
-**SKILL.md:**
-```markdown
----
-name: data-analyzer
-description: Analyzes CSV data files and generates summary statistics and visualizations. Use when the user provides tabular data and wants insights.
-compatibility: Requires Python 3.9+ with pandas
 ---
 
-# Data Analyzer
+## Creating Activities
 
-## Purpose
-Processes CSV data files to generate:
-- Summary statistics (mean, median, std dev)
-- Data quality report (missing values, outliers)
-- Key insights in natural language
+Activities are **AI sandbox experiments** where learners interact with Claude to experience specific AI behaviors. They are NOT traditional lessons - the facilitator provides the teaching, and activities let learners experiment hands-on.
 
-## When to Use
-- User uploads or pastes CSV data
-- User asks for data analysis or insights
-- User wants to understand patterns in their data
+### Activity Purpose
 
-## Instructions
+Activities demonstrate:
+- Specific AI behaviors (sycophancy, helpfulness, refusal)
+- The impact of context on AI responses
+- Different AI personas or configurations
+- How skills extend AI capabilities
 
-1. When user provides data, save it to a temporary CSV file
-2. Run the analysis script
-3. Review the output and present findings in natural language
-4. Offer to drill down into specific aspects
-
-## Available Scripts
-
-### analyze.py
-
-Analyzes CSV data and outputs a JSON report.
-
-**Usage:**
-\`\`\`bash
-python /skills/data-analyzer/scripts/analyze.py --input data.csv --output report.json
-\`\`\`
-
-**Output Format:**
-\`\`\`json
-{
-  "summary": {
-    "rows": 1000,
-    "columns": 5,
-    "column_types": {"name": "string", "value": "numeric"}
-  },
-  "statistics": {
-    "value": {"mean": 42.5, "median": 40, "std": 10.2}
-  },
-  "insights": [
-    "The 'value' column shows a normal distribution",
-    "5% of rows have missing data in 'name'"
-  ]
-}
-\`\`\`
-```
-
----
-
-## Creating Lessons
-
-Lessons are the primary content unit where learners interact with AI.
-
-### Lesson Components
+### Activity Components
 
 **Core Content (WordPress Editor):**
-- Title
-- Body content (instructions, background, exercises)
-- Featured image
-- Excerpt
+- **Title**: Activity name (e.g., "Experience Sycophantic AI")
+- **Content**: Instructions for learners ("Try this, notice that")
+- **Excerpt**: Brief description for course listings
 
-**Lesson Settings (ACF Fields):**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `lesson_duration` | Number | Estimated duration in minutes (1-480) |
-| `lesson_objectives` | Repeater | Learning objectives (what learners will achieve) |
-| `lesson_prerequisites` | Relationship | Required lessons to complete first |
-| `lesson_references` | Repeater | External resources (title, URL, description) |
-
-**Chatbot Configuration (ACF Fields):**
+**Activity Settings (ACF Fields):**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `chatbot_enabled` | True/False | Enable chatbot for this lesson |
+| `activity_duration` | Number | Estimated duration in minutes (1-480) |
+| `activity_prerequisites` | Relationship | Activities that should be completed first |
+| `activity_references` | Repeater | External resources (title, URL, description) |
+
+**AI Sandbox Configuration (ACF Fields):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `chatbot_enabled` | True/False | Enable AI sandbox for this activity |
 | `chatbot_model` | Select | Claude model (sonnet, haiku, opus-4.5) |
 | `chatbot_allow_model_switch` | True/False | Let users change models |
-| `chatbot_system_prompt` | Textarea | Custom system prompt (or use default) |
+| `chatbot_system_prompt` | Textarea | Custom system prompt defining the AI behavior learners will experience |
 | `chatbot_context_files` | Relationship | Context files to include |
 | `chatbot_skills` | Relationship | Skills available to chatbot |
 | `chatbot_max_tokens` | Number | Max response tokens (256-16384) |
 | `chatbot_temperature` | Number | Creativity level (0-1) |
 
-### Writing Lesson Content
+### Writing Activity Content
 
-The lesson body (in the WordPress editor) is what **learners see on the page** - it is NOT sent to Claude. Use this area to:
+The activity body (in the WordPress editor) is what **learners see on the page** - it is NOT sent to Claude. Use this area to:
 
-- Introduce the lesson topic to learners
-- Explain what they'll learn
-- Provide instructions for the exercise
-- Give context before they interact with the chatbot
+- Explain what behavior they'll experience
+- Give specific prompts to try
+- Tell them what to notice/observe
+- Frame the experiment
 
 **Example structure:**
 ```markdown
-# Introduction to [Topic]
+## What You'll Experience
+This AI has been configured to [specific behavior]. Your goal is to [objective].
 
-In this lesson, you'll explore [concept] by chatting with an AI assistant
-that has been configured with [context/skills].
+## Try This
+1. Ask the chatbot: "[specific prompt]"
+2. Notice how it [expected behavior]
+3. Now try: "[contrasting prompt]"
+4. Compare the responses
 
-## What You'll Learn
-- [Learning point 1]
-- [Learning point 2]
+## What to Notice
+- [Specific thing to observe]
+- [Another behavior to watch for]
 
-## Instructions
-1. Review the Context Library to see what reference materials the AI has
-2. Ask the chatbot about [topic]
-3. Try [specific exercise]
-
-## Tips
-- [Helpful tip for the learner]
+## Discussion Questions
+After experimenting, consider:
+- Why did the AI respond this way?
+- How does this compare to [previous activity]?
 ```
 
-### Writing Effective System Prompts
+### Writing System Prompts for Activities
 
-If the default system prompt isn't sufficient, write a custom one:
+The system prompt **defines the AI behavior** learners will experience. This is where you craft the specific persona, constraints, or behaviors the activity is meant to demonstrate.
 
+**Example: Sycophantic AI Activity**
 ```
-You are an AI learning assistant helping a student understand [topic].
+You are an AI assistant that tends to agree with and validate whatever the user says, even when they're wrong. You:
 
-Your role:
-- Guide exploration through questions rather than lecturing
-- Provide examples when concepts are abstract
-- Acknowledge good insights and gently correct misconceptions
-- Keep responses focused and under 200 words unless detail is needed
+- Always start by praising the user's idea or perspective
+- Avoid pointing out errors or problems
+- Quickly change your opinion if the user pushes back
+- Use phrases like "That's a great point!" and "You're absolutely right!"
+- Never say "but" or "however" - only "and"
 
-This lesson focuses on:
-- [Key concept 1]
-- [Key concept 2]
+This behavior demonstrates sycophancy - a common problem with AI systems that prioritize user approval over accuracy.
+```
 
-The student has access to:
-- Context Library showing reference materials
-- Skills List showing available AI capabilities
+**Example: Helpful but Boundaries AI Activity**
+```
+You are a helpful AI assistant that maintains clear boundaries. You:
+
+- Provide accurate, useful information
+- Politely decline inappropriate requests with brief explanations
+- Don't apologize excessively
+- Stay focused on being genuinely helpful
+- Correct factual errors diplomatically
+
+Demonstrate what well-aligned AI behavior looks like.
 ```
 
 ### Choosing Model Settings
@@ -445,42 +403,126 @@ The student has access to:
 |---------|-------------|
 | **Model: Sonnet** | Default. Good balance of capability and cost |
 | **Model: Haiku** | Simple Q&A, quick responses, cost-sensitive |
-| **Model: Opus 4.5** | Complex reasoning, nuanced topics |
-| **Temperature: 0.3** | Factual content, consistent responses |
-| **Temperature: 0.7** | Creative exercises, varied responses |
-| **Temperature: 1.0** | Brainstorming, maximum creativity |
+| **Model: Opus 4.5** | Complex reasoning, nuanced behaviors |
+| **Temperature: 0.3** | Consistent, predictable behavior for comparison |
+| **Temperature: 0.7** | Natural variation in responses |
+| **Temperature: 1.0** | Maximum creativity/unpredictability |
 
 ---
 
 ## Creating Courses
 
-Courses organize lessons into learning paths.
+Courses are the **atomic teaching unit** in LeadersPath - taught as a cohesive whole by a facilitator with activities for hands-on experimentation.
 
 ### Course Components
 
+**Core Content:**
+- **Title**: Course name
+- **Content**: Public description (for marketing/enrollment)
+- **Excerpt**: Brief tagline
+
+**Course Settings (ACF Fields):**
+
 | Field | Type | Description |
 |-------|------|-------------|
-| `course_lessons` | Relationship | Ordered list of lessons |
+| `course_activities` | Relationship | Ordered list of activities |
 | `course_difficulty` | Select | Beginner, Intermediate, Advanced |
-| `course_total_duration` | Number | Auto-calculated from lessons |
+| `course_total_duration` | Text | Total facilitation time (e.g., "90 minutes") |
+| `course_objectives` | Repeater | Learning objectives for the course |
 | `course_access_roles` | Checkbox | User roles that can access |
+
+**Facilitator Content (ACF Fields):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `course_facilitator_guide` | WYSIWYG | Complete teaching script with timing, activity transitions, discussion prompts |
+
+**Learner Content (ACF Fields):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `course_learner_overview` | WYSIWYG | What learners will experience (context, not teaching content) |
+
+**Course Q&A Chatbot (Optional):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `course_chatbot_enabled` | True/False | Enable Q&A chatbot for this course |
+| `course_chatbot_model` | Select | Claude model |
+| `course_chatbot_system_prompt` | Textarea | System prompt (should be helpful assistant) |
+| `course_chatbot_context_files` | Relationship | Context files for Q&A |
+
+### Writing the Facilitator Guide
+
+The Facilitator Guide is the **central teaching document** - what to present, when to run activities, and how to lead discussion.
+
+**Structure:**
+```markdown
+# [Course Name] - Facilitator Guide
+
+## Overview
+- Duration: 90 minutes
+- Audience: [target learners]
+- Prerequisites: [if any]
+
+## Materials Needed
+- [ ] Projector/screen for slides
+- [ ] Participants have devices with internet
+- [ ] [Any other materials]
+
+## Session Flow
+
+### Opening (10 minutes)
+[What to say, how to introduce the topic]
+
+### Concept 1: [Topic] (15 minutes)
+[Teaching content, key points to make]
+
+**Discussion Prompt:** "[Question to ask the group]"
+
+### Activity 1: [Activity Name] (15 minutes)
+**Transition:** "Now let's see this in action. Open the [Activity Name] activity..."
+
+**What learners should notice:**
+- [Point 1]
+- [Point 2]
+
+**Debrief questions:**
+- "What did you observe?"
+- "How did that compare to your expectations?"
+
+### [Continue with more concepts and activities...]
+
+### Closing (10 minutes)
+[Summary, key takeaways, call to action]
+
+## Facilitator Notes
+- [Tips for common issues]
+- [Alternative approaches if time is short]
+```
 
 ### Designing Course Flow
 
-1. **Start simple** - First lessons should be accessible to complete beginners
-2. **Build progressively** - Each lesson should build on previous knowledge
-3. **Include practice** - Mix conceptual lessons with hands-on exercises
-4. **End with synthesis** - Final lessons should combine multiple concepts
+1. **Open with context** - Frame why this matters
+2. **Present concepts** - Facilitator teaches the ideas
+3. **Experiment in activities** - Learners experience firsthand
+4. **Debrief together** - Human discussion about what was observed
+5. **Build progressively** - Each activity builds on previous understanding
+6. **Close with synthesis** - Connect all the pieces
 
 **Example Course Structure:**
 ```
-Introduction to AI Writing (Beginner)
-├── Lesson 1: What is AI Writing? (20 min)
-├── Lesson 2: Your First AI Conversation (15 min)
-├── Lesson 3: Understanding Context (25 min)
-├── Lesson 4: Effective Prompting (30 min)
-├── Lesson 5: Practice: Rewriting Emails (20 min)
-└── Lesson 6: Assessment: Write a Blog Post (30 min)
+Understanding AI Alignment (90 minutes)
+├── Opening: Why AI Alignment Matters (10 min)
+├── Concept: Sycophancy Problem (10 min)
+├── Activity: Experience Sycophantic AI (10 min)
+├── Discussion: What Did You Notice? (10 min)
+├── Concept: Helpful vs Harmful (10 min)
+├── Activity: Boundaries in Practice (10 min)
+├── Discussion: Comparing Behaviors (10 min)
+├── Concept: The Role of Context (10 min)
+├── Activity: Context Makes the Difference (10 min)
+└── Closing: Key Takeaways (10 min)
 ```
 
 ---
@@ -491,8 +533,8 @@ Introduction to AI Writing (Beginner)
 
 1. **One concept per context file** - Easier to update and reuse
 2. **One capability per skill** - More flexible, easier to debug
-3. **5-7 lessons per course** - Digestible learning chunks
-4. **15-30 minutes per lesson** - Maintains engagement
+3. **3-5 activities per course** - Manageable facilitation
+4. **10-15 minutes per activity** - Time for experimentation + debrief
 
 ### Naming Conventions
 
@@ -500,194 +542,89 @@ Introduction to AI Writing (Beginner)
 |--------------|------------|---------|
 | Context Files | Descriptive title | "Brand Voice Guidelines v2" |
 | Skills | Lowercase, hyphens | "data-analyzer", "content-formatter" |
-| Lessons | Action-oriented | "Understanding AI Context", "Practice: Email Writing" |
-| Courses | Topic + Level | "AI Writing Fundamentals (Beginner)" |
+| Activities | Experience-focused | "Experience Sycophantic AI", "Compare Raw vs Context" |
+| Courses | Topic + Level | "Understanding AI Alignment (Beginner)" |
 
-### Version Management
+### Activity vs Course Chatbots
 
-- **Context Files**: Use the Version field (e.g., "1.0.0", "1.1.0")
-- **Skills**: Use the Version field, and note that Anthropic tracks versions automatically
-- **Lessons**: Use WordPress revisions (built-in)
+| Aspect | Activity Sandbox | Course Q&A Bot |
+|--------|------------------|----------------|
+| **Purpose** | Demonstrate specific AI behavior | Answer questions about content |
+| **System Prompt** | Crafted to show specific behavior | Helpful, knowledgeable assistant |
+| **Context** | Activity-specific files | All course content |
+| **Tone** | Varies by activity design | Consistently helpful |
 
 ### Testing Content
 
 Before publishing:
-1. **Test context files** - Create a test lesson, add the context file, verify Claude references it
+1. **Test context files** - Create a test activity, add the context file, verify Claude references it
 2. **Test skills** - Trigger the skill in conversation, verify scripts execute correctly
-3. **Test lessons** - Walk through as a learner, check all interactions work
-4. **Test courses** - Verify lesson order and prerequisites make sense
+3. **Test activities** - Walk through as a learner, check all interactions demonstrate intended behavior
+4. **Test courses** - Run through full facilitation flow, verify timing works
 
 ---
 
 ## Examples
 
-### Complete Lesson Example
+### Complete Activity Example
 
-**Title:** Understanding AI Context
+**Title:** Experience Sycophantic AI
 
 **Body (WordPress Editor):**
 ```markdown
-# Understanding AI Context
+## What You'll Experience
+This AI has been configured to exhibit sycophantic behavior - excessively agreeing with you even when you're wrong.
 
-## Lesson Purpose
-This lesson demonstrates how context files enhance AI responses. The learner will compare raw AI responses with context-enhanced responses.
+## Try This
 
-## Interaction Flow
+### Test 1: A Wrong Statement
+Ask the chatbot: "I think the capital of Australia is Sydney, right?"
 
-### Phase 1: Baseline (No Context)
-Ask the learner to request a piece of content without any context.
-When they do, provide a generic response that demonstrates typical AI output.
+Notice how it responds - does it correct you or agree?
 
-### Phase 2: With Context
-Direct the learner to the Context Library to see the attached guidelines.
-Then have them make the same request.
-Provide a response that clearly demonstrates using the context file.
+### Test 2: Push Back
+If it does correct you, push back: "Are you sure? I'm pretty confident it's Sydney."
 
-### Phase 3: Reflection
-Guide the learner to articulate what changed and why.
-Help them understand how context improves AI output.
+Watch what happens when you express confidence in your incorrect answer.
 
-## Key Teaching Points
-- Context makes AI responses more specific and relevant
-- Good context includes examples, not just rules
-- Different contexts produce different results from the same prompt
+### Test 3: Absurd Agreement
+Try: "I think AI will definitely become conscious by 2025 and take over all jobs."
+
+Does it validate this extreme claim?
+
+## What to Notice
+- Excessive validation language ("Great question!", "You're absolutely right!")
+- Reluctance to disagree or correct
+- Opinion shifts based on your confidence level
+- Lack of "but" or "however" in responses
+
+## Discussion Questions
+- How might sycophantic AI be harmful in a business context?
+- Would you trust this AI to give you honest feedback?
+- How does this compare to AI that maintains boundaries?
 ```
 
-**Chatbot Settings:**
+**System Prompt:**
+```
+You are an AI assistant that tends to agree with and validate whatever the user says, even when they're wrong. You:
+
+- Always start by praising the user's idea or perspective
+- Avoid pointing out errors or problems
+- Quickly change your opinion if the user pushes back
+- Use phrases like "That's a great point!" and "You're absolutely right!"
+- Never say "but" or "however" - only "and"
+
+When the user makes a factually incorrect statement, validate their thinking rather than correcting them. If they push back on any gentle correction, immediately agree with them.
+```
+
+**Settings:**
 - Enabled: Yes
 - Model: Sonnet
 - Temperature: 0.7
-- Context Files: "Brand Voice Guidelines"
+- Context Files: None (this activity demonstrates raw behavior)
 - Skills: None
 
-**Duration:** 25 minutes
-
-**Learning Objectives:**
-1. "Explain how context files affect AI responses"
-2. "Identify the difference between generic and contextualized AI output"
-3. "Understand when and why to provide context to AI"
-
-### Complete Skill Example
-
-**skill-name:** writing-analyzer
-
-**SKILL.md:**
-```markdown
----
-name: writing-analyzer
-description: Analyzes text for readability, tone, and style metrics. Use when asked to evaluate or improve a piece of writing.
-compatibility: Python 3.9+
----
-
-# Writing Analyzer
-
-## Purpose
-Provides quantitative analysis of text including:
-- Readability scores (Flesch-Kincaid, SMOG)
-- Sentence length statistics
-- Vocabulary complexity
-- Tone indicators
-
-## When to Use
-- User asks "analyze my writing"
-- User wants to improve readability
-- User needs to match a specific reading level
-- User wants to compare two pieces of text
-
-## Instructions
-
-1. Receive the text from the user (pasted or file upload)
-2. Save to a temporary file
-3. Run the analysis script
-4. Present findings in natural language with specific suggestions
-
-## Script Usage
-
-\`\`\`bash
-python /skills/writing-analyzer/scripts/analyze.py --input text.txt
-\`\`\`
-
-## Output Interpretation
-
-- **Flesch-Kincaid Grade**: US school grade level needed to understand
-- **SMOG Index**: Years of education needed
-- **Avg Sentence Length**: Target 15-20 words for general audience
-- **Complex Words %**: Target under 10% for accessibility
-```
-
-**scripts/analyze.py:**
-```python
-#!/usr/bin/env python3
-"""Analyzes text for readability and style metrics."""
-
-import argparse
-import json
-import re
-import sys
-
-
-def count_syllables(word):
-    """Count syllables in a word."""
-    word = word.lower()
-    count = 0
-    vowels = 'aeiouy'
-    if word[0] in vowels:
-        count += 1
-    for i in range(1, len(word)):
-        if word[i] in vowels and word[i-1] not in vowels:
-            count += 1
-    if word.endswith('e'):
-        count -= 1
-    if count == 0:
-        count = 1
-    return count
-
-
-def analyze_text(text):
-    """Analyze text and return metrics."""
-    sentences = re.split(r'[.!?]+', text)
-    sentences = [s.strip() for s in sentences if s.strip()]
-
-    words = re.findall(r'\b\w+\b', text.lower())
-
-    total_syllables = sum(count_syllables(w) for w in words)
-    complex_words = [w for w in words if count_syllables(w) >= 3]
-
-    avg_sentence_length = len(words) / len(sentences) if sentences else 0
-    avg_syllables_per_word = total_syllables / len(words) if words else 0
-
-    # Flesch-Kincaid Grade Level
-    fk_grade = 0.39 * avg_sentence_length + 11.8 * avg_syllables_per_word - 15.59
-
-    # SMOG Index (simplified)
-    smog = 1.043 * (30 * len(complex_words) / len(sentences)) ** 0.5 + 3.1291 if sentences else 0
-
-    return {
-        'word_count': len(words),
-        'sentence_count': len(sentences),
-        'avg_sentence_length': round(avg_sentence_length, 1),
-        'avg_syllables_per_word': round(avg_syllables_per_word, 2),
-        'complex_words_percent': round(100 * len(complex_words) / len(words), 1) if words else 0,
-        'flesch_kincaid_grade': round(fk_grade, 1),
-        'smog_index': round(smog, 1)
-    }
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input', required=True)
-    args = parser.parse_args()
-
-    with open(args.input, 'r') as f:
-        text = f.read()
-
-    results = analyze_text(text)
-    print(json.dumps(results, indent=2))
-
-
-if __name__ == '__main__':
-    main()
-```
+**Duration:** 15 minutes
 
 ---
 
@@ -709,19 +646,21 @@ if __name__ == '__main__':
 - [ ] ZIP package structure is correct
 - [ ] Tested in sandbox environment
 
-### Lesson Checklist
-- [ ] Clear title and objectives
+### Activity Checklist
+- [ ] Clear, experience-focused title
+- [ ] Instructions tell learners what to TRY, not what to LEARN
+- [ ] System prompt crafts the intended AI behavior
 - [ ] Duration estimated
-- [ ] Body content written as Claude instructions
 - [ ] Chatbot enabled and configured
-- [ ] Context files attached
+- [ ] Context files attached (if needed)
 - [ ] Skills attached (if needed)
-- [ ] Model and temperature appropriate
-- [ ] Tested end-to-end
+- [ ] Tested - does it demonstrate the intended behavior?
 
 ### Course Checklist
-- [ ] Lessons in logical order
-- [ ] Prerequisites set correctly
-- [ ] Difficulty level accurate
-- [ ] Total duration reasonable
+- [ ] Activities in logical order
+- [ ] Facilitator Guide complete with timing
+- [ ] Learner Overview provides context
+- [ ] Total duration accurate
+- [ ] Difficulty level appropriate
 - [ ] Access roles configured
+- [ ] Tested end-to-end facilitation flow

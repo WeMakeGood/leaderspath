@@ -42,7 +42,7 @@ trait RenderCallbackTrait {
 	];
 
 	/**
-	 * Get the current lesson post ID.
+	 * Get the current activity post ID.
 	 *
 	 * Uses get_queried_object_id() for Theme Builder templates,
 	 * with get_the_ID() as fallback.
@@ -51,7 +51,7 @@ trait RenderCallbackTrait {
 	 *
 	 * @return int Post ID, or 0 if not found.
 	 */
-	public static function get_lesson_id(): int {
+	public static function get_activity_id(): int {
 		$post_id = get_queried_object_id();
 
 		if ( ! $post_id ) {
@@ -62,14 +62,14 @@ trait RenderCallbackTrait {
 	}
 
 	/**
-	 * Get context files for the current lesson.
+	 * Get context files for the current activity.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return array<int, array{id: int, title: string, description: string, file_type: string, content: string}>
 	 */
 	public static function get_context_files(): array {
-		$post_id       = self::get_lesson_id();
+		$post_id       = self::get_activity_id();
 		$context_files = [];
 
 		if ( ! $post_id ) {

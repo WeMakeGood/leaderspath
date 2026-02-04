@@ -1,5 +1,5 @@
 /**
- * Lesson Meta Module edit component for Visual Builder.
+ * Activity Meta Module edit component for Visual Builder.
  *
  * @package LeadersPath
  * @since 0.1.0
@@ -8,12 +8,12 @@
 import React, { ReactElement } from 'react';
 import { ModuleContainer } from '@divi/module';
 
-import { LessonMetaEditProps } from './types';
+import { ActivityMetaEditProps } from './types';
 import { ModuleStyles } from './styles';
 import { moduleClassnames } from './module-classnames';
 
 /**
- * Lesson Meta Module edit component.
+ * Activity Meta Module edit component.
  *
  * This component renders the module in the Divi Visual Builder.
  * Since ACF data isn't available in the VB context, we show placeholder
@@ -21,10 +21,10 @@ import { moduleClassnames } from './module-classnames';
  *
  * @since 0.1.0
  *
- * @param {LessonMetaEditProps} props React component props.
+ * @param {ActivityMetaEditProps} props React component props.
  * @returns {ReactElement}
  */
-export const LessonMetaEdit = (props: LessonMetaEditProps): ReactElement => {
+export const ActivityMetaEdit = (props: ActivityMetaEditProps): ReactElement => {
   const {
     attrs,
     elements,
@@ -49,28 +49,28 @@ export const LessonMetaEdit = (props: LessonMetaEditProps): ReactElement => {
       {elements.styleComponents({
         attrName: 'module',
       })}
-      <div className="leaderspath-lesson-meta__content">
+      <div className="leaderspath-activity-meta__content">
         {elements.render({
           attrName: 'title',
         })}
 
         {/* Duration Section - Placeholder */}
         {showDuration === 'on' && (
-          <div className="leaderspath-lesson-meta__section leaderspath-lesson-meta__duration">
+          <div className="leaderspath-activity-meta__section leaderspath-activity-meta__duration">
             {elements.render({
               attrName: 'durationLabel',
             })}
-            <span className="leaderspath-lesson-meta__value">45 minutes</span>
+            <span className="leaderspath-activity-meta__value">45 minutes</span>
           </div>
         )}
 
         {/* Objectives Section - Placeholder */}
         {showObjectives === 'on' && (
-          <div className="leaderspath-lesson-meta__section leaderspath-lesson-meta__objectives">
+          <div className="leaderspath-activity-meta__section leaderspath-activity-meta__objectives">
             {elements.render({
               attrName: 'objectivesLabel',
             })}
-            <ul className="leaderspath-lesson-meta__list">
+            <ul className="leaderspath-activity-meta__list">
               <li>Understand the key concepts</li>
               <li>Apply learning in practical scenarios</li>
               <li>Evaluate outcomes effectively</li>
@@ -80,11 +80,11 @@ export const LessonMetaEdit = (props: LessonMetaEditProps): ReactElement => {
 
         {/* Model Section - Placeholder */}
         {showModel === 'on' && (
-          <div className="leaderspath-lesson-meta__section leaderspath-lesson-meta__model">
+          <div className="leaderspath-activity-meta__section leaderspath-activity-meta__model">
             {elements.render({
               attrName: 'modelLabel',
             })}
-            <span className="leaderspath-lesson-meta__value leaderspath-lesson-meta__badge">
+            <span className="leaderspath-activity-meta__value leaderspath-activity-meta__badge">
               Claude Sonnet
             </span>
           </div>

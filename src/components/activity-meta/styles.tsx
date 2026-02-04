@@ -1,5 +1,5 @@
 /**
- * Lesson Meta Module styles component.
+ * Activity Meta Module styles component.
  *
  * @package LeadersPath
  * @since 0.1.0
@@ -12,18 +12,18 @@ import {
   CssStyle,
 } from '@divi/module';
 
-import { LessonMetaAttrs } from './types';
+import { ActivityMetaAttrs } from './types';
 import { cssFields } from './custom-css';
 
 /**
- * Generate styles for Lesson Meta Module.
+ * Generate styles for Activity Meta Module.
  *
  * This function is equivalent of PHP function module_styles located in
- * modules/LessonMeta/LessonMetaTrait/ModuleStylesTrait.php.
+ * modules/ActivityMeta/ActivityMetaTrait/ModuleStylesTrait.php.
  *
  * @since 0.1.0
  *
- * @param {StylesProps<LessonMetaAttrs>} props Style component arguments.
+ * @param {StylesProps<ActivityMetaAttrs>} props Style component arguments.
  * @returns {ReactElement}
  */
 export const ModuleStyles = ({
@@ -34,8 +34,8 @@ export const ModuleStyles = ({
   mode,
   state,
   noStyleTag,
-}: StylesProps<LessonMetaAttrs>): ReactElement => {
-  const textSelector = `${orderClass} .leaderspath-lesson-meta__content`;
+}: StylesProps<ActivityMetaAttrs>): ReactElement => {
+  const textSelector = `${orderClass} .leaderspath-activity-meta__content`;
 
   return (
     <StyleContainer mode={mode} state={state} noStyleTag={noStyleTag}>

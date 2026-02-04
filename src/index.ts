@@ -13,7 +13,7 @@ import { registerModule } from '@divi/module-library';
 
 // Import modules
 import { helloModule } from './components/hello-module';
-import { lessonMetaModule } from './components/lesson-meta';
+import { activityMetaModule } from './components/activity-meta';
 import { contextLibraryModule } from './components/context-library';
 import { skillsListModule } from './components/skills-list';
 import { chatbotModule } from './components/chatbot';
@@ -33,8 +33,8 @@ addAction(
     // Register Hello Module (test module)
     registerModule(helloModule.metadata, omit(helloModule, 'metadata'));
 
-    // Register Lesson Meta Module
-    registerModule(lessonMetaModule.metadata, omit(lessonMetaModule, 'metadata'));
+    // Register Activity Meta Module
+    registerModule(activityMetaModule.metadata, omit(activityMetaModule, 'metadata'));
 
     // Register Context Library Module
     registerModule(contextLibraryModule.metadata, omit(contextLibraryModule, 'metadata'));

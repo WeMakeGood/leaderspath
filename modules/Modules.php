@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use LeadersPath\Modules\HelloModule\HelloModule;
-use LeadersPath\Modules\LessonMeta\LessonMeta;
+use LeadersPath\Modules\ActivityMeta\ActivityMeta;
 use LeadersPath\Modules\ContextLibrary\ContextLibrary;
 use LeadersPath\Modules\SkillsList\SkillsList;
 use LeadersPath\Modules\Chatbot\Chatbot;
@@ -30,7 +30,7 @@ add_action(
 	'divi_module_library_modules_dependency_tree',
 	function ( $dependency_tree ) {
 		$dependency_tree->add_dependency( new HelloModule() );
-		$dependency_tree->add_dependency( new LessonMeta() );
+		$dependency_tree->add_dependency( new ActivityMeta() );
 		$dependency_tree->add_dependency( new ContextLibrary() );
 		$dependency_tree->add_dependency( new SkillsList() );
 		$dependency_tree->add_dependency( new Chatbot() );

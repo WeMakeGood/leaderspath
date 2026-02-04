@@ -1,14 +1,14 @@
 <?php
 /**
- * LessonMeta::module_classnames()
+ * ActivityMeta::module_classnames()
  *
- * @package LeadersPath\Modules\LessonMeta
+ * @package LeadersPath\Modules\ActivityMeta
  * @since 0.1.0
  */
 
 declare(strict_types=1);
 
-namespace LeadersPath\Modules\LessonMeta\LessonMetaTrait;
+namespace LeadersPath\Modules\ActivityMeta\ActivityMetaTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access forbidden.' );
@@ -18,17 +18,17 @@ use ET\Builder\Packages\Module\Options\Element\ElementClassnames;
 use ET\Builder\Packages\Module\Options\Text\TextClassnames;
 
 /**
- * Module classnames trait for LessonMeta.
+ * Module classnames trait for ActivityMeta.
  *
  * @since 0.1.0
  */
 trait ModuleClassnamesTrait {
 
 	/**
-	 * Module classnames function for LessonMeta module.
+	 * Module classnames function for ActivityMeta module.
 	 *
 	 * This function is equivalent of JS function moduleClassnames located in
-	 * src/components/lesson-meta/module-classnames.ts.
+	 * src/components/activity-meta/module-classnames.ts.
 	 *
 	 * @since 0.1.0
 	 *

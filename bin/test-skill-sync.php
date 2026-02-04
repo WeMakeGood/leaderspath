@@ -134,7 +134,7 @@ echo "9. Testing skill inclusion in chat request...\n";
 
 // Get a lesson that uses this skill.
 $lessons = get_posts( [
-	'post_type'      => 'leaderspath_lesson',
+	'post_type'      => 'leaderspath_activity',
 	'post_status'    => 'publish',
 	'posts_per_page' => 1,
 	'meta_query'     => [

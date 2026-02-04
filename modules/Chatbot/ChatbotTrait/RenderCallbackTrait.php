@@ -25,60 +25,119 @@ use LeadersPath\Modules\Chatbot\Chatbot;
 /**
  * Render callback trait for Chatbot.
  *
+ * Supports two modes:
+ * - Activity Sandbox: AI configured to demonstrate specific behaviors (on Activity pages)
+ * - Course Q&A: Helpful assistant for course content questions (on Course pages)
+ *
  * @since 0.1.0
  */
 trait RenderCallbackTrait {
 
 	/**
-	 * Get the current lesson post ID.
+	 * Get the current post context (Activity or Course).
 	 *
 	 * Uses get_queried_object_id() for Theme Builder templates,
 	 * with get_the_ID() as fallback.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @return int Post ID, or 0 if not found.
+	 * @return array{post_id: int, post_type: string, mode: string} Context info.
 	 */
-	public static function get_lesson_id(): int {
+	public static function get_chatbot_context(): array {
 		$post_id = get_queried_object_id();
 
 		if ( ! $post_id ) {
 			$post_id = get_the_ID();
 		}
 
-		return (int) $post_id;
+		$post_id   = (int) $post_id;
+		$post_type = get_post_type( $post_id );
+
+		// Determine mode based on post type.
+		$mode = 'none';
+		if ( 'leaderspath_activity' === $post_type ) {
+			$mode = 'activity'; // Activity sandbox mode.
+		} elseif ( 'leaderspath_course' === $post_type ) {
+			$mode = 'course'; // Course Q&A mode.
+		}
+
+		return [
+			'post_id'   => $post_id,
+			'post_type' => $post_type ?: '',
+			'mode'      => $mode,
+		];
 	}
 
 	/**
-	 * Check if chatbot is enabled for the current lesson.
+	 * Get the current activity post ID.
+	 *
+	 * @since 0.1.0
+	 * @deprecated Use get_chatbot_context() instead.
+	 *
+	 * @return int Post ID, or 0 if not found.
+	 */
+	public static function get_activity_id(): int {
+		$context = self::get_chatbot_context();
+		return 'activity' === $context['mode'] ? $context['post_id'] : 0;
+	}
+
+	/**
+	 * Check if chatbot is enabled for the current context.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int $lesson_id Lesson post ID.
+	 * @param array $context Chatbot context from get_chatbot_context().
 	 * @return bool Whether chatbot is enabled.
 	 */
-	public static function is_chatbot_enabled( int $lesson_id ): bool {
-		if ( ! $lesson_id ) {
+	public static function is_chatbot_enabled( array $context ): bool {
+		if ( ! $context['post_id'] || 'none' === $context['mode'] ) {
 			return false;
 		}
 
-		return (bool) get_field( 'chatbot_enabled', $lesson_id );
+		if ( 'activity' === $context['mode'] ) {
+			return (bool) get_field( 'chatbot_enabled', $context['post_id'] );
+		}
+
+		if ( 'course' === $context['mode'] ) {
+			return (bool) get_field( 'course_chatbot_enabled', $context['post_id'] );
+		}
+
+		return false;
 	}
 
 	/**
-	 * Get chatbot configuration for a lesson.
+	 * Get chatbot configuration for the current context.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int $lesson_id Lesson post ID.
+	 * @param array $context Chatbot context from get_chatbot_context().
 	 * @return array{model: string, allow_model_switch: bool, max_tokens: int, temperature: float}
 	 */
-	public static function get_chatbot_config( int $lesson_id ): array {
+	public static function get_chatbot_config( array $context ): array {
+		if ( 'activity' === $context['mode'] ) {
+			return [
+				'model'              => get_field( 'chatbot_model', $context['post_id'] ) ?: 'sonnet',
+				'allow_model_switch' => (bool) get_field( 'chatbot_allow_model_switch', $context['post_id'] ),
+				'max_tokens'         => (int) ( get_field( 'chatbot_max_tokens', $context['post_id'] ) ?: 4096 ),
+				'temperature'        => (float) ( get_field( 'chatbot_temperature', $context['post_id'] ) ?? 0.7 ),
+			];
+		}
+
+		if ( 'course' === $context['mode'] ) {
+			return [
+				'model'              => get_field( 'course_chatbot_model', $context['post_id'] ) ?: 'sonnet',
+				'allow_model_switch' => false, // Course Q&A doesn't support model switching.
+				'max_tokens'         => (int) ( get_field( 'course_chatbot_max_tokens', $context['post_id'] ) ?: 4096 ),
+				'temperature'        => (float) ( get_field( 'course_chatbot_temperature', $context['post_id'] ) ?? 0.7 ),
+			];
+		}
+
+		// Default config.
 		return [
-			'model'              => get_field( 'chatbot_model', $lesson_id ) ?: 'sonnet',
-			'allow_model_switch' => (bool) get_field( 'chatbot_allow_model_switch', $lesson_id ),
-			'max_tokens'         => (int) ( get_field( 'chatbot_max_tokens', $lesson_id ) ?: 4096 ),
-			'temperature'        => (float) ( get_field( 'chatbot_temperature', $lesson_id ) ?? 0.7 ),
+			'model'              => 'sonnet',
+			'allow_model_switch' => false,
+			'max_tokens'         => 4096,
+			'temperature'        => 0.7,
 		];
 	}
 
@@ -95,8 +154,8 @@ trait RenderCallbackTrait {
 	 * @return string HTML rendered of Chatbot module.
 	 */
 	public static function render_callback( $attrs, $content, $block, $elements ): string {
-		$lesson_id = self::get_lesson_id();
-		$enabled   = self::is_chatbot_enabled( $lesson_id );
+		$context = self::get_chatbot_context();
+		$enabled = self::is_chatbot_enabled( $context );
 
 		// Render module title.
 		$title = $elements->render(
@@ -106,10 +165,10 @@ trait RenderCallbackTrait {
 		);
 
 		// Build content based on whether chatbot is enabled.
-		if ( ! $enabled || ! $lesson_id ) {
+		if ( ! $enabled || 'none' === $context['mode'] ) {
 			$content_html = self::render_disabled_state( $attrs, $elements );
 		} else {
-			$content_html = self::render_chat_interface( $attrs, $elements, $lesson_id );
+			$content_html = self::render_chat_interface( $attrs, $elements, $context );
 		}
 
 		// Main content container.
@@ -195,14 +254,14 @@ trait RenderCallbackTrait {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param array          $attrs     Module attributes.
-	 * @param ModuleElements $elements  ModuleElements instance.
-	 * @param int            $lesson_id Lesson post ID.
+	 * @param array          $attrs   Module attributes.
+	 * @param ModuleElements $elements ModuleElements instance.
+	 * @param array          $context Chatbot context.
 	 *
 	 * @return string HTML for chat interface.
 	 */
-	private static function render_chat_interface( array $attrs, $elements, int $lesson_id ): string {
-		$config = self::get_chatbot_config( $lesson_id );
+	private static function render_chat_interface( array $attrs, $elements, array $context ): string {
+		$config = self::get_chatbot_config( $context );
 
 		// Enqueue frontend scripts and pass configuration.
 		wp_enqueue_script( 'leaderspath-chatbot' );
@@ -215,24 +274,30 @@ trait RenderCallbackTrait {
 			?? __( 'Send', 'leaderspath' );
 
 		// Generate unique ID for TinyMCE instance.
-		$input_id = 'leaderspath-chatbot-input-' . $lesson_id;
+		$input_id = 'leaderspath-chatbot-input-' . $context['post_id'];
+
+		// Build JS configuration based on mode.
+		$js_config = [
+			'apiUrl'      => rest_url( 'leaderspath/v1/chat' ),
+			'nonce'       => wp_create_nonce( 'wp_rest' ),
+			'mode'        => $context['mode'],
+			'inputId'     => $input_id,
+			'model'       => $config['model'],
+			'placeholder' => $placeholder_text,
+			'sendLabel'   => $send_button_text,
+			'errorMsg'    => __( 'Something went wrong. Please try again.', 'leaderspath' ),
+			'loadingMsg'  => __( 'Thinking...', 'leaderspath' ),
+		];
+
+		// Add context-specific IDs.
+		if ( 'activity' === $context['mode'] ) {
+			$js_config['activityId'] = $context['post_id'];
+		} elseif ( 'course' === $context['mode'] ) {
+			$js_config['courseId'] = $context['post_id'];
+		}
 
 		// Pass configuration to JavaScript.
-		wp_localize_script(
-			'leaderspath-chatbot',
-			'leaderspathChatbot',
-			[
-				'apiUrl'      => rest_url( 'leaderspath/v1/chat' ),
-				'nonce'       => wp_create_nonce( 'wp_rest' ),
-				'lessonId'    => $lesson_id,
-				'inputId'     => $input_id,
-				'model'       => $config['model'],
-				'placeholder' => $placeholder_text,
-				'sendLabel'   => $send_button_text,
-				'errorMsg'    => __( 'Something went wrong. Please try again.', 'leaderspath' ),
-				'loadingMsg'  => __( 'Thinking...', 'leaderspath' ),
-			]
-		);
+		wp_localize_script( 'leaderspath-chatbot', 'leaderspathChatbot', $js_config );
 
 		// Build chat interface HTML.
 		$messages_area = HTMLUtility::render(
@@ -292,15 +357,24 @@ trait RenderCallbackTrait {
 			]
 		);
 
+		// Data attributes for the chat container.
+		$data_attrs = [
+			'class'     => 'leaderspath-chatbot__chat',
+			'data-mode' => $context['mode'],
+		];
+
+		if ( 'activity' === $context['mode'] ) {
+			$data_attrs['data-activity-id'] = (string) $context['post_id'];
+		} elseif ( 'course' === $context['mode'] ) {
+			$data_attrs['data-course-id'] = (string) $context['post_id'];
+		}
+
 		// Chat container with data attributes.
 		return HTMLUtility::render(
 			[
 				'tag'               => 'div',
 				'tagEscaped'        => true,
-				'attributes'        => [
-					'class'          => 'leaderspath-chatbot__chat',
-					'data-lesson-id' => (string) $lesson_id,
-				],
+				'attributes'        => $data_attrs,
 				'childrenSanitizer' => 'et_core_esc_previously',
 				'children'          => $messages_area . $form,
 			]

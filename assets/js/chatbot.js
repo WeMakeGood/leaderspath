@@ -277,22 +277,33 @@
   /**
    * Send a message to the API.
    *
+   * Supports both Activity (activity_id) and Course (course_id) modes.
+   *
    * @param {string} message User message.
    * @returns {Promise<Object>} API response.
    */
   async function sendMessage(message) {
+    // Build request body based on mode.
+    const body = {
+      message: message,
+      history: history.slice(0, -1), // Exclude the message we just added.
+      model: config.model,
+    };
+
+    // Add context ID based on mode.
+    if (config.mode === 'course' && config.courseId) {
+      body.course_id = config.courseId;
+    } else if (config.activityId) {
+      body.activity_id = config.activityId;
+    }
+
     const response = await fetch(config.apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-WP-Nonce': config.nonce,
       },
-      body: JSON.stringify({
-        lesson_id: config.lessonId,
-        message: message,
-        history: history.slice(0, -1), // Exclude the message we just added.
-        model: config.model,
-      }),
+      body: JSON.stringify(body),
     });
 
     const data = await response.json();

@@ -59,7 +59,7 @@ Simpler examples with full TypeScript source. Use after understanding the core p
 
 ### Pattern 1: Theme Builder Module (Current Post Data)
 
-**Use when:** Displaying data from the current post being viewed (lesson meta, context files, post title).
+**Use when:** Displaying data from the current post being viewed (activity meta, context files, post title).
 
 **Key reference files:**
 - `ModuleLibrary/PostTitle/PostTitleModule.php` - Complete PHP implementation

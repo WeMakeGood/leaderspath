@@ -45,6 +45,7 @@ require LEADERSPATH_PATH . 'includes/class-post-types.php';
 require LEADERSPATH_PATH . 'includes/class-taxonomies.php';
 require LEADERSPATH_PATH . 'includes/class-capabilities.php';
 require LEADERSPATH_PATH . 'includes/class-acf-fields.php';
+require LEADERSPATH_PATH . 'admin/class-admin-menu.php';
 require LEADERSPATH_PATH . 'admin/class-settings.php';
 require LEADERSPATH_PATH . 'admin/class-admin-columns.php';
 require LEADERSPATH_PATH . 'includes/class-claude-api.php';
@@ -53,7 +54,11 @@ require LEADERSPATH_PATH . 'includes/class-skill-processor.php';
 
 /**
  * Initialize core functionality.
+ *
+ * Note: Admin_Menu must be initialized before Post_Types so the menu exists
+ * when CPTs register with show_in_menu.
  */
+new LeadersPath\Admin\Admin_Menu();
 new LeadersPath\Includes\Post_Types();
 new LeadersPath\Includes\Taxonomies();
 new LeadersPath\Includes\Capabilities();

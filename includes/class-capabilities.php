@@ -42,26 +42,58 @@ class Capabilities {
 			return;
 		}
 
-		// Check if our capabilities are already added by testing for one.
-		if ( $admin->has_cap( 'edit_leaderspath_skill' ) ) {
+		// Check if our capabilities are already added by testing for the activity capability.
+		// This also catches the migration from leaderspath_lesson to leaderspath_activity.
+		if ( $admin->has_cap( 'edit_leaderspath_activity' ) ) {
 			return;
 		}
+
+		// Remove old lesson capabilities if they exist (migration from lesson to activity).
+		self::remove_legacy_lesson_caps();
 
 		// Capabilities are missing, add them.
 		self::add_caps();
 	}
 
 	/**
-	 * All custom post type capability bases.
+	 * Remove legacy leaderspath_lesson capabilities.
 	 *
-	 * @var array<string>
+	 * This is a one-time migration from the old lesson terminology to activity.
+	 *
+	 * @since 0.2.0
+	 */
+	private static function remove_legacy_lesson_caps(): void {
+		$legacy_caps = self::get_cpt_caps( 'leaderspath_lesson', 'leaderspath_lessons' );
+		$legacy_caps[] = 'leaderspath_access_lessons';
+
+		$admin = get_role( 'administrator' );
+		if ( $admin ) {
+			foreach ( $legacy_caps as $cap ) {
+				$admin->remove_cap( $cap );
+			}
+		}
+
+		$editor = get_role( 'editor' );
+		if ( $editor ) {
+			foreach ( $legacy_caps as $cap ) {
+				$editor->remove_cap( $cap );
+			}
+		}
+	}
+
+	/**
+	 * Custom post type capability bases with their plurals.
+	 *
+	 * Maps singular capability base to plural form for proper English pluralization.
+	 *
+	 * @var array<string, string>
 	 */
 	private const CPT_CAPS = [
-		'leaderspath_lesson',
-		'leaderspath_course',
-		'leaderspath_cohort',
-		'leaderspath_context',
-		'leaderspath_skill',
+		'leaderspath_activity' => 'leaderspath_activities',
+		'leaderspath_course'   => 'leaderspath_courses',
+		'leaderspath_cohort'   => 'leaderspath_cohorts',
+		'leaderspath_context'  => 'leaderspath_contexts',
+		'leaderspath_skill'    => 'leaderspath_skills',
 	];
 
 	/**
@@ -70,7 +102,7 @@ class Capabilities {
 	 * @var array<string>
 	 */
 	private const CUSTOM_CAPS = [
-		'leaderspath_access_lessons',
+		'leaderspath_access_activities',
 		'leaderspath_access_chatbot',
 		'leaderspath_view_context',
 		'leaderspath_download_context',
@@ -81,11 +113,15 @@ class Capabilities {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string $cap_base The capability base (e.g., 'leaderspath_lesson').
+	 * @param string      $cap_base The capability base (e.g., 'leaderspath_activity').
+	 * @param string|null $plural   Optional. The plural form. Defaults to lookup from CPT_CAPS or appending 's'.
 	 * @return array<string> Array of capabilities.
 	 */
-	public static function get_cpt_caps( string $cap_base ): array {
-		$plural = $cap_base . 's';
+	public static function get_cpt_caps( string $cap_base, ?string $plural = null ): array {
+		// Use provided plural, lookup from CPT_CAPS map, or fall back to simple 's' suffix.
+		if ( null === $plural ) {
+			$plural = self::CPT_CAPS[ $cap_base ] ?? $cap_base . 's';
+		}
 
 		return [
 			// Primitive caps for this post type.
@@ -116,8 +152,8 @@ class Capabilities {
 		$caps = [];
 
 		// Add all CPT capabilities.
-		foreach ( self::CPT_CAPS as $cap_base ) {
-			foreach ( self::get_cpt_caps( $cap_base ) as $cap ) {
+		foreach ( self::CPT_CAPS as $cap_base => $plural ) {
+			foreach ( self::get_cpt_caps( $cap_base, $plural ) as $cap ) {
 				$caps[ $cap ] = true;
 			}
 		}
@@ -133,7 +169,7 @@ class Capabilities {
 	/**
 	 * Get capabilities for editor role.
 	 *
-	 * Editors can manage Lessons and Courses, but only read Cohorts, Context, and Skills.
+	 * Editors can manage Activities and Courses, but only read Cohorts, Context, and Skills.
 	 *
 	 * @since 0.1.0
 	 *
@@ -142,17 +178,26 @@ class Capabilities {
 	public static function get_editor_caps(): array {
 		$caps = [];
 
-		// Full access to Lessons and Courses.
-		foreach ( [ 'leaderspath_lesson', 'leaderspath_course' ] as $cap_base ) {
-			foreach ( self::get_cpt_caps( $cap_base ) as $cap ) {
+		// Full access to Activities and Courses.
+		$editor_full_access = [
+			'leaderspath_activity' => 'leaderspath_activities',
+			'leaderspath_course'   => 'leaderspath_courses',
+		];
+		foreach ( $editor_full_access as $cap_base => $plural ) {
+			foreach ( self::get_cpt_caps( $cap_base, $plural ) as $cap ) {
 				$caps[ $cap ] = true;
 			}
 		}
 
 		// Read-only for Cohorts, Context, Skills.
-		foreach ( [ 'leaderspath_cohort', 'leaderspath_context', 'leaderspath_skill' ] as $cap_base ) {
-			$caps[ "read_{$cap_base}" ] = true;
-			$caps[ "read_private_{$cap_base}s" ] = true;
+		$editor_read_only = [
+			'leaderspath_cohort'  => 'leaderspath_cohorts',
+			'leaderspath_context' => 'leaderspath_contexts',
+			'leaderspath_skill'   => 'leaderspath_skills',
+		];
+		foreach ( $editor_read_only as $cap_base => $plural ) {
+			$caps[ "read_{$cap_base}" ]      = true;
+			$caps[ "read_private_{$plural}" ] = true;
 		}
 
 		// Custom feature capabilities.
@@ -172,11 +217,11 @@ class Capabilities {
 	 */
 	public static function get_student_caps(): array {
 		return [
-			'read'                        => true,
-			'leaderspath_access_lessons'  => true,
-			'leaderspath_access_chatbot'  => true,
-			'leaderspath_view_context'    => true,
-			'leaderspath_download_context' => true,
+			'read'                          => true,
+			'leaderspath_access_activities' => true,
+			'leaderspath_access_chatbot'    => true,
+			'leaderspath_view_context'      => true,
+			'leaderspath_download_context'  => true,
 		];
 	}
 
