@@ -187,6 +187,76 @@ Now that data layer exists, build the UI modules.
 
 ---
 
+## Phase 5b: Course Divi 5 Modules
+
+Course-specific modules to display course data in Divi 5 Theme Builder templates.
+
+**Reference:** Existing Activity modules use Theme Builder pattern with `get_queried_object_id()`.
+
+### Facilitator Role Setup
+Add a `leaderspath_facilitator` role to distinguish facilitators from students.
+- [ ] Add `leaderspath_facilitator` role in `includes/class-capabilities.php`
+- [ ] Grant facilitator role: all student capabilities + `leaderspath_view_facilitator_content`
+- [ ] Add new capability: `leaderspath_view_facilitator_content`
+- [ ] Map capability to Administrator, Editor, and Facilitator roles
+- [ ] Update documentation in `docs/cpt-schema.md`
+
+### CourseMeta Module
+Display course metadata (similar to ActivityMeta).
+- [ ] Create PHP module class and traits
+- [ ] Create TypeScript/React edit component
+- [ ] Display: duration, difficulty badge, activity count
+- [ ] Visibility toggles for each element
+- [ ] Configurable labels for each element
+
+### CourseObjectives Module
+Display learning objectives as a styled list.
+- [ ] Create PHP module class and traits
+- [ ] Create TypeScript/React edit component
+- [ ] Render `course_objectives` repeater as list items
+- [ ] Configurable title
+- [ ] List style options (bullets, numbers, checkmarks, icons)
+- [ ] Visibility toggle and empty state message
+
+### CourseActivities Module
+Display ordered list of activities with navigation.
+- [ ] Create PHP module class and traits
+- [ ] Create TypeScript/React edit component
+- [ ] Render `course_activities` relationship as linked cards/list
+- [ ] Display activity: title, duration, excerpt
+- [ ] Card or list layout option
+- [ ] Link to activity pages
+- [ ] Visibility toggles for activity metadata
+
+### LearnerOverview Module
+Display the learner-facing WYSIWYG content (visible to all users).
+- [ ] Create PHP module class and traits
+- [ ] Create TypeScript/React edit component
+- [ ] Render `course_learner_overview` WYSIWYG content
+- [ ] Standard text styling options
+- [ ] Configurable wrapper/container styles
+- [ ] No access control (visible to all, including logged-out users)
+
+### FacilitatorGuide Module
+Display facilitator guide with role-based access control.
+- [ ] Create PHP module class and traits
+- [ ] Create TypeScript/React edit component
+- [ ] Render `course_facilitator_guide` WYSIWYG content
+- [ ] Access control: only show to users with `leaderspath_view_facilitator_content` capability
+- [ ] Module setting: "When hidden" - show nothing OR show configurable message
+- [ ] Configurable "access denied" message (rich text)
+- [ ] Standard text styling options
+
+### Integration
+- [ ] Register all modules in `modules/Modules.php`
+- [ ] Register all modules in `src/index.ts`
+- [ ] Verify build completes successfully
+- [ ] Test in Divi 5 Visual Builder
+- [ ] Test frontend rendering with Course template
+- [ ] Test access control for FacilitatorGuide (student vs facilitator view)
+
+---
+
 ## Phase 6: Polish & Testing
 
 - [ ] Write PHPUnit tests for CPTs, taxonomies, API
@@ -612,6 +682,30 @@ Brief notes from each development session:
   - 2 Courses (IDs 78-79) with full facilitator guides and Q&A chatbots
   - 1 Cohort (ID 80)
 - Build verified successful
+
+### Session 17 (2026-02-04)
+- **Identified VB vs Frontend rendering disconnect**
+  - VB edit.tsx uses hardcoded placeholder data
+  - PHP render_callback uses real ACF data via `get_queried_object_id()`
+  - These are completely separate code paths, causing VB preview to differ from frontend
+  - Example: ActivityMeta still shows "Learning Objectives" in VB even though removed from PHP
+- **Researched Server-Side Rendering for VB**
+  - WordPress provides `@wordpress/server-side-render` component
+  - Calls `/wp/v2/block-renderer/{block-name}` REST endpoint
+  - Server runs PHP render_callback and returns HTML to VB
+  - Divi 5 registers WordPress blocks, so endpoint IS available for our modules
+- **Implementation plan documented:**
+  - See `memory/divi5-ssr-implementation.md` for full details
+  - Key challenge: getting current post ID in VB context for Theme Builder templates
+  - Need to add `@wordpress/server-side-render` to webpack externals
+  - Need to enqueue `wp-server-side-render` script when VB loads
+- **Created Phase 5b task list for Course modules:**
+  - Added `leaderspath_facilitator` role requirement
+  - 5 new modules: CourseMeta, CourseObjectives, CourseActivities, LearnerOverview, FacilitatorGuide
+- **Next steps:**
+  1. Create test module using SSR to verify approach works
+  2. If successful, apply SSR pattern to all Theme Builder modules
+  3. Build Course modules with SSR from the start
 
 ---
 

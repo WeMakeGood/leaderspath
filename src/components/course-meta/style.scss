@@ -1,0 +1,86 @@
+/**
+ * Course Meta Module styles.
+ *
+ * Uses BEM naming convention with leaderspath- prefix.
+ *
+ * @package LeadersPath
+ * @since 0.1.0
+ */
+
+.leaderspath-course-meta {
+  // Content container.
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  // Module title.
+  &__title {
+    margin: 0 0 0.5rem;
+  }
+
+  // Individual sections (duration, difficulty, activities).
+  &__section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  // Section labels.
+  &__label {
+    font-weight: 600;
+  }
+
+  // Section values.
+  &__value {
+    color: inherit;
+  }
+
+  // Difficulty badge.
+  &__badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background-color: #f0f0f1;
+    border-radius: 4px;
+    font-size: 0.875em;
+
+    // Difficulty level colors.
+    &--beginner {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    &--intermediate {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    &--advanced {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  }
+
+  // Placeholder styles for VB when no content.
+  &__placeholder,
+  &__error {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    text-align: center;
+    color: #666;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__error {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+  }
+}

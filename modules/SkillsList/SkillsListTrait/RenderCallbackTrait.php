@@ -32,21 +32,38 @@ trait RenderCallbackTrait {
 	/**
 	 * Get the current activity post ID.
 	 *
-	 * Uses get_queried_object_id() for Theme Builder templates,
-	 * with get_the_ID() as fallback.
+	 * Uses get_queried_object_id() for Theme Builder templates on frontend.
+	 * Falls back to finding the first Activity for VB preview context.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return int Post ID, or 0 if not found.
 	 */
 	public static function get_activity_id(): int {
-		$post_id = get_queried_object_id();
+		$post_id   = get_queried_object_id();
+		$post_type = $post_id ? get_post_type( $post_id ) : '';
 
-		if ( ! $post_id ) {
-			$post_id = get_the_ID();
+		// If we have a valid Activity, use it.
+		if ( $post_id && 'leaderspath_activity' === $post_type ) {
+			return (int) $post_id;
 		}
 
-		return (int) $post_id;
+		// Fallback for VB/REST context: get first Activity as sample data.
+		$sample_activities = get_posts(
+			[
+				'post_type'      => 'leaderspath_activity',
+				'posts_per_page' => 1,
+				'post_status'    => 'publish',
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			]
+		);
+
+		if ( ! empty( $sample_activities ) ) {
+			return (int) $sample_activities[0]->ID;
+		}
+
+		return 0;
 	}
 
 	/**

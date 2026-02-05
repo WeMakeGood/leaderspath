@@ -1,58 +1,28 @@
 /**
  * Skills List Module edit component for Visual Builder.
  *
+ * Fetches skills via REST API and renders using the same
+ * HTML structure as the PHP render_callback, ensuring VB preview
+ * matches the frontend output.
+ *
  * @package LeadersPath
  * @since 0.1.0
  */
 
 import React, { ReactElement } from 'react';
 import { ModuleContainer } from '@divi/module';
+import { __ } from '@wordpress/i18n';
 
-import { SkillsListEditProps, SkillItem } from './types';
+import { SkillsListEditProps } from './types';
 import { ModuleStyles } from './styles';
 import { moduleClassnames } from './module-classnames';
-
-/**
- * Placeholder skills for Visual Builder preview.
- *
- * These demonstrate the layout since ACF data isn't available in VB context.
- */
-const placeholderSkills: SkillItem[] = [
-  {
-    id: 1,
-    title: 'Code Review',
-    name: 'Code Review',
-    description: 'Analyzes code for quality, security, and best practices. Provides structured feedback.',
-    compatibility: 'Python 3.9+',
-    version: '1.2.0',
-    packageUrl: '#',
-  },
-  {
-    id: 2,
-    title: 'Writing Editor',
-    name: 'Writing Editor',
-    description: 'Helps improve writing clarity, tone, and structure. Supports multiple formats.',
-    compatibility: '',
-    version: '2.0.0',
-    packageUrl: '#',
-  },
-  {
-    id: 3,
-    title: 'Data Analysis',
-    name: 'Data Analysis',
-    description: 'Processes datasets and generates insights with visualizations.',
-    compatibility: 'Python 3.9+, pandas',
-    version: '1.0.0',
-    packageUrl: '#',
-  },
-];
+import { useSkills, Skill } from './use-skills';
 
 /**
  * Skills List Module edit component.
  *
- * This component renders the module in the Divi Visual Builder.
- * Since ACF data isn't available in the VB context, we show placeholder
- * data that demonstrates the layout.
+ * Fetches real skills via REST API and renders it in the VB,
+ * ensuring the preview matches the frontend output.
  *
  * @since 0.1.0
  *
@@ -67,11 +37,113 @@ export const SkillsListEdit = (props: SkillsListEditProps): ReactElement => {
     name,
   } = props;
 
+  // Fetch skills from REST API.
+  const { data: skills, isLoading, error } = useSkills();
+
   // Get visibility toggle values.
   const showDescription = attrs?.skills?.advanced?.showDescription?.desktop?.value ?? 'on';
   const showCompatibility = attrs?.skills?.advanced?.showCompatibility?.desktop?.value ?? 'on';
   const showVersion = attrs?.skills?.advanced?.showVersion?.desktop?.value ?? 'on';
   const showDownloadButton = attrs?.skills?.advanced?.showDownloadButton?.desktop?.value ?? 'on';
+
+  /**
+   * Render a single skill item.
+   */
+  const renderItem = (skill: Skill): ReactElement => {
+    return (
+      <div
+        key={skill.id}
+        className="leaderspath-skills-list__item"
+        data-skill-id={skill.id}
+      >
+        <div className="leaderspath-skills-list__item-header">
+          <h4 className="leaderspath-skills-list__item-title">
+            {skill.name}
+          </h4>
+          {(showCompatibility === 'on' || showVersion === 'on') && (
+            <div className="leaderspath-skills-list__item-badges">
+              {showCompatibility === 'on' && skill.compatibility && (
+                <span className="leaderspath-skills-list__item-badge leaderspath-skills-list__item-badge--compatibility">
+                  {skill.compatibility}
+                </span>
+              )}
+              {showVersion === 'on' && skill.version && (
+                <span className="leaderspath-skills-list__item-badge leaderspath-skills-list__item-badge--version">
+                  v{skill.version}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {showDescription === 'on' && skill.description && (
+          <p className="leaderspath-skills-list__item-description">
+            {skill.description}
+          </p>
+        )}
+
+        {showDownloadButton === 'on' && skill.download && (
+          <div className="leaderspath-skills-list__item-buttons">
+            <a
+              href={skill.download}
+              className="leaderspath-skills-list__button leaderspath-skills-list__download-button et_pb_button"
+              download
+            >
+              {__('Download Skill', 'leaderspath')}
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /**
+   * Render the content based on loading/error state.
+   */
+  const renderContent = (): ReactElement => {
+    if (isLoading) {
+      return (
+        <div className="leaderspath-skills-list__content">
+          {elements.render({ attrName: 'title' })}
+          <div className="leaderspath-skills-list__placeholder">
+            <p>{__('Loading skills...', 'leaderspath')}</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="leaderspath-skills-list__content">
+          {elements.render({ attrName: 'title' })}
+          <div className="leaderspath-skills-list__error">
+            <p>{__('Error loading skills:', 'leaderspath')} {error}</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (skills.length === 0) {
+      return (
+        <div className="leaderspath-skills-list__content">
+          {elements.render({ attrName: 'title' })}
+          <div className="leaderspath-skills-list__empty">
+            {elements.render({ attrName: 'emptyState' })}
+          </div>
+        </div>
+      );
+    }
+
+    // Render the same structure as PHP render_callback.
+    return (
+      <div className="leaderspath-skills-list__content">
+        {elements.render({ attrName: 'title' })}
+        <div className="leaderspath-skills-list__grid">
+          {skills.map(renderItem)}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <ModuleContainer
@@ -85,58 +157,7 @@ export const SkillsListEdit = (props: SkillsListEditProps): ReactElement => {
       {elements.styleComponents({
         attrName: 'module',
       })}
-      <div className="leaderspath-skills-list__content">
-        {elements.render({
-          attrName: 'title',
-        })}
-
-        <div className="leaderspath-skills-list__grid">
-          {placeholderSkills.map((skill) => (
-            <div
-              key={skill.id}
-              className="leaderspath-skills-list__item"
-              data-skill-id={skill.id}
-            >
-              <div className="leaderspath-skills-list__item-header">
-                <h4 className="leaderspath-skills-list__item-title">
-                  {skill.name}
-                </h4>
-                {(showCompatibility === 'on' || showVersion === 'on') && (
-                  <div className="leaderspath-skills-list__item-badges">
-                    {showCompatibility === 'on' && skill.compatibility && (
-                      <span className="leaderspath-skills-list__item-badge leaderspath-skills-list__item-badge--compatibility">
-                        {skill.compatibility}
-                      </span>
-                    )}
-                    {showVersion === 'on' && skill.version && (
-                      <span className="leaderspath-skills-list__item-badge leaderspath-skills-list__item-badge--version">
-                        v{skill.version}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {showDescription === 'on' && skill.description && (
-                <p className="leaderspath-skills-list__item-description">
-                  {skill.description}
-                </p>
-              )}
-
-              {showDownloadButton === 'on' && (
-                <div className="leaderspath-skills-list__item-buttons">
-                  <a
-                    href="#"
-                    className="leaderspath-skills-list__button leaderspath-skills-list__download-button et_pb_button"
-                  >
-                    Download Skill
-                  </a>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      {renderContent()}
     </ModuleContainer>
   );
 };

@@ -131,6 +131,88 @@ class REST_API {
 				],
 			]
 		);
+
+		// Course meta preview (for VB).
+		register_rest_route(
+			self::NAMESPACE,
+			'/courses/(?P<id>\d+)/meta',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_course_meta' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+				'args'                => [
+					'id' => [
+						'description'       => __( 'Course ID.', 'leaderspath' ),
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => [ $this, 'validate_course_id_for_meta' ],
+					],
+				],
+			]
+		);
+
+		// Course meta preview (fallback to first course).
+		register_rest_route(
+			self::NAMESPACE,
+			'/courses/meta',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_first_course_meta' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+			]
+		);
+
+		// Activity meta preview (for VB).
+		register_rest_route(
+			self::NAMESPACE,
+			'/activities/(?P<id>\d+)/meta',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_activity_meta_preview' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+				'args'                => [
+					'id' => [
+						'description'       => __( 'Activity ID.', 'leaderspath' ),
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => [ $this, 'validate_activity_id' ],
+					],
+				],
+			]
+		);
+
+		// Activity meta preview (fallback to first activity).
+		register_rest_route(
+			self::NAMESPACE,
+			'/activities/meta',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_first_activity_meta' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+			]
+		);
+
+		// Context files preview (fallback to first activity).
+		register_rest_route(
+			self::NAMESPACE,
+			'/activities/context',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_first_activity_context' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+			]
+		);
+
+		// Skills preview (fallback to first activity).
+		register_rest_route(
+			self::NAMESPACE,
+			'/activities/skills',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_first_activity_skills' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+			]
+		);
 	}
 
 	/**
@@ -258,6 +340,29 @@ class REST_API {
 	}
 
 	/**
+	 * Check permission for Visual Builder endpoints.
+	 *
+	 * Used for module preview data in the VB.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return bool|WP_Error True if permitted, WP_Error otherwise.
+	 */
+	public function check_vb_permission( WP_REST_Request $request ) {
+		// Must be logged in and able to edit posts.
+		if ( ! is_user_logged_in() || ! current_user_can( 'edit_posts' ) ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'You must be logged in with edit permissions to access this content.', 'leaderspath' ),
+				[ 'status' => 401 ]
+			);
+		}
+
+		return true;
+	}
+
+	/**
 	 * Validate activity ID.
 	 *
 	 * @since 0.1.0
@@ -321,6 +426,28 @@ class REST_API {
 				'rest_forbidden',
 				__( 'You cannot access this course.', 'leaderspath' ),
 				[ 'status' => 403 ]
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Validate course ID for meta endpoint (required).
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param mixed $value Course ID.
+	 * @return bool|WP_Error True if valid, WP_Error otherwise.
+	 */
+	public function validate_course_id_for_meta( $value ) {
+		$post = get_post( (int) $value );
+
+		if ( ! $post || 'leaderspath_course' !== $post->post_type ) {
+			return new WP_Error(
+				'rest_invalid_param',
+				__( 'Invalid course ID.', 'leaderspath' ),
+				[ 'status' => 404 ]
 			);
 		}
 
@@ -675,6 +802,316 @@ class REST_API {
 			],
 			'package_url' => $file_url,
 		];
+
+		return new WP_REST_Response( $data, 200 );
+	}
+
+	/**
+	 * Get course meta data for VB preview.
+	 *
+	 * Returns course metadata (duration, difficulty, activity count) for rendering
+	 * in the Visual Builder preview.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	public function get_course_meta( WP_REST_Request $request ) {
+		$course_id = (int) $request->get_param( 'id' );
+
+		return new WP_REST_Response( $this->build_course_meta_response( $course_id ), 200 );
+	}
+
+	/**
+	 * Get first available course meta for VB fallback.
+	 *
+	 * Used when editing Theme Builder templates where no specific course context exists.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	public function get_first_course_meta() {
+		$courses = get_posts(
+			[
+				'post_type'      => 'leaderspath_course',
+				'posts_per_page' => 1,
+				'post_status'    => 'publish',
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			]
+		);
+
+		if ( empty( $courses ) ) {
+			return new WP_REST_Response(
+				[
+					'course_id'      => 0,
+					'course_title'   => '',
+					'duration'       => '',
+					'difficulty'     => '',
+					'difficulty_name'=> '',
+					'activity_count' => 0,
+					'is_sample'      => true,
+				],
+				200
+			);
+		}
+
+		$data              = $this->build_course_meta_response( $courses[0]->ID );
+		$data['is_sample'] = true;
+
+		return new WP_REST_Response( $data, 200 );
+	}
+
+	/**
+	 * Build course meta response data.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int $course_id Course ID.
+	 * @return array Course meta data.
+	 */
+	private function build_course_meta_response( int $course_id ): array {
+		$activities = get_field( 'course_activities', $course_id );
+		$difficulty = get_field( 'course_difficulty', $course_id ) ?: '';
+
+		$difficulty_names = [
+			'beginner'     => __( 'Beginner', 'leaderspath' ),
+			'intermediate' => __( 'Intermediate', 'leaderspath' ),
+			'advanced'     => __( 'Advanced', 'leaderspath' ),
+		];
+
+		return [
+			'course_id'       => $course_id,
+			'course_title'    => get_the_title( $course_id ),
+			'duration'        => get_field( 'course_total_duration', $course_id ) ?: '',
+			'difficulty'      => $difficulty,
+			'difficulty_name' => $difficulty_names[ $difficulty ] ?? ucfirst( $difficulty ),
+			'activity_count'  => is_array( $activities ) ? count( $activities ) : 0,
+			'is_sample'       => false,
+		];
+	}
+
+	/**
+	 * Get activity meta data for VB preview.
+	 *
+	 * Returns activity metadata (duration, model) for rendering in the Visual Builder preview.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	public function get_activity_meta_preview( WP_REST_Request $request ) {
+		$activity_id = (int) $request->get_param( 'id' );
+
+		return new WP_REST_Response( $this->build_activity_meta_response( $activity_id ), 200 );
+	}
+
+	/**
+	 * Get first available activity meta for VB fallback.
+	 *
+	 * Used when editing Theme Builder templates where no specific activity context exists.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	public function get_first_activity_meta() {
+		$activities = get_posts(
+			[
+				'post_type'      => 'leaderspath_activity',
+				'posts_per_page' => 1,
+				'post_status'    => 'publish',
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			]
+		);
+
+		if ( empty( $activities ) ) {
+			return new WP_REST_Response(
+				[
+					'activity_id'     => 0,
+					'activity_title'  => '',
+					'duration'        => 0,
+					'duration_text'   => '',
+					'model'           => '',
+					'model_name'      => '',
+					'chatbot_enabled' => false,
+				],
+				200
+			);
+		}
+
+		return new WP_REST_Response( $this->build_activity_meta_response( $activities[0]->ID ), 200 );
+	}
+
+	/**
+	 * Build activity meta response data.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int $activity_id Activity ID.
+	 * @return array Activity meta data.
+	 */
+	private function build_activity_meta_response( int $activity_id ): array {
+		$model           = get_field( 'chatbot_model', $activity_id ) ?: '';
+		$chatbot_enabled = (bool) get_field( 'chatbot_enabled', $activity_id );
+		$duration        = (int) ( get_field( 'activity_duration', $activity_id ) ?: 0 );
+
+		$model_names = [
+			'sonnet'   => __( 'Claude Sonnet', 'leaderspath' ),
+			'haiku'    => __( 'Claude Haiku', 'leaderspath' ),
+			'opus-4.5' => __( 'Claude Opus', 'leaderspath' ),
+		];
+
+		$duration_text = '';
+		if ( $duration > 0 ) {
+			$duration_text = sprintf(
+				/* translators: %d: number of minutes */
+				_n( '%d minute', '%d minutes', $duration, 'leaderspath' ),
+				$duration
+			);
+		}
+
+		return [
+			'activity_id'     => $activity_id,
+			'activity_title'  => get_the_title( $activity_id ),
+			'duration'        => $duration,
+			'duration_text'   => $duration_text,
+			'model'           => $model,
+			'model_name'      => $model_names[ $model ] ?? ucfirst( $model ),
+			'chatbot_enabled' => $chatbot_enabled,
+		];
+	}
+
+	/**
+	 * Get context files for first activity (VB fallback).
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return WP_REST_Response Response.
+	 */
+	public function get_first_activity_context() {
+		$activity_id = $this->get_first_activity_id();
+
+		if ( ! $activity_id ) {
+			return new WP_REST_Response( [], 200 );
+		}
+
+		return $this->build_context_response( $activity_id );
+	}
+
+	/**
+	 * Get skills for first activity (VB fallback).
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return WP_REST_Response Response.
+	 */
+	public function get_first_activity_skills() {
+		$activity_id = $this->get_first_activity_id();
+
+		if ( ! $activity_id ) {
+			return new WP_REST_Response( [], 200 );
+		}
+
+		return $this->build_skills_response( $activity_id );
+	}
+
+	/**
+	 * Get the first activity ID for VB preview.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return int Activity ID or 0.
+	 */
+	private function get_first_activity_id(): int {
+		$activities = get_posts(
+			[
+				'post_type'      => 'leaderspath_activity',
+				'posts_per_page' => 1,
+				'post_status'    => 'publish',
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			]
+		);
+
+		return ! empty( $activities ) ? (int) $activities[0]->ID : 0;
+	}
+
+	/**
+	 * Build context files response for an activity.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int $activity_id Activity ID.
+	 * @return WP_REST_Response Response.
+	 */
+	private function build_context_response( int $activity_id ): WP_REST_Response {
+		$context_files = get_field( 'chatbot_context_files', $activity_id ) ?: [];
+
+		$file_type_labels = [
+			'system_prompt'  => __( 'System Prompt', 'leaderspath' ),
+			'knowledge_base' => __( 'Knowledge Base', 'leaderspath' ),
+			'instructions'   => __( 'Instructions', 'leaderspath' ),
+			'other'          => __( 'Context', 'leaderspath' ),
+		];
+
+		$data = [];
+
+		foreach ( $context_files as $context_id ) {
+			$post = get_post( $context_id );
+			if ( ! $post ) {
+				continue;
+			}
+
+			$file_type = get_field( 'context_file_type', $post->ID ) ?: 'other';
+
+			$data[] = [
+				'id'              => $post->ID,
+				'title'           => $post->post_title,
+				'description'     => get_field( 'context_description', $post->ID ) ?: '',
+				'file_type'       => $file_type,
+				'file_type_label' => $file_type_labels[ $file_type ] ?? $file_type_labels['other'],
+				'version'         => get_field( 'context_version', $post->ID ) ?: '',
+				'download'        => rest_url( self::NAMESPACE . '/context/' . $post->ID . '/download' ),
+			];
+		}
+
+		return new WP_REST_Response( $data, 200 );
+	}
+
+	/**
+	 * Build skills response for an activity.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int $activity_id Activity ID.
+	 * @return WP_REST_Response Response.
+	 */
+	private function build_skills_response( int $activity_id ): WP_REST_Response {
+		$skills = get_field( 'chatbot_skills', $activity_id ) ?: [];
+
+		$data = [];
+
+		foreach ( $skills as $skill_id ) {
+			$post = get_post( $skill_id );
+			if ( ! $post ) {
+				continue;
+			}
+
+			$data[] = [
+				'id'            => $post->ID,
+				'title'         => $post->post_title,
+				'name'          => get_field( 'skill_name', $post->ID ) ?: $post->post_title,
+				'description'   => get_field( 'skill_description', $post->ID ) ?: '',
+				'compatibility' => get_field( 'skill_compatibility', $post->ID ) ?: '',
+				'version'       => get_field( 'skill_version', $post->ID ) ?: '',
+				'download'      => rest_url( self::NAMESPACE . '/skills/' . $post->ID . '/download' ),
+			];
+		}
 
 		return new WP_REST_Response( $data, 200 );
 	}

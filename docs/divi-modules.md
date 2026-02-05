@@ -214,3 +214,180 @@ npm run start        # Development with watch
 3. Read its PHP for render and style patterns
 4. Read the example repo TypeScript for VB component patterns
 5. **Do not guess** - copy the pattern exactly, then adapt
+
+---
+
+## Visual Builder Preview with Real Data (REST API Pattern)
+
+**Last Updated:** 2026-02-04
+
+### The Problem
+
+Divi's Visual Builder doesn't have access to the same post context as the frontend:
+- When editing Theme Builder templates, `get_queried_object_id()` returns the template ID, not a preview post
+- ACF fields can't be fetched directly in React components
+- `@wordpress/server-side-render` isn't available (Divi VB doesn't load WP block editor scripts)
+
+### The Solution: Custom REST API + React Hook
+
+Instead of hardcoded placeholder data, use REST API endpoints to fetch real data from the first post of the CPT.
+
+**Pattern Overview:**
+1. **REST Endpoint** returns JSON data (not rendered HTML)
+2. **React Hook** fetches data in VB edit component
+3. **VB Component** renders same HTML structure as PHP
+4. **PHP Fallback** uses same logic - first post of CPT when no valid context
+
+### Implementation
+
+#### 1. Add REST Endpoint (class-rest-api.php)
+
+```php
+// Fallback endpoint (no ID required - uses first post)
+register_rest_route(
+    'leaderspath/v1',
+    '/activities/meta',
+    [
+        'methods'             => WP_REST_Server::READABLE,
+        'callback'            => [ $this, 'get_first_activity_meta' ],
+        'permission_callback' => [ $this, 'check_vb_permission' ],
+    ]
+);
+
+// Permission check for VB endpoints
+public function check_vb_permission( WP_REST_Request $request ) {
+    if ( ! is_user_logged_in() || ! current_user_can( 'edit_posts' ) ) {
+        return new WP_Error( 'rest_forbidden', 'Unauthorized', [ 'status' => 401 ] );
+    }
+    return true;
+}
+
+// Handler fetches first post as sample
+public function get_first_activity_meta() {
+    $activities = get_posts([
+        'post_type'      => 'leaderspath_activity',
+        'posts_per_page' => 1,
+        'post_status'    => 'publish',
+    ]);
+
+    if ( empty( $activities ) ) {
+        return new WP_REST_Response( [ 'activity_id' => 0 ], 200 );
+    }
+
+    return new WP_REST_Response( $this->build_activity_meta_response( $activities[0]->ID ), 200 );
+}
+```
+
+#### 2. Create React Hook (use-activity-meta.ts)
+
+```typescript
+import { useState, useEffect, useRef } from 'react';
+
+export interface ActivityMeta {
+  activity_id: number;
+  duration: number;
+  duration_text: string;
+  model: string;
+  model_name: string;
+  chatbot_enabled: boolean;
+}
+
+export function useActivityMeta() {
+  const [data, setData] = useState<ActivityMeta | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    fetchData();
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  async function fetchData() {
+    const wpApiSettings = (window as any).wpApiSettings || { root: '/wp-json/', nonce: '' };
+    const url = `${wpApiSettings.root}leaderspath/v1/activities/meta`;
+
+    try {
+      const response = await fetch(url, {
+        headers: { 'X-WP-Nonce': wpApiSettings.nonce },
+        credentials: 'same-origin',
+      });
+      const responseData = await response.json();
+      if (isMountedRef.current) setData(responseData);
+    } catch (err) {
+      if (isMountedRef.current) setError(err.message);
+    } finally {
+      if (isMountedRef.current) setIsLoading(false);
+    }
+  }
+
+  return { data, isLoading, error };
+}
+```
+
+#### 3. Update VB Edit Component (edit.tsx)
+
+```tsx
+import { useActivityMeta } from './use-activity-meta';
+
+export const ActivityMetaEdit = (props) => {
+  const { data, isLoading, error } = useActivityMeta();
+
+  if (isLoading) return <div className="placeholder">Loading...</div>;
+  if (error) return <div className="error">Error: {error}</div>;
+  if (!data?.activity_id) return <div className="placeholder">No data</div>;
+
+  // Render same HTML structure as PHP render_callback
+  return (
+    <div className="leaderspath-activity-meta__content">
+      {elements.render({ attrName: 'title' })}
+      {data.duration > 0 && (
+        <div className="leaderspath-activity-meta__section">
+          {elements.render({ attrName: 'durationLabel' })}
+          <span className="leaderspath-activity-meta__value">{data.duration_text}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+#### 4. Update PHP Fallback (RenderCallbackTrait.php)
+
+```php
+public static function get_activity_id(): int {
+    $post_id   = get_queried_object_id();
+    $post_type = $post_id ? get_post_type( $post_id ) : '';
+
+    // Valid Activity on frontend
+    if ( $post_id && 'leaderspath_activity' === $post_type ) {
+        return (int) $post_id;
+    }
+
+    // Fallback: first Activity as sample
+    $sample = get_posts([
+        'post_type'      => 'leaderspath_activity',
+        'posts_per_page' => 1,
+        'post_status'    => 'publish',
+    ]);
+
+    return ! empty( $sample ) ? (int) $sample[0]->ID : 0;
+}
+```
+
+### LeadersPath Modules Using This Pattern
+
+| Module | REST Endpoint | Hook | Fallback CPT |
+|--------|--------------|------|--------------|
+| CourseMeta | `/courses/meta` | `useCourseMeta()` | leaderspath_course |
+| ActivityMeta | `/activities/meta` | `useActivityMeta()` | leaderspath_activity |
+| ContextLibrary | `/activities/context` | `useContextFiles()` | leaderspath_activity |
+| SkillsList | `/activities/skills` | `useSkills()` | leaderspath_activity |
+
+### Key Benefits
+
+1. **True WYSIWYG** - VB preview shows real data, not placeholders
+2. **Empty state testing** - If no posts exist, empty states render correctly
+3. **Consistent rendering** - Same data source for VB and frontend
+4. **No sample notice needed** - Data is real, just from first available post
