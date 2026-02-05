@@ -18,6 +18,7 @@ import { contextLibraryModule } from './components/context-library';
 import { skillsListModule } from './components/skills-list';
 import { chatbotModule } from './components/chatbot';
 import { courseMetaModule } from './components/course-meta';
+import { courseObjectivesModule } from './components/course-objectives';
 
 /**
  * Register all LeadersPath modules with Divi.
@@ -48,5 +49,8 @@ addAction(
 
     // Register Course Meta Module
     registerModule(courseMetaModule.metadata, omit(courseMetaModule, 'metadata'));
+
+    // Register Course Objectives Module
+    registerModule(courseObjectivesModule.metadata, omit(courseObjectivesModule, 'metadata'));
   }
 );

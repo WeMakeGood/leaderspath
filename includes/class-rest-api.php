@@ -213,6 +213,36 @@ class REST_API {
 				'permission_callback' => [ $this, 'check_vb_permission' ],
 			]
 		);
+
+		// Course objectives preview (for VB).
+		register_rest_route(
+			self::NAMESPACE,
+			'/courses/(?P<id>\d+)/objectives',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_course_objectives' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+				'args'                => [
+					'id' => [
+						'description'       => __( 'Course ID.', 'leaderspath' ),
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => [ $this, 'validate_course_id_for_meta' ],
+					],
+				],
+			]
+		);
+
+		// Course objectives preview (fallback to first course).
+		register_rest_route(
+			self::NAMESPACE,
+			'/courses/objectives',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_first_course_objectives' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+			]
+		);
 	}
 
 	/**
@@ -1114,5 +1144,83 @@ class REST_API {
 		}
 
 		return new WP_REST_Response( $data, 200 );
+	}
+
+	/**
+	 * Get course objectives for VB preview.
+	 *
+	 * Returns course objectives from the course_objectives repeater field
+	 * for rendering in the Visual Builder preview.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	public function get_course_objectives( WP_REST_Request $request ) {
+		$course_id = (int) $request->get_param( 'id' );
+
+		return new WP_REST_Response( $this->build_course_objectives_response( $course_id ), 200 );
+	}
+
+	/**
+	 * Get first available course objectives for VB fallback.
+	 *
+	 * Used when editing Theme Builder templates where no specific course context exists.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	public function get_first_course_objectives() {
+		$courses = get_posts(
+			[
+				'post_type'      => 'leaderspath_course',
+				'posts_per_page' => 1,
+				'post_status'    => 'publish',
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			]
+		);
+
+		if ( empty( $courses ) ) {
+			return new WP_REST_Response(
+				[
+					'course_id'    => 0,
+					'course_title' => '',
+					'objectives'   => [],
+				],
+				200
+			);
+		}
+
+		return new WP_REST_Response( $this->build_course_objectives_response( $courses[0]->ID ), 200 );
+	}
+
+	/**
+	 * Build course objectives response data.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int $course_id Course ID.
+	 * @return array Course objectives data.
+	 */
+	private function build_course_objectives_response( int $course_id ): array {
+		$objectives_repeater = get_field( 'course_objectives', $course_id );
+		$objectives          = [];
+
+		if ( is_array( $objectives_repeater ) ) {
+			foreach ( $objectives_repeater as $row ) {
+				if ( ! empty( $row['objective'] ) ) {
+					$objectives[] = $row['objective'];
+				}
+			}
+		}
+
+		return [
+			'course_id'    => $course_id,
+			'course_title' => get_the_title( $course_id ),
+			'objectives'   => $objectives,
+		];
 	}
 }
