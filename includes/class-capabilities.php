@@ -44,15 +44,53 @@ class Capabilities {
 
 		// Check if our capabilities are already added by testing for the activity capability.
 		// This also catches the migration from leaderspath_lesson to leaderspath_activity.
-		if ( $admin->has_cap( 'edit_leaderspath_activity' ) ) {
+		if ( ! $admin->has_cap( 'edit_leaderspath_activity' ) ) {
+			// Remove old lesson capabilities if they exist (migration from lesson to activity).
+			self::remove_legacy_lesson_caps();
+
+			// Capabilities are missing, add them.
+			self::add_caps();
 			return;
 		}
 
-		// Remove old lesson capabilities if they exist (migration from lesson to activity).
-		self::remove_legacy_lesson_caps();
+		// Check for newer capabilities that may have been added in updates.
+		self::maybe_add_facilitator_caps();
+	}
 
-		// Capabilities are missing, add them.
-		self::add_caps();
+	/**
+	 * Add facilitator capability if missing.
+	 *
+	 * This handles upgrades where the facilitator capability was added after initial activation.
+	 *
+	 * @since 0.1.0
+	 */
+	private static function maybe_add_facilitator_caps(): void {
+		$admin = get_role( 'administrator' );
+
+		// If admin already has facilitator cap, we're up to date.
+		if ( $admin && $admin->has_cap( 'leaderspath_view_facilitator_content' ) ) {
+			return;
+		}
+
+		// Add facilitator capability to admin.
+		if ( $admin ) {
+			$admin->add_cap( 'leaderspath_view_facilitator_content', true );
+		}
+
+		// Add facilitator capability to editor.
+		$editor = get_role( 'editor' );
+		if ( $editor ) {
+			$editor->add_cap( 'leaderspath_view_facilitator_content', true );
+		}
+
+		// Create facilitator role if it doesn't exist.
+		if ( ! get_role( 'leaderspath_facilitator' ) ) {
+			add_role(
+				'leaderspath_facilitator',
+				__( 'LeadersPath Facilitator', 'leaderspath' ),
+				self::get_facilitator_caps()
+			);
+		}
 	}
 
 	/**
@@ -106,6 +144,7 @@ class Capabilities {
 		'leaderspath_access_chatbot',
 		'leaderspath_view_context',
 		'leaderspath_download_context',
+		'leaderspath_view_facilitator_content',
 	];
 
 	/**
@@ -226,6 +265,24 @@ class Capabilities {
 	}
 
 	/**
+	 * Get capabilities for facilitator role.
+	 *
+	 * Facilitators have all student capabilities plus access to facilitator-only content.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return array<string, bool> Capabilities with true values.
+	 */
+	public static function get_facilitator_caps(): array {
+		return array_merge(
+			self::get_student_caps(),
+			[
+				'leaderspath_view_facilitator_content' => true,
+			]
+		);
+	}
+
+	/**
 	 * Add capabilities to roles on plugin activation.
 	 *
 	 * @since 0.1.0
@@ -253,6 +310,15 @@ class Capabilities {
 				'leaderspath_student',
 				__( 'LeadersPath Student', 'leaderspath' ),
 				self::get_student_caps()
+			);
+		}
+
+		// Create LeadersPath Facilitator role if it doesn't exist.
+		if ( ! get_role( 'leaderspath_facilitator' ) ) {
+			add_role(
+				'leaderspath_facilitator',
+				__( 'LeadersPath Facilitator', 'leaderspath' ),
+				self::get_facilitator_caps()
 			);
 		}
 	}
