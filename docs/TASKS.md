@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-02-04
-**Current Phase:** Phase 6 - Polish & Testing
+**Last Updated:** 2026-02-09
+**Current Phase:** Phase 5b - Course Divi 5 Modules
 
 This file tracks all development tasks across Claude Code sessions. Each session should read this file at startup and update it when tasks are completed or new tasks are discovered.
 
@@ -193,40 +193,38 @@ Course-specific modules to display course data in Divi 5 Theme Builder templates
 
 **Reference:** Existing Activity modules use Theme Builder pattern with `get_queried_object_id()`.
 
-### Facilitator Role Setup
+### Facilitator Role Setup (COMPLETED)
 Add a `leaderspath_facilitator` role to distinguish facilitators from students.
-- [ ] Add `leaderspath_facilitator` role in `includes/class-capabilities.php`
-- [ ] Grant facilitator role: all student capabilities + `leaderspath_view_facilitator_content`
-- [ ] Add new capability: `leaderspath_view_facilitator_content`
-- [ ] Map capability to Administrator, Editor, and Facilitator roles
+- [x] Add `leaderspath_facilitator` role in `includes/class-capabilities.php`
+- [x] Grant facilitator role: all student capabilities + `leaderspath_view_facilitator_content`
+- [x] Add new capability: `leaderspath_view_facilitator_content`
+- [x] Map capability to Administrator, Editor, and Facilitator roles
 - [ ] Update documentation in `docs/cpt-schema.md`
 
-### CourseMeta Module
+### CourseMeta Module (COMPLETED)
 Display course metadata (similar to ActivityMeta).
-- [ ] Create PHP module class and traits
-- [ ] Create TypeScript/React edit component
-- [ ] Display: duration, difficulty badge, activity count
-- [ ] Visibility toggles for each element
-- [ ] Configurable labels for each element
+- [x] Create PHP module class and traits
+- [x] Create TypeScript/React edit component
+- [x] Display: duration, difficulty badge, activity count
+- [x] Visibility toggles for each element
+- [x] Configurable labels for each element
+- [x] REST API endpoint (`/courses/meta`) for VB preview
 
-### CourseObjectives Module
+### CourseObjectives Module (COMPLETED)
 Display learning objectives as a styled list.
-- [ ] Create PHP module class and traits
-- [ ] Create TypeScript/React edit component
-- [ ] Render `course_objectives` repeater as list items
-- [ ] Configurable title
-- [ ] List style options (bullets, numbers, checkmarks, icons)
-- [ ] Visibility toggle and empty state message
+- [x] Create PHP module class and traits
+- [x] Create TypeScript/React edit component
+- [x] Render `course_objectives` repeater as list items
+- [x] Configurable title and empty state message
+- [x] REST API endpoint (`/courses/objectives`) for VB preview
 
-### CourseActivities Module
+### CourseActivities Module (COMPLETED)
 Display ordered list of activities with navigation.
-- [ ] Create PHP module class and traits
-- [ ] Create TypeScript/React edit component
-- [ ] Render `course_activities` relationship as linked cards/list
-- [ ] Display activity: title, duration, excerpt
-- [ ] Card or list layout option
-- [ ] Link to activity pages
-- [ ] Visibility toggles for activity metadata
+- [x] Create PHP module class and traits
+- [x] Create TypeScript/React edit component
+- [x] Render `course_activities` relationship as ordered list with links
+- [x] Display activity: numbered badge + linked title
+- [x] REST API endpoint (`/courses/activities`) for VB preview
 
 ### LearnerOverview Module
 Display the learner-facing WYSIWYG content (visible to all users).
@@ -248,9 +246,10 @@ Display facilitator guide with role-based access control.
 - [ ] Standard text styling options
 
 ### Integration
-- [ ] Register all modules in `modules/Modules.php`
-- [ ] Register all modules in `src/index.ts`
-- [ ] Verify build completes successfully
+- [x] Register CourseMeta, CourseObjectives, CourseActivities in `modules/Modules.php`
+- [x] Register CourseMeta, CourseObjectives, CourseActivities in `src/index.ts`
+- [x] Verify build completes successfully for all completed modules
+- [ ] Register LearnerOverview, FacilitatorGuide in `modules/Modules.php` and `src/index.ts`
 - [ ] Test in Divi 5 Visual Builder
 - [ ] Test frontend rendering with Course template
 - [ ] Test access control for FacilitatorGuide (student vs facilitator view)
@@ -707,6 +706,38 @@ Brief notes from each development session:
   2. If successful, apply SSR pattern to all Theme Builder modules
   3. Build Course modules with SSR from the start
 
+### Session 18 (2026-02-04)
+- **Built CourseMeta Divi 5 module** (first Course module)
+- Established REST API pattern for VB preview:
+  - Custom REST endpoint returns JSON data (not HTML)
+  - React hook in edit.tsx fetches data via REST API
+  - PHP render_callback handles frontend rendering with ACF data
+  - Both REST and PHP fall back to first post of CPT as sample data
+- Why NOT `@wordpress/server-side-render`: Divi VB doesn't load WP block editor scripts, `wp.serverSideRender` global unavailable (React error #130)
+- Added endpoints: `/courses/meta` and `/courses/{id}/meta`
+- Updated existing modules (ActivityMeta, ContextLibrary, SkillsList) to use REST API pattern
+- Added VB fallback endpoints: `/activities/meta`, `/activities/context`, `/activities/skills`
+
+### Session 19 (2026-02-09)
+- **Built CourseObjectives Divi 5 module**
+  - Displays learning objectives from `course_objectives` ACF repeater field
+  - Each objective rendered as list item (`<li>`)
+  - Configurable title and empty state message
+  - REST endpoints: `/courses/objectives` and `/courses/{id}/objectives`
+- **Added `leaderspath_facilitator` role**
+  - New capability: `leaderspath_view_facilitator_content`
+  - Facilitator role gets all student caps + facilitator content access
+  - Capability granted to Administrator and Editor roles
+  - Upgrade handling via `maybe_add_facilitator_caps()` on `admin_init`
+
+### Session 20 (2026-02-09)
+- **Built CourseActivities Divi 5 module**
+  - Displays ordered list of activities from `course_activities` ACF relationship field
+  - Each activity shows numbered badge + linked title
+  - REST endpoints: `/courses/activities` and `/courses/{id}/activities`
+  - Styled with card-like appearance for each activity item
+- Updated TASKS.md with all completed Phase 5b items and session notes
+
 ---
 
 ## Quick Reference for Next Session
@@ -729,25 +760,20 @@ modules/
 ├── ContextLibrary/          # Theme Builder pattern - compound elements, modal, buttons
 ├── SkillsList/              # Theme Builder pattern - similar to ContextLibrary, no modal
 ├── Chatbot/                 # Theme Builder pattern - interactive frontend JavaScript
-│   ├── Chatbot.php          # Main class implementing DependencyInterface
-│   └── ChatbotTrait/        # Traits: RenderCallback, ModuleClassnames, ModuleStyles, CustomCss
+├── CourseMeta/              # Theme Builder pattern - course duration, difficulty, activity count
+├── CourseObjectives/        # Theme Builder pattern - learning objectives list
+├── CourseActivities/        # Theme Builder pattern - ordered activity list with links
 src/
 ├── index.ts                 # JS module registration (add registerModule() here)
 └── components/
     ├── hello-module/        # Simple reference
-    ├── activity-meta/       # Theme Builder pattern
-    ├── context-library/     # Theme Builder pattern with compound elements + modal
-    ├── skills-list/         # Theme Builder pattern (same structure, no modal)
-    └── chatbot/             # Theme Builder pattern with interactive chat
-        ├── index.ts         # Module export with metadata + renderers
-        ├── edit.tsx         # Visual Builder React component (placeholder messages)
-        ├── module.json      # Module schema (chat area, bubbles, input, button)
-        ├── types.ts         # TypeScript interfaces
-        ├── styles.tsx       # VB styles component with StyleContainer
-        ├── custom-css.ts    # CSS fields definition
-        ├── module-classnames.ts
-        ├── placeholder-content.ts
-        └── style.scss       # BEM CSS with loading animations
+    ├── activity-meta/       # Theme Builder pattern with REST API hook
+    ├── context-library/     # Theme Builder pattern with REST API hook + modal
+    ├── skills-list/         # Theme Builder pattern with REST API hook
+    ├── chatbot/             # Theme Builder pattern with interactive chat
+    ├── course-meta/         # REST API hook for course metadata
+    ├── course-objectives/   # REST API hook for course objectives
+    └── course-activities/   # REST API hook for course activities
 assets/
 ├── js/context-modal.js      # Modal JavaScript for View Content (Context Library only)
 ├── js/chatbot.js            # Chatbot frontend interactivity (REST API calls)
@@ -820,6 +846,16 @@ Container:
 - `GET /leaderspath/v1/activities/{id}/skills` - Get skills for activity
 - `GET /leaderspath/v1/context/{id}/download` - Get context file content
 - `GET /leaderspath/v1/skills/{id}/download` - Get skill definition
+- `GET /leaderspath/v1/courses/meta` - Course meta for VB preview (fallback to first course)
+- `GET /leaderspath/v1/courses/{id}/meta` - Course meta for specific course
+- `GET /leaderspath/v1/courses/objectives` - Course objectives for VB preview
+- `GET /leaderspath/v1/courses/{id}/objectives` - Course objectives for specific course
+- `GET /leaderspath/v1/courses/activities` - Course activities for VB preview
+- `GET /leaderspath/v1/courses/{id}/activities` - Course activities for specific course
+- `GET /leaderspath/v1/activities/meta` - Activity meta for VB preview (fallback to first activity)
+- `GET /leaderspath/v1/activities/{id}/meta` - Activity meta for specific activity
+- `GET /leaderspath/v1/activities/context` - Context files for VB preview (first activity)
+- `GET /leaderspath/v1/activities/skills` - Skills for VB preview (first activity)
 
 ### CLI Test Scripts
 ```bash

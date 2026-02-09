@@ -243,6 +243,36 @@ class REST_API {
 				'permission_callback' => [ $this, 'check_vb_permission' ],
 			]
 		);
+
+		// Course activities preview (for VB).
+		register_rest_route(
+			self::NAMESPACE,
+			'/courses/(?P<id>\d+)/activities',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_course_activities' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+				'args'                => [
+					'id' => [
+						'description'       => __( 'Course ID.', 'leaderspath' ),
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => [ $this, 'validate_course_id_for_meta' ],
+					],
+				],
+			]
+		);
+
+		// Course activities preview (fallback to first course).
+		register_rest_route(
+			self::NAMESPACE,
+			'/courses/activities',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_first_course_activities' ],
+				'permission_callback' => [ $this, 'check_vb_permission' ],
+			]
+		);
 	}
 
 	/**
@@ -1221,6 +1251,90 @@ class REST_API {
 			'course_id'    => $course_id,
 			'course_title' => get_the_title( $course_id ),
 			'objectives'   => $objectives,
+		];
+	}
+
+	/**
+	 * Get course activities for VB preview.
+	 *
+	 * Returns ordered list of activities from the course_activities relationship field
+	 * for rendering in the Visual Builder preview.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	public function get_course_activities( WP_REST_Request $request ) {
+		$course_id = (int) $request->get_param( 'id' );
+
+		return new WP_REST_Response( $this->build_course_activities_response( $course_id ), 200 );
+	}
+
+	/**
+	 * Get first available course activities for VB fallback.
+	 *
+	 * Used when editing Theme Builder templates where no specific course context exists.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	public function get_first_course_activities() {
+		$courses = get_posts(
+			[
+				'post_type'      => 'leaderspath_course',
+				'posts_per_page' => 1,
+				'post_status'    => 'publish',
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			]
+		);
+
+		if ( empty( $courses ) ) {
+			return new WP_REST_Response(
+				[
+					'course_id'    => 0,
+					'course_title' => '',
+					'activities'   => [],
+				],
+				200
+			);
+		}
+
+		return new WP_REST_Response( $this->build_course_activities_response( $courses[0]->ID ), 200 );
+	}
+
+	/**
+	 * Build course activities response data.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param int $course_id Course ID.
+	 * @return array Course activities data.
+	 */
+	private function build_course_activities_response( int $course_id ): array {
+		$related_activities = get_field( 'course_activities', $course_id );
+		$activities         = [];
+
+		if ( is_array( $related_activities ) ) {
+			foreach ( $related_activities as $activity ) {
+				if ( ! $activity instanceof \WP_Post ) {
+					continue;
+				}
+
+				$activities[] = [
+					'id'    => $activity->ID,
+					'title' => get_the_title( $activity ),
+					'url'   => get_permalink( $activity ),
+				];
+			}
+		}
+
+		return [
+			'course_id'    => $course_id,
+			'course_title' => get_the_title( $course_id ),
+			'activities'   => $activities,
 		];
 	}
 }
