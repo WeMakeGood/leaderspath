@@ -94,15 +94,24 @@ class Capabilities {
 	}
 
 	/**
-	 * Remove legacy leaderspath_lesson capabilities.
+	 * Remove legacy capabilities from prior naming conventions.
 	 *
-	 * This is a one-time migration from the old lesson terminology to activity.
+	 * Handles migrations:
+	 * - leaderspath_lesson → leaderspath_activity (v0.2.0)
+	 * - leaderspath_cohort removed, old leaderspath_course → leaderspath_lesson (v0.3.0)
 	 *
 	 * @since 0.2.0
 	 */
 	private static function remove_legacy_lesson_caps(): void {
+		// Old lesson→activity migration caps.
 		$legacy_caps = self::get_cpt_caps( 'leaderspath_lesson', 'leaderspath_lessons' );
 		$legacy_caps[] = 'leaderspath_access_lessons';
+
+		// Old cohort caps (cohort CPT renamed to course in v0.3.0).
+		$legacy_caps = array_merge(
+			$legacy_caps,
+			self::get_cpt_caps( 'leaderspath_cohort', 'leaderspath_cohorts' )
+		);
 
 		$admin = get_role( 'administrator' );
 		if ( $admin ) {
@@ -128,8 +137,8 @@ class Capabilities {
 	 */
 	private const CPT_CAPS = [
 		'leaderspath_activity' => 'leaderspath_activities',
+		'leaderspath_lesson'   => 'leaderspath_lessons',
 		'leaderspath_course'   => 'leaderspath_courses',
-		'leaderspath_cohort'   => 'leaderspath_cohorts',
 		'leaderspath_context'  => 'leaderspath_contexts',
 		'leaderspath_skill'    => 'leaderspath_skills',
 	];
@@ -208,7 +217,7 @@ class Capabilities {
 	/**
 	 * Get capabilities for editor role.
 	 *
-	 * Editors can manage Activities and Courses, but only read Cohorts, Context, and Skills.
+	 * Editors can manage Activities and Lessons, but only read Courses, Context, and Skills.
 	 *
 	 * @since 0.1.0
 	 *
@@ -217,10 +226,10 @@ class Capabilities {
 	public static function get_editor_caps(): array {
 		$caps = [];
 
-		// Full access to Activities and Courses.
+		// Full access to Activities and Lessons.
 		$editor_full_access = [
 			'leaderspath_activity' => 'leaderspath_activities',
-			'leaderspath_course'   => 'leaderspath_courses',
+			'leaderspath_lesson'   => 'leaderspath_lessons',
 		];
 		foreach ( $editor_full_access as $cap_base => $plural ) {
 			foreach ( self::get_cpt_caps( $cap_base, $plural ) as $cap ) {
@@ -228,9 +237,9 @@ class Capabilities {
 			}
 		}
 
-		// Read-only for Cohorts, Context, Skills.
+		// Read-only for Courses, Context, Skills.
 		$editor_read_only = [
-			'leaderspath_cohort'  => 'leaderspath_cohorts',
+			'leaderspath_course'  => 'leaderspath_courses',
 			'leaderspath_context' => 'leaderspath_contexts',
 			'leaderspath_skill'   => 'leaderspath_skills',
 		];

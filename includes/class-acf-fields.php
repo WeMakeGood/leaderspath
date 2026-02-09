@@ -38,8 +38,8 @@ class ACF_Fields {
 
 		$this->register_activity_settings();
 		$this->register_activity_chatbot();
+		$this->register_lesson_settings();
 		$this->register_course_settings();
-		$this->register_cohort_settings();
 		$this->register_context_settings();
 		$this->register_skill_settings();
 	}
@@ -320,24 +320,24 @@ class ACF_Fields {
 	}
 
 	/**
-	 * Register Course Settings field group.
+	 * Register Lesson Settings field group.
 	 *
-	 * Courses are the atomic teaching unit in LeadersPath - taught as a cohesive
+	 * Lessons are the atomic teaching unit in LeadersPath - taught as a cohesive
 	 * whole by a facilitator with AI sandbox activities for hands-on experimentation.
 	 *
-	 * @since 0.1.0
+	 * @since 0.3.0
 	 */
-	private function register_course_settings(): void {
+	private function register_lesson_settings(): void {
 		acf_add_local_field_group( [
-			'key'      => 'group_course_settings',
-			'title'    => __( 'Course Settings', 'leaderspath' ),
+			'key'      => 'group_lesson_settings',
+			'title'    => __( 'Lesson Settings', 'leaderspath' ),
 			'fields'   => [
 				[
-					'key'           => 'field_course_activities',
+					'key'           => 'field_lesson_activities',
 					'label'         => __( 'Activities', 'leaderspath' ),
-					'name'          => 'course_activities',
+					'name'          => 'lesson_activities',
 					'type'          => 'relationship',
-					'instructions'  => __( 'Select and order the activities in this course. Activities are AI sandbox experiments within the facilitated course.', 'leaderspath' ),
+					'instructions'  => __( 'Select and order the activities in this lesson. Activities are AI sandbox experiments within the facilitated lesson.', 'leaderspath' ),
 					'required'      => 0,
 					'post_type'     => [ 'leaderspath_activity' ],
 					'filters'       => [ 'search' ],
@@ -347,11 +347,11 @@ class ACF_Fields {
 					'return_format' => 'id',
 				],
 				[
-					'key'           => 'field_course_difficulty',
+					'key'           => 'field_lesson_difficulty',
 					'label'         => __( 'Difficulty Level', 'leaderspath' ),
-					'name'          => 'course_difficulty',
+					'name'          => 'lesson_difficulty',
 					'type'          => 'select',
-					'instructions'  => __( 'Target skill level for this course.', 'leaderspath' ),
+					'instructions'  => __( 'Target skill level for this lesson.', 'leaderspath' ),
 					'choices'       => [
 						'beginner'     => __( 'Beginner', 'leaderspath' ),
 						'intermediate' => __( 'Intermediate', 'leaderspath' ),
@@ -361,19 +361,19 @@ class ACF_Fields {
 					'return_format' => 'value',
 				],
 				[
-					'key'          => 'field_course_total_duration',
+					'key'          => 'field_lesson_total_duration',
 					'label'        => __( 'Total Duration', 'leaderspath' ),
-					'name'         => 'course_total_duration',
+					'name'         => 'lesson_total_duration',
 					'type'         => 'text',
 					'instructions' => __( 'Total facilitation time (e.g., "90 minutes" or "2 hours").', 'leaderspath' ),
 					'placeholder'  => __( '90 minutes', 'leaderspath' ),
 				],
 				[
-					'key'           => 'field_course_objectives',
+					'key'           => 'field_lesson_objectives',
 					'label'         => __( 'Learning Objectives', 'leaderspath' ),
-					'name'          => 'course_objectives',
+					'name'          => 'lesson_objectives',
 					'type'          => 'repeater',
-					'instructions'  => __( 'What learners will achieve after completing this course.', 'leaderspath' ),
+					'instructions'  => __( 'What learners will achieve after completing this lesson.', 'leaderspath' ),
 					'required'      => 0,
 					'min'           => 0,
 					'max'           => 10,
@@ -381,7 +381,7 @@ class ACF_Fields {
 					'button_label'  => __( 'Add Objective', 'leaderspath' ),
 					'sub_fields'    => [
 						[
-							'key'   => 'field_course_objective',
+							'key'   => 'field_lesson_objective',
 							'label' => __( 'Objective', 'leaderspath' ),
 							'name'  => 'objective',
 							'type'  => 'text',
@@ -389,11 +389,11 @@ class ACF_Fields {
 					],
 				],
 				[
-					'key'           => 'field_course_access_roles',
+					'key'           => 'field_lesson_access_roles',
 					'label'         => __( 'Access Roles', 'leaderspath' ),
-					'name'          => 'course_access_roles',
+					'name'          => 'lesson_access_roles',
 					'type'          => 'checkbox',
-					'instructions'  => __( 'User roles that can access this course. Leave empty for public access.', 'leaderspath' ),
+					'instructions'  => __( 'User roles that can access this lesson. Leave empty for public access.', 'leaderspath' ),
 					'choices'       => [
 						'leaderspath_student' => __( 'LeadersPath Student', 'leaderspath' ),
 						'subscriber'          => __( 'Subscriber', 'leaderspath' ),
@@ -411,7 +411,7 @@ class ACF_Fields {
 					[
 						'param'    => 'post_type',
 						'operator' => '==',
-						'value'    => 'leaderspath_course',
+						'value'    => 'leaderspath_lesson',
 					],
 				],
 			],
@@ -425,13 +425,13 @@ class ACF_Fields {
 
 		// Facilitator Content field group - for facilitator-only content.
 		acf_add_local_field_group( [
-			'key'      => 'group_course_facilitator',
+			'key'      => 'group_lesson_facilitator',
 			'title'    => __( 'Facilitator Content', 'leaderspath' ),
 			'fields'   => [
 				[
-					'key'          => 'field_course_facilitator_guide',
+					'key'          => 'field_lesson_facilitator_guide',
 					'label'        => __( 'Facilitator Guide', 'leaderspath' ),
-					'name'         => 'course_facilitator_guide',
+					'name'         => 'lesson_facilitator_guide',
 					'type'         => 'wysiwyg',
 					'instructions' => __( 'Complete teaching script with timing, activity transitions, and discussion prompts. This is the primary teaching document for facilitators.', 'leaderspath' ),
 					'tabs'         => 'all',
@@ -444,7 +444,7 @@ class ACF_Fields {
 					[
 						'param'    => 'post_type',
 						'operator' => '==',
-						'value'    => 'leaderspath_course',
+						'value'    => 'leaderspath_lesson',
 					],
 				],
 			],
@@ -458,15 +458,15 @@ class ACF_Fields {
 
 		// Learner Content field group - what learners see.
 		acf_add_local_field_group( [
-			'key'      => 'group_course_learner',
+			'key'      => 'group_lesson_learner',
 			'title'    => __( 'Learner Content', 'leaderspath' ),
 			'fields'   => [
 				[
-					'key'          => 'field_course_learner_overview',
+					'key'          => 'field_lesson_learner_overview',
 					'label'        => __( 'Learner Overview', 'leaderspath' ),
-					'name'         => 'course_learner_overview',
+					'name'         => 'lesson_learner_overview',
 					'type'         => 'wysiwyg',
-					'instructions' => __( 'What learners will experience in this course. Context and framing, not teaching content (that comes from the facilitator).', 'leaderspath' ),
+					'instructions' => __( 'What learners will experience in this lesson. Context and framing, not teaching content (that comes from the facilitator).', 'leaderspath' ),
 					'tabs'         => 'all',
 					'toolbar'      => 'full',
 					'media_upload' => 1,
@@ -477,7 +477,7 @@ class ACF_Fields {
 					[
 						'param'    => 'post_type',
 						'operator' => '==',
-						'value'    => 'leaderspath_course',
+						'value'    => 'leaderspath_lesson',
 					],
 				],
 			],
@@ -489,24 +489,24 @@ class ACF_Fields {
 			'active'                => true,
 		] );
 
-		// Course Q&A Chatbot Configuration - optional course-level Q&A assistant.
+		// Lesson Q&A Chatbot Configuration - optional lesson-level Q&A assistant.
 		acf_add_local_field_group( [
-			'key'      => 'group_course_chatbot',
-			'title'    => __( 'Course Q&A Chatbot', 'leaderspath' ),
+			'key'      => 'group_lesson_chatbot',
+			'title'    => __( 'Lesson Q&A Chatbot', 'leaderspath' ),
 			'fields'   => [
 				[
-					'key'           => 'field_course_chatbot_enabled',
+					'key'           => 'field_lesson_chatbot_enabled',
 					'label'         => __( 'Enable Q&A Chatbot', 'leaderspath' ),
-					'name'          => 'course_chatbot_enabled',
+					'name'          => 'lesson_chatbot_enabled',
 					'type'          => 'true_false',
-					'instructions'  => __( 'Enable a course-level Q&A chatbot for answering questions about course content. Unlike activity sandboxes (which demonstrate specific AI behaviors), this is a helpful assistant.', 'leaderspath' ),
+					'instructions'  => __( 'Enable a lesson-level Q&A chatbot for answering questions about lesson content. Unlike activity sandboxes (which demonstrate specific AI behaviors), this is a helpful assistant.', 'leaderspath' ),
 					'default_value' => 0,
 					'ui'            => 1,
 				],
 				[
-					'key'           => 'field_course_chatbot_model',
+					'key'           => 'field_lesson_chatbot_model',
 					'label'         => __( 'Claude Model', 'leaderspath' ),
-					'name'          => 'course_chatbot_model',
+					'name'          => 'lesson_chatbot_model',
 					'type'          => 'select',
 					'instructions'  => __( 'Select the Claude model for the Q&A chatbot.', 'leaderspath' ),
 					'required'      => 0,
@@ -520,7 +520,7 @@ class ACF_Fields {
 					'conditional_logic' => [
 						[
 							[
-								'field'    => 'field_course_chatbot_enabled',
+								'field'    => 'field_lesson_chatbot_enabled',
 								'operator' => '==',
 								'value'    => '1',
 							],
@@ -528,16 +528,16 @@ class ACF_Fields {
 					],
 				],
 				[
-					'key'           => 'field_course_chatbot_system_prompt',
+					'key'           => 'field_lesson_chatbot_system_prompt',
 					'label'         => __( 'System Prompt', 'leaderspath' ),
-					'name'          => 'course_chatbot_system_prompt',
+					'name'          => 'lesson_chatbot_system_prompt',
 					'type'          => 'textarea',
 					'instructions'  => __( 'Custom system prompt for the Q&A chatbot. Should be configured as a helpful, knowledgeable assistant.', 'leaderspath' ),
 					'rows'          => 6,
 					'conditional_logic' => [
 						[
 							[
-								'field'    => 'field_course_chatbot_enabled',
+								'field'    => 'field_lesson_chatbot_enabled',
 								'operator' => '==',
 								'value'    => '1',
 							],
@@ -545,11 +545,11 @@ class ACF_Fields {
 					],
 				],
 				[
-					'key'           => 'field_course_chatbot_context_files',
+					'key'           => 'field_lesson_chatbot_context_files',
 					'label'         => __( 'Context Files', 'leaderspath' ),
-					'name'          => 'course_chatbot_context_files',
+					'name'          => 'lesson_chatbot_context_files',
 					'type'          => 'relationship',
-					'instructions'  => __( 'Select context files for the Q&A chatbot. Typically includes all course content.', 'leaderspath' ),
+					'instructions'  => __( 'Select context files for the Q&A chatbot. Typically includes all lesson content.', 'leaderspath' ),
 					'required'      => 0,
 					'post_type'     => [ 'leaderspath_context' ],
 					'filters'       => [ 'search' ],
@@ -560,7 +560,7 @@ class ACF_Fields {
 					'conditional_logic' => [
 						[
 							[
-								'field'    => 'field_course_chatbot_enabled',
+								'field'    => 'field_lesson_chatbot_enabled',
 								'operator' => '==',
 								'value'    => '1',
 							],
@@ -568,9 +568,9 @@ class ACF_Fields {
 					],
 				],
 				[
-					'key'           => 'field_course_chatbot_max_tokens',
+					'key'           => 'field_lesson_chatbot_max_tokens',
 					'label'         => __( 'Max Response Tokens', 'leaderspath' ),
-					'name'          => 'course_chatbot_max_tokens',
+					'name'          => 'lesson_chatbot_max_tokens',
 					'type'          => 'number',
 					'instructions'  => __( 'Maximum tokens in Claude\'s response.', 'leaderspath' ),
 					'default_value' => 4096,
@@ -580,7 +580,7 @@ class ACF_Fields {
 					'conditional_logic' => [
 						[
 							[
-								'field'    => 'field_course_chatbot_enabled',
+								'field'    => 'field_lesson_chatbot_enabled',
 								'operator' => '==',
 								'value'    => '1',
 							],
@@ -588,9 +588,9 @@ class ACF_Fields {
 					],
 				],
 				[
-					'key'           => 'field_course_chatbot_temperature',
+					'key'           => 'field_lesson_chatbot_temperature',
 					'label'         => __( 'Temperature', 'leaderspath' ),
-					'name'          => 'course_chatbot_temperature',
+					'name'          => 'lesson_chatbot_temperature',
 					'type'          => 'number',
 					'instructions'  => __( 'Controls randomness. Lower is more focused, higher is more creative.', 'leaderspath' ),
 					'default_value' => 0.7,
@@ -600,7 +600,7 @@ class ACF_Fields {
 					'conditional_logic' => [
 						[
 							[
-								'field'    => 'field_course_chatbot_enabled',
+								'field'    => 'field_lesson_chatbot_enabled',
 								'operator' => '==',
 								'value'    => '1',
 							],
@@ -613,7 +613,7 @@ class ACF_Fields {
 					[
 						'param'    => 'post_type',
 						'operator' => '==',
-						'value'    => 'leaderspath_course',
+						'value'    => 'leaderspath_lesson',
 					],
 				],
 			],
@@ -627,32 +627,37 @@ class ACF_Fields {
 	}
 
 	/**
-	 * Register Cohort Settings field group.
+	 * Register Course Settings field group.
 	 *
-	 * @since 0.1.0
+	 * Courses are reusable curriculum structures containing Lessons.
+	 *
+	 * @since 0.3.0
 	 */
-	private function register_cohort_settings(): void {
+	private function register_course_settings(): void {
 		acf_add_local_field_group( [
-			'key'      => 'group_cohort_settings',
-			'title'    => __( 'Cohort Settings', 'leaderspath' ),
+			'key'      => 'group_course_settings',
+			'title'    => __( 'Course Settings', 'leaderspath' ),
 			'fields'   => [
 				[
-					'key'           => 'field_cohort_course',
-					'label'         => __( 'Course', 'leaderspath' ),
-					'name'          => 'cohort_course',
-					'type'          => 'post_object',
-					'instructions'  => __( 'The course this cohort will complete.', 'leaderspath' ),
-					'required'      => 1,
-					'post_type'     => [ 'leaderspath_course' ],
+					'key'           => 'field_course_lessons',
+					'label'         => __( 'Lessons', 'leaderspath' ),
+					'name'          => 'course_lessons',
+					'type'          => 'relationship',
+					'instructions'  => __( 'Select and order the lessons in this course.', 'leaderspath' ),
+					'required'      => 0,
+					'post_type'     => [ 'leaderspath_lesson' ],
+					'filters'       => [ 'search' ],
+					'elements'      => [ 'featured_image' ],
+					'min'           => 0,
+					'max'           => 100,
 					'return_format' => 'id',
-					'ui'            => 1,
 				],
 				[
-					'key'           => 'field_cohort_status',
+					'key'           => 'field_course_status',
 					'label'         => __( 'Status', 'leaderspath' ),
-					'name'          => 'cohort_status',
+					'name'          => 'course_status',
 					'type'          => 'select',
-					'instructions'  => __( 'Current status of this cohort.', 'leaderspath' ),
+					'instructions'  => __( 'Current status of this course.', 'leaderspath' ),
 					'required'      => 1,
 					'choices'       => [
 						'upcoming'  => __( 'Upcoming', 'leaderspath' ),
@@ -664,41 +669,41 @@ class ACF_Fields {
 					'return_format' => 'value',
 				],
 				[
-					'key'           => 'field_cohort_start_date',
+					'key'           => 'field_course_start_date',
 					'label'         => __( 'Start Date', 'leaderspath' ),
-					'name'          => 'cohort_start_date',
+					'name'          => 'course_start_date',
 					'type'          => 'date_picker',
-					'instructions'  => __( 'When this cohort begins.', 'leaderspath' ),
+					'instructions'  => __( 'When this course begins.', 'leaderspath' ),
 					'required'      => 1,
 					'display_format' => 'F j, Y',
 					'return_format' => 'Y-m-d',
 				],
 				[
-					'key'           => 'field_cohort_end_date',
+					'key'           => 'field_course_end_date',
 					'label'         => __( 'End Date', 'leaderspath' ),
-					'name'          => 'cohort_end_date',
+					'name'          => 'course_end_date',
 					'type'          => 'date_picker',
-					'instructions'  => __( 'When this cohort ends.', 'leaderspath' ),
+					'instructions'  => __( 'When this course ends.', 'leaderspath' ),
 					'required'      => 1,
 					'display_format' => 'F j, Y',
 					'return_format' => 'Y-m-d',
 				],
 				[
-					'key'           => 'field_cohort_instructor',
+					'key'           => 'field_course_instructor',
 					'label'         => __( 'Instructor', 'leaderspath' ),
-					'name'          => 'cohort_instructor',
+					'name'          => 'course_instructor',
 					'type'          => 'user',
-					'instructions'  => __( 'The facilitator for this cohort.', 'leaderspath' ),
+					'instructions'  => __( 'The facilitator for this course.', 'leaderspath' ),
 					'required'      => 0,
 					'role'          => [ 'administrator', 'editor', 'author' ],
 					'return_format' => 'id',
 				],
 				[
-					'key'           => 'field_cohort_language',
+					'key'           => 'field_course_language',
 					'label'         => __( 'Language', 'leaderspath' ),
-					'name'          => 'cohort_language',
+					'name'          => 'course_language',
 					'type'          => 'select',
-					'instructions'  => __( 'Primary language for this cohort.', 'leaderspath' ),
+					'instructions'  => __( 'Primary language for this course.', 'leaderspath' ),
 					'choices'       => [
 						'en' => __( 'English', 'leaderspath' ),
 						'es' => __( 'Spanish', 'leaderspath' ),
@@ -710,9 +715,9 @@ class ACF_Fields {
 					'return_format' => 'value',
 				],
 				[
-					'key'           => 'field_cohort_timezone',
+					'key'           => 'field_course_timezone',
 					'label'         => __( 'Timezone', 'leaderspath' ),
-					'name'          => 'cohort_timezone',
+					'name'          => 'course_timezone',
 					'type'          => 'select',
 					'instructions'  => __( 'Timezone for scheduling.', 'leaderspath' ),
 					'choices'       => $this->get_timezone_choices(),
@@ -720,9 +725,9 @@ class ACF_Fields {
 					'return_format' => 'value',
 				],
 				[
-					'key'           => 'field_cohort_max_participants',
+					'key'           => 'field_course_max_participants',
 					'label'         => __( 'Max Participants', 'leaderspath' ),
-					'name'          => 'cohort_max_participants',
+					'name'          => 'course_max_participants',
 					'type'          => 'number',
 					'instructions'  => __( 'Maximum number of participants. Leave empty for unlimited.', 'leaderspath' ),
 					'min'           => 1,
@@ -734,7 +739,7 @@ class ACF_Fields {
 					[
 						'param'    => 'post_type',
 						'operator' => '==',
-						'value'    => 'leaderspath_cohort',
+						'value'    => 'leaderspath_course',
 					],
 				],
 			],

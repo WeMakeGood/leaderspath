@@ -226,20 +226,20 @@ class Claude_API {
 	}
 
 	/**
-	 * Send a message to Claude for course Q&A chatbot.
+	 * Send a message to Claude for lesson Q&A chatbot.
 	 *
-	 * Similar to send_message but configured for course-level Q&A assistance.
+	 * Similar to send_message but configured for lesson-level Q&A assistance.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int         $course_id    Course ID for context.
+	 * @param int         $lesson_id    Lesson ID for context.
 	 * @param string      $message      User message.
 	 * @param array       $history      Previous conversation messages.
 	 * @param string      $model        Model slug (sonnet, haiku, opus-4.5).
 	 * @param string|null $container_id Container ID for session continuity.
 	 * @return array|WP_Error Response data or error.
 	 */
-	public function send_course_message( int $course_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null ) {
+	public function send_lesson_message( int $lesson_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null ) {
 		// Get API key.
 		$api_key = \LeadersPath\Admin\Settings::get_api_key();
 
@@ -257,15 +257,15 @@ class Claude_API {
 			return $model_id;
 		}
 
-		// Build system prompt with course context.
-		$system_prompt = $this->build_course_system_prompt( $course_id );
+		// Build system prompt with lesson context.
+		$system_prompt = $this->build_lesson_system_prompt( $lesson_id );
 
 		// Build messages array.
 		$messages = $this->build_messages( $message, $history );
 
-		// Get model settings from course.
-		$max_tokens  = (int) ( get_field( 'course_chatbot_max_tokens', $course_id ) ?: 4096 );
-		$temperature = (float) ( get_field( 'course_chatbot_temperature', $course_id ) ?? 0.7 );
+		// Get model settings from lesson.
+		$max_tokens  = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: 4096 );
+		$temperature = (float) ( get_field( 'lesson_chatbot_temperature', $lesson_id ) ?? 0.7 );
 
 		// Build request body.
 		$body = [
@@ -281,7 +281,7 @@ class Claude_API {
 		}
 
 		// Log request if debug mode is enabled.
-		$this->maybe_log( 'Course Q&A Request', $body );
+		$this->maybe_log( 'Lesson Q&A Request', $body );
 
 		// Build headers.
 		$headers = [
@@ -314,7 +314,7 @@ class Claude_API {
 		$data        = json_decode( $body_raw, true );
 
 		// Log response if debug mode is enabled.
-		$this->maybe_log( 'Course Q&A Response', [ 'status' => $status_code, 'body' => $data ] );
+		$this->maybe_log( 'Lesson Q&A Response', [ 'status' => $status_code, 'body' => $data ] );
 
 		// Handle error responses.
 		if ( $status_code >= 400 ) {
@@ -333,16 +333,16 @@ class Claude_API {
 		}
 
 		/**
-		 * Fires after a successful course Q&A chat message.
+		 * Fires after a successful lesson Q&A chat message.
 		 *
 		 * @since 0.1.0
 		 *
 		 * @param string $message   The user's message.
 		 * @param array  $data      The API response data.
 		 * @param int    $user_id   The current user ID.
-		 * @param int    $course_id The course ID.
+		 * @param int    $lesson_id The lesson ID.
 		 */
-		do_action( 'leaderspath_course_chat_message_sent', $message, $data, get_current_user_id(), $course_id );
+		do_action( 'leaderspath_lesson_chat_message_sent', $message, $data, get_current_user_id(), $lesson_id );
 
 		return [
 			'content'      => $content,
@@ -577,37 +577,37 @@ class Claude_API {
 	}
 
 	/**
-	 * Build the system prompt for course Q&A chatbot.
+	 * Build the system prompt for lesson Q&A chatbot.
 	 *
 	 * Unlike activity sandboxes (which demonstrate specific behaviors),
-	 * the course Q&A bot is a helpful assistant for answering questions.
+	 * the lesson Q&A bot is a helpful assistant for answering questions.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int $course_id Course ID.
+	 * @param int $lesson_id Lesson ID.
 	 * @return string System prompt.
 	 */
-	private function build_course_system_prompt( int $course_id ): string {
-		$course = get_post( $course_id );
+	private function build_lesson_system_prompt( int $lesson_id ): string {
+		$lesson = get_post( $lesson_id );
 		$parts  = [];
 
 		// Start with custom system prompt if set.
-		$custom_prompt = get_field( 'course_chatbot_system_prompt', $course_id );
+		$custom_prompt = get_field( 'lesson_chatbot_system_prompt', $lesson_id );
 		if ( ! empty( $custom_prompt ) ) {
 			$parts[] = $custom_prompt;
 		} else {
 			// Default Q&A assistant prompt.
 			$parts[] = sprintf(
-				/* translators: %s: course title */
-				__( 'You are a helpful Q&A assistant for the course "%s". Your role is to answer questions about the course content, clarify concepts, and help learners understand the material. Be accurate, clear, and supportive.', 'leaderspath' ),
-				$course->post_title
+				/* translators: %s: lesson title */
+				__( 'You are a helpful Q&A assistant for the lesson "%s". Your role is to answer questions about the lesson content, clarify concepts, and help learners understand the material. Be accurate, clear, and supportive.', 'leaderspath' ),
+				$lesson->post_title
 			);
 		}
 
-		// Add course learning objectives if available.
-		$objectives = get_field( 'course_objectives', $course_id );
+		// Add lesson learning objectives if available.
+		$objectives = get_field( 'lesson_objectives', $lesson_id );
 		if ( ! empty( $objectives ) ) {
-			$parts[]    = "\n\n--- Course Learning Objectives ---";
+			$parts[]    = "\n\n--- Lesson Learning Objectives ---";
 			$obj_number = 1;
 			foreach ( $objectives as $objective ) {
 				if ( ! empty( $objective['objective'] ) ) {
@@ -617,14 +617,14 @@ class Claude_API {
 		}
 
 		// Add learner overview if available.
-		$learner_overview = get_field( 'course_learner_overview', $course_id );
+		$learner_overview = get_field( 'lesson_learner_overview', $lesson_id );
 		if ( ! empty( $learner_overview ) ) {
-			$parts[] = "\n\n--- Course Overview ---\n";
+			$parts[] = "\n\n--- Lesson Overview ---\n";
 			$parts[] = wp_strip_all_tags( $learner_overview );
 		}
 
 		// Add context files.
-		$context_files = get_field( 'course_chatbot_context_files', $course_id ) ?: [];
+		$context_files = get_field( 'lesson_chatbot_context_files', $lesson_id ) ?: [];
 		if ( ! empty( $context_files ) ) {
 			$parts[] = "\n\n--- Reference Materials ---";
 
@@ -643,14 +643,14 @@ class Claude_API {
 		}
 
 		/**
-		 * Filter the course Q&A system prompt before sending to Claude.
+		 * Filter the lesson Q&A system prompt before sending to Claude.
 		 *
 		 * @since 0.1.0
 		 *
 		 * @param string $prompt    The assembled system prompt.
-		 * @param int    $course_id The course ID.
+		 * @param int    $lesson_id The lesson ID.
 		 */
-		$system_prompt = apply_filters( 'leaderspath_course_chatbot_system_prompt', implode( '', $parts ), $course_id );
+		$system_prompt = apply_filters( 'leaderspath_lesson_chatbot_system_prompt', implode( '', $parts ), $lesson_id );
 
 		return $system_prompt;
 	}

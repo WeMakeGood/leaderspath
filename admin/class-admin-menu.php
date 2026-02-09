@@ -47,7 +47,7 @@ class Admin_Menu {
 		add_menu_page(
 			__( 'LeadersPath', 'leaderspath' ),
 			__( 'LeadersPath', 'leaderspath' ),
-			'edit_leaderspath_courses', // Capability to view menu.
+			'edit_leaderspath_lessons', // Capability to view menu.
 			self::MENU_SLUG,
 			[ $this, 'render_dashboard' ],
 			'dashicons-welcome-learn-more',
@@ -59,7 +59,7 @@ class Admin_Menu {
 			self::MENU_SLUG,
 			__( 'Dashboard', 'leaderspath' ),
 			__( 'Dashboard', 'leaderspath' ),
-			'edit_leaderspath_courses',
+			'edit_leaderspath_lessons',
 			self::MENU_SLUG, // Same slug as parent = replaces default submenu item.
 			[ $this, 'render_dashboard' ]
 		);
@@ -87,16 +87,16 @@ class Admin_Menu {
 					<table class="widefat striped">
 						<tbody>
 							<tr>
-								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_course' ) ); ?>"><?php esc_html_e( 'Courses', 'leaderspath' ); ?></a></td>
-								<td><?php echo esc_html( (string) $counts['courses'] ); ?></td>
+								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_lesson' ) ); ?>"><?php esc_html_e( 'Lessons', 'leaderspath' ); ?></a></td>
+								<td><?php echo esc_html( (string) $counts['lessons'] ); ?></td>
 							</tr>
 							<tr>
 								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_activity' ) ); ?>"><?php esc_html_e( 'Activities', 'leaderspath' ); ?></a></td>
 								<td><?php echo esc_html( (string) $counts['activities'] ); ?></td>
 							</tr>
 							<tr>
-								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_cohort' ) ); ?>"><?php esc_html_e( 'Cohorts', 'leaderspath' ); ?></a></td>
-								<td><?php echo esc_html( (string) $counts['cohorts'] ); ?></td>
+								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_course' ) ); ?>"><?php esc_html_e( 'Courses', 'leaderspath' ); ?></a></td>
+								<td><?php echo esc_html( (string) $counts['courses'] ); ?></td>
 							</tr>
 							<tr>
 								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_context' ) ); ?>"><?php esc_html_e( 'Context Files', 'leaderspath' ); ?></a></td>
@@ -113,7 +113,7 @@ class Admin_Menu {
 				<div class="leaderspath-dashboard__quick-actions">
 					<h3><?php esc_html_e( 'Quick Actions', 'leaderspath' ); ?></h3>
 					<p>
-						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_course' ) ); ?>" class="button button-primary"><?php esc_html_e( 'New Course', 'leaderspath' ); ?></a>
+						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_lesson' ) ); ?>" class="button button-primary"><?php esc_html_e( 'New Lesson', 'leaderspath' ); ?></a>
 						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_activity' ) ); ?>" class="button"><?php esc_html_e( 'New Activity', 'leaderspath' ); ?></a>
 						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_context' ) ); ?>" class="button"><?php esc_html_e( 'New Context File', 'leaderspath' ); ?></a>
 						<a href="<?php echo esc_url( admin_url( 'admin.php?page=leaderspath-settings' ) ); ?>" class="button"><?php esc_html_e( 'Settings', 'leaderspath' ); ?></a>
@@ -167,9 +167,9 @@ class Admin_Menu {
 	 */
 	private function get_content_counts(): array {
 		return [
-			'courses'       => (int) wp_count_posts( 'leaderspath_course' )->publish,
+			'lessons'       => (int) wp_count_posts( 'leaderspath_lesson' )->publish,
 			'activities'    => (int) wp_count_posts( 'leaderspath_activity' )->publish,
-			'cohorts'       => (int) wp_count_posts( 'leaderspath_cohort' )->publish,
+			'courses'       => (int) wp_count_posts( 'leaderspath_course' )->publish,
 			'context_files' => (int) wp_count_posts( 'leaderspath_context' )->publish,
 			'skills'        => (int) wp_count_posts( 'leaderspath_skill' )->publish,
 		];

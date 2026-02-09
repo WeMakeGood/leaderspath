@@ -17,9 +17,9 @@ use LeadersPath\Modules\ActivityMeta\ActivityMeta;
 use LeadersPath\Modules\ContextLibrary\ContextLibrary;
 use LeadersPath\Modules\SkillsList\SkillsList;
 use LeadersPath\Modules\Chatbot\Chatbot;
-use LeadersPath\Modules\CourseMeta\CourseMeta;
-use LeadersPath\Modules\CourseObjectives\CourseObjectives;
-use LeadersPath\Modules\CourseActivities\CourseActivities;
+use LeadersPath\Modules\LessonMeta\LessonMeta;
+use LeadersPath\Modules\LessonObjectives\LessonObjectives;
+use LeadersPath\Modules\LessonActivities\LessonActivities;
 
 /**
  * Register LeadersPath modules with Divi's dependency tree.
@@ -37,8 +37,8 @@ add_action(
 		$dependency_tree->add_dependency( new ContextLibrary() );
 		$dependency_tree->add_dependency( new SkillsList() );
 		$dependency_tree->add_dependency( new Chatbot() );
-		$dependency_tree->add_dependency( new CourseMeta() );
-		$dependency_tree->add_dependency( new CourseObjectives() );
-		$dependency_tree->add_dependency( new CourseActivities() );
+		$dependency_tree->add_dependency( new LessonMeta() );
+		$dependency_tree->add_dependency( new LessonObjectives() );
+		$dependency_tree->add_dependency( new LessonActivities() );
 	}
 );

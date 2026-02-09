@@ -33,8 +33,8 @@ class Post_Types {
 	 */
 	public function register_post_types(): void {
 		$this->register_activity();
+		$this->register_lesson();
 		$this->register_course();
-		$this->register_cohort();
 		$this->register_context();
 		$this->register_skill();
 	}
@@ -42,7 +42,7 @@ class Post_Types {
 	/**
 	 * Register the Activity post type.
 	 *
-	 * Activities are AI sandbox experiments within a facilitated Course.
+	 * Activities are AI sandbox experiments within a facilitated Lesson.
 	 *
 	 * @since 0.1.0
 	 */
@@ -96,9 +96,67 @@ class Post_Types {
 	}
 
 	/**
+	 * Register the Lesson post type.
+	 *
+	 * Lessons are atomic teaching units within a Course, containing Activities.
+	 *
+	 * @since 0.3.0
+	 */
+	private function register_lesson(): void {
+		$labels = [
+			'name'                  => _x( 'Lessons', 'Post type general name', 'leaderspath' ),
+			'singular_name'         => _x( 'Lesson', 'Post type singular name', 'leaderspath' ),
+			'menu_name'             => _x( 'Lessons', 'Admin Menu text', 'leaderspath' ),
+			'name_admin_bar'        => _x( 'Lesson', 'Add New on Toolbar', 'leaderspath' ),
+			'add_new'               => __( 'Add New', 'leaderspath' ),
+			'add_new_item'          => __( 'Add New Lesson', 'leaderspath' ),
+			'new_item'              => __( 'New Lesson', 'leaderspath' ),
+			'edit_item'             => __( 'Edit Lesson', 'leaderspath' ),
+			'view_item'             => __( 'View Lesson', 'leaderspath' ),
+			'all_items'             => __( 'All Lessons', 'leaderspath' ),
+			'search_items'          => __( 'Search Lessons', 'leaderspath' ),
+			'parent_item_colon'     => __( 'Parent Lessons:', 'leaderspath' ),
+			'not_found'             => __( 'No lessons found.', 'leaderspath' ),
+			'not_found_in_trash'    => __( 'No lessons found in Trash.', 'leaderspath' ),
+			'featured_image'        => _x( 'Lesson Cover Image', 'Overrides the "Featured Image" phrase', 'leaderspath' ),
+			'set_featured_image'    => _x( 'Set cover image', 'Overrides the "Set featured image" phrase', 'leaderspath' ),
+			'remove_featured_image' => _x( 'Remove cover image', 'Overrides the "Remove featured image" phrase', 'leaderspath' ),
+			'use_featured_image'    => _x( 'Use as cover image', 'Overrides the "Use as featured image" phrase', 'leaderspath' ),
+			'archives'              => _x( 'Lesson archives', 'The post type archive label', 'leaderspath' ),
+			'insert_into_item'      => _x( 'Insert into lesson', 'Overrides the "Insert into post" phrase', 'leaderspath' ),
+			'uploaded_to_this_item' => _x( 'Uploaded to this lesson', 'Overrides the "Uploaded to this post" phrase', 'leaderspath' ),
+			'filter_items_list'     => _x( 'Filter lessons list', 'Screen reader text', 'leaderspath' ),
+			'items_list_navigation' => _x( 'Lessons list navigation', 'Screen reader text', 'leaderspath' ),
+			'items_list'            => _x( 'Lessons list', 'Screen reader text', 'leaderspath' ),
+		];
+
+		$args = [
+			'labels'              => $labels,
+			'public'              => true,
+			'publicly_queryable'  => true,
+			'show_ui'             => true,
+			'show_in_menu'        => \LeadersPath\Admin\Admin_Menu::MENU_SLUG,
+			'show_in_rest'        => true,
+			'rest_base'           => 'lessons',
+			'rest_namespace'      => 'wp/v2',
+			'query_var'           => true,
+			'rewrite'             => [ 'slug' => 'lesson', 'with_front' => false ],
+			'capability_type'     => [ 'leaderspath_lesson', 'leaderspath_lessons' ],
+			'map_meta_cap'        => true,
+			'has_archive'         => true,
+			'hierarchical'        => false,
+			'supports'            => [ 'title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields' ],
+		];
+
+		register_post_type( 'leaderspath_lesson', $args );
+	}
+
+	/**
 	 * Register the Course post type.
 	 *
-	 * @since 0.1.0
+	 * Courses are reusable curriculum structures containing Lessons.
+	 *
+	 * @since 0.3.0
 	 */
 	private function register_course(): void {
 		$labels = [
@@ -116,10 +174,6 @@ class Post_Types {
 			'parent_item_colon'     => __( 'Parent Courses:', 'leaderspath' ),
 			'not_found'             => __( 'No courses found.', 'leaderspath' ),
 			'not_found_in_trash'    => __( 'No courses found in Trash.', 'leaderspath' ),
-			'featured_image'        => _x( 'Course Cover Image', 'Overrides the "Featured Image" phrase', 'leaderspath' ),
-			'set_featured_image'    => _x( 'Set cover image', 'Overrides the "Set featured image" phrase', 'leaderspath' ),
-			'remove_featured_image' => _x( 'Remove cover image', 'Overrides the "Remove featured image" phrase', 'leaderspath' ),
-			'use_featured_image'    => _x( 'Use as cover image', 'Overrides the "Use as featured image" phrase', 'leaderspath' ),
 			'archives'              => _x( 'Course archives', 'The post type archive label', 'leaderspath' ),
 			'insert_into_item'      => _x( 'Insert into course', 'Overrides the "Insert into post" phrase', 'leaderspath' ),
 			'uploaded_to_this_item' => _x( 'Uploaded to this course', 'Overrides the "Uploaded to this post" phrase', 'leaderspath' ),
@@ -147,56 +201,6 @@ class Post_Types {
 		];
 
 		register_post_type( 'leaderspath_course', $args );
-	}
-
-	/**
-	 * Register the Cohort post type.
-	 *
-	 * @since 0.1.0
-	 */
-	private function register_cohort(): void {
-		$labels = [
-			'name'                  => _x( 'Cohorts', 'Post type general name', 'leaderspath' ),
-			'singular_name'         => _x( 'Cohort', 'Post type singular name', 'leaderspath' ),
-			'menu_name'             => _x( 'Cohorts', 'Admin Menu text', 'leaderspath' ),
-			'name_admin_bar'        => _x( 'Cohort', 'Add New on Toolbar', 'leaderspath' ),
-			'add_new'               => __( 'Add New', 'leaderspath' ),
-			'add_new_item'          => __( 'Add New Cohort', 'leaderspath' ),
-			'new_item'              => __( 'New Cohort', 'leaderspath' ),
-			'edit_item'             => __( 'Edit Cohort', 'leaderspath' ),
-			'view_item'             => __( 'View Cohort', 'leaderspath' ),
-			'all_items'             => __( 'All Cohorts', 'leaderspath' ),
-			'search_items'          => __( 'Search Cohorts', 'leaderspath' ),
-			'parent_item_colon'     => __( 'Parent Cohorts:', 'leaderspath' ),
-			'not_found'             => __( 'No cohorts found.', 'leaderspath' ),
-			'not_found_in_trash'    => __( 'No cohorts found in Trash.', 'leaderspath' ),
-			'archives'              => _x( 'Cohort archives', 'The post type archive label', 'leaderspath' ),
-			'insert_into_item'      => _x( 'Insert into cohort', 'Overrides the "Insert into post" phrase', 'leaderspath' ),
-			'uploaded_to_this_item' => _x( 'Uploaded to this cohort', 'Overrides the "Uploaded to this post" phrase', 'leaderspath' ),
-			'filter_items_list'     => _x( 'Filter cohorts list', 'Screen reader text', 'leaderspath' ),
-			'items_list_navigation' => _x( 'Cohorts list navigation', 'Screen reader text', 'leaderspath' ),
-			'items_list'            => _x( 'Cohorts list', 'Screen reader text', 'leaderspath' ),
-		];
-
-		$args = [
-			'labels'              => $labels,
-			'public'              => false,
-			'publicly_queryable'  => false,
-			'show_ui'             => true,
-			'show_in_menu'        => \LeadersPath\Admin\Admin_Menu::MENU_SLUG,
-			'show_in_rest'        => true,
-			'rest_base'           => 'cohorts',
-			'rest_namespace'      => 'wp/v2',
-			'query_var'           => true,
-			'rewrite'             => false,
-			'capability_type'     => [ 'leaderspath_cohort', 'leaderspath_cohorts' ],
-			'map_meta_cap'        => true,
-			'has_archive'         => false,
-			'hierarchical'        => false,
-			'supports'            => [ 'title', 'revisions', 'custom-fields' ],
-		];
-
-		register_post_type( 'leaderspath_cohort', $args );
 	}
 
 	/**

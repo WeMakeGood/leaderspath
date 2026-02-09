@@ -277,7 +277,7 @@
   /**
    * Send a message to the API.
    *
-   * Supports both Activity (activity_id) and Course (course_id) modes.
+   * Supports both Activity (activity_id) and Lesson (lesson_id) modes.
    *
    * @param {string} message User message.
    * @returns {Promise<Object>} API response.
@@ -291,8 +291,8 @@
     };
 
     // Add context ID based on mode.
-    if (config.mode === 'course' && config.courseId) {
-      body.course_id = config.courseId;
+    if (config.mode === 'lesson' && config.lessonId) {
+      body.lesson_id = config.lessonId;
     } else if (config.activityId) {
       body.activity_id = config.activityId;
     }

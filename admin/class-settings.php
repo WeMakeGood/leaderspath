@@ -536,13 +536,13 @@ class Settings {
 
 		$show_on_screens = [
 			'leaderspath_activity',
+			'leaderspath_lesson',
 			'leaderspath_course',
-			'leaderspath_cohort',
 			'leaderspath_context',
 			'leaderspath_skill',
 			'edit-leaderspath_activity',
+			'edit-leaderspath_lesson',
 			'edit-leaderspath_course',
-			'edit-leaderspath_cohort',
 			'edit-leaderspath_context',
 			'edit-leaderspath_skill',
 			'leaderspath_page_' . self::PAGE_SLUG,

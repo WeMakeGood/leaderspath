@@ -1,0 +1,119 @@
+/**
+ * Lesson Activities Module styles.
+ *
+ * Uses BEM naming convention with leaderspath- prefix.
+ *
+ * @package LeadersPath
+ * @since 0.1.0
+ */
+
+.leaderspath-lesson-activities {
+  // Content container.
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  // Module title.
+  &__title {
+    margin: 0 0 0.5rem;
+  }
+
+  // Activities list.
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: activity-counter;
+  }
+
+  // Individual activity items.
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &:hover {
+      background-color: #e9ecef;
+    }
+  }
+
+  // Activity number.
+  &__number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    background-color: #0073aa;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 50%;
+  }
+
+  // Activity link.
+  &__link {
+    color: #0073aa;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #005177;
+      text-decoration: underline;
+    }
+  }
+
+  // Empty state container.
+  &__empty {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    text-align: center;
+    color: #666;
+  }
+
+  &__empty-text {
+    margin: 0;
+  }
+
+  // Placeholder styles for VB when loading.
+  &__placeholder {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    text-align: center;
+    color: #666;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__error {
+    padding: 1rem;
+    background-color: #fff3cd;
+    border: 1px dashed #ffc107;
+    border-radius: 4px;
+    text-align: center;
+    color: #856404;
+
+    p {
+      margin: 0;
+    }
+  }
+}

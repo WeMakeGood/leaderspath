@@ -1,0 +1,80 @@
+/**
+ * Lesson Objectives Module styles.
+ *
+ * Uses BEM naming convention with leaderspath- prefix.
+ *
+ * @package LeadersPath
+ * @since 0.1.0
+ */
+
+.leaderspath-lesson-objectives {
+  // Content container.
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  // Module title.
+  &__title {
+    margin: 0 0 0.5rem;
+  }
+
+  // Objectives list.
+  &__list {
+    margin: 0;
+    padding-left: 1.5rem;
+    list-style-type: disc;
+  }
+
+  // Individual objective items.
+  &__item {
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // Empty state container.
+  &__empty {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    text-align: center;
+    color: #666;
+  }
+
+  &__empty-text {
+    margin: 0;
+  }
+
+  // Placeholder styles for VB when loading.
+  &__placeholder {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    text-align: center;
+    color: #666;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__error {
+    padding: 1rem;
+    background-color: #fff3cd;
+    border: 1px dashed #ffc107;
+    border-radius: 4px;
+    text-align: center;
+    color: #856404;
+
+    p {
+      margin: 0;
+    }
+  }
+}

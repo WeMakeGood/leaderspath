@@ -17,9 +17,9 @@ import { activityMetaModule } from './components/activity-meta';
 import { contextLibraryModule } from './components/context-library';
 import { skillsListModule } from './components/skills-list';
 import { chatbotModule } from './components/chatbot';
-import { courseMetaModule } from './components/course-meta';
-import { courseObjectivesModule } from './components/course-objectives';
-import { courseActivitiesModule } from './components/course-activities';
+import { lessonMetaModule } from './components/lesson-meta';
+import { lessonObjectivesModule } from './components/lesson-objectives';
+import { lessonActivitiesModule } from './components/lesson-activities';
 
 /**
  * Register all LeadersPath modules with Divi.
@@ -48,13 +48,13 @@ addAction(
     // Register Chatbot Module
     registerModule(chatbotModule.metadata, omit(chatbotModule, 'metadata'));
 
-    // Register Course Meta Module
-    registerModule(courseMetaModule.metadata, omit(courseMetaModule, 'metadata'));
+    // Register Lesson Meta Module
+    registerModule(lessonMetaModule.metadata, omit(lessonMetaModule, 'metadata'));
 
-    // Register Course Objectives Module
-    registerModule(courseObjectivesModule.metadata, omit(courseObjectivesModule, 'metadata'));
+    // Register Lesson Objectives Module
+    registerModule(lessonObjectivesModule.metadata, omit(lessonObjectivesModule, 'metadata'));
 
-    // Register Course Activities Module
-    registerModule(courseActivitiesModule.metadata, omit(courseActivitiesModule, 'metadata'));
+    // Register Lesson Activities Module
+    registerModule(lessonActivitiesModule.metadata, omit(lessonActivitiesModule, 'metadata'));
   }
 );

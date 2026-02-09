@@ -2,7 +2,7 @@
 /**
  * Module: Chatbot class.
  *
- * Interactive chat interface for AI-powered activity and course experiences.
+ * Interactive chat interface for AI-powered activity and lesson experiences.
  *
  * @package LeadersPath\Modules\Chatbot
  * @since 0.1.0
@@ -23,7 +23,7 @@ use ET\Builder\Packages\ModuleLibrary\ModuleRegistration;
  * Chatbot module class.
  *
  * Renders an interactive chat interface that communicates with Claude AI.
- * Uses Theme Builder pattern with get_queried_object_id() to get current activity or course.
+ * Uses Theme Builder pattern with get_queried_object_id() to get current activity or lesson.
  *
  * @since 0.1.0
  */

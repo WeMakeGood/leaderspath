@@ -132,32 +132,32 @@ class REST_API {
 			]
 		);
 
-		// Course meta preview (for VB).
+		// Lesson meta preview (for VB).
 		register_rest_route(
 			self::NAMESPACE,
-			'/courses/(?P<id>\d+)/meta',
+			'/lessons/(?P<id>\d+)/meta',
 			[
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => [ $this, 'get_course_meta' ],
+				'callback'            => [ $this, 'get_lesson_meta' ],
 				'permission_callback' => [ $this, 'check_vb_permission' ],
 				'args'                => [
 					'id' => [
-						'description'       => __( 'Course ID.', 'leaderspath' ),
+						'description'       => __( 'Lesson ID.', 'leaderspath' ),
 						'type'              => 'integer',
 						'required'          => true,
-						'validate_callback' => [ $this, 'validate_course_id_for_meta' ],
+						'validate_callback' => [ $this, 'validate_lesson_id_for_meta' ],
 					],
 				],
 			]
 		);
 
-		// Course meta preview (fallback to first course).
+		// Lesson meta preview (fallback to first lesson).
 		register_rest_route(
 			self::NAMESPACE,
-			'/courses/meta',
+			'/lessons/meta',
 			[
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => [ $this, 'get_first_course_meta' ],
+				'callback'            => [ $this, 'get_first_lesson_meta' ],
 				'permission_callback' => [ $this, 'check_vb_permission' ],
 			]
 		);
@@ -214,62 +214,62 @@ class REST_API {
 			]
 		);
 
-		// Course objectives preview (for VB).
+		// Lesson objectives preview (for VB).
 		register_rest_route(
 			self::NAMESPACE,
-			'/courses/(?P<id>\d+)/objectives',
+			'/lessons/(?P<id>\d+)/objectives',
 			[
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => [ $this, 'get_course_objectives' ],
+				'callback'            => [ $this, 'get_lesson_objectives' ],
 				'permission_callback' => [ $this, 'check_vb_permission' ],
 				'args'                => [
 					'id' => [
-						'description'       => __( 'Course ID.', 'leaderspath' ),
+						'description'       => __( 'Lesson ID.', 'leaderspath' ),
 						'type'              => 'integer',
 						'required'          => true,
-						'validate_callback' => [ $this, 'validate_course_id_for_meta' ],
+						'validate_callback' => [ $this, 'validate_lesson_id_for_meta' ],
 					],
 				],
 			]
 		);
 
-		// Course objectives preview (fallback to first course).
+		// Lesson objectives preview (fallback to first lesson).
 		register_rest_route(
 			self::NAMESPACE,
-			'/courses/objectives',
+			'/lessons/objectives',
 			[
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => [ $this, 'get_first_course_objectives' ],
+				'callback'            => [ $this, 'get_first_lesson_objectives' ],
 				'permission_callback' => [ $this, 'check_vb_permission' ],
 			]
 		);
 
-		// Course activities preview (for VB).
+		// Lesson activities preview (for VB).
 		register_rest_route(
 			self::NAMESPACE,
-			'/courses/(?P<id>\d+)/activities',
+			'/lessons/(?P<id>\d+)/activities',
 			[
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => [ $this, 'get_course_activities' ],
+				'callback'            => [ $this, 'get_lesson_activities' ],
 				'permission_callback' => [ $this, 'check_vb_permission' ],
 				'args'                => [
 					'id' => [
-						'description'       => __( 'Course ID.', 'leaderspath' ),
+						'description'       => __( 'Lesson ID.', 'leaderspath' ),
 						'type'              => 'integer',
 						'required'          => true,
-						'validate_callback' => [ $this, 'validate_course_id_for_meta' ],
+						'validate_callback' => [ $this, 'validate_lesson_id_for_meta' ],
 					],
 				],
 			]
 		);
 
-		// Course activities preview (fallback to first course).
+		// Lesson activities preview (fallback to first lesson).
 		register_rest_route(
 			self::NAMESPACE,
-			'/courses/activities',
+			'/lessons/activities',
 			[
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => [ $this, 'get_first_course_activities' ],
+				'callback'            => [ $this, 'get_first_lesson_activities' ],
 				'permission_callback' => [ $this, 'check_vb_permission' ],
 			]
 		);
@@ -278,8 +278,8 @@ class REST_API {
 	/**
 	 * Get chat endpoint arguments.
 	 *
-	 * Supports both activity-level (activity_id) and course-level (course_id) chatbots.
-	 * One of activity_id or course_id must be provided.
+	 * Supports both activity-level (activity_id) and lesson-level (lesson_id) chatbots.
+	 * One of activity_id or lesson_id must be provided.
 	 *
 	 * @since 0.1.0
 	 *
@@ -293,11 +293,11 @@ class REST_API {
 				'required'          => false,
 				'validate_callback' => [ $this, 'validate_activity_id' ],
 			],
-			'course_id' => [
-				'description'       => __( 'The course ID for context (course Q&A chatbot).', 'leaderspath' ),
+			'lesson_id' => [
+				'description'       => __( 'The lesson ID for context (lesson Q&A chatbot).', 'leaderspath' ),
 				'type'              => 'integer',
 				'required'          => false,
-				'validate_callback' => [ $this, 'validate_course_id' ],
+				'validate_callback' => [ $this, 'validate_lesson_id' ],
 			],
 			'message'   => [
 				'description'       => __( 'The user message to send to Claude.', 'leaderspath' ),
@@ -458,14 +458,14 @@ class REST_API {
 	}
 
 	/**
-	 * Validate course ID.
+	 * Validate lesson ID.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param mixed $value Course ID.
+	 * @param mixed $value Lesson ID.
 	 * @return bool|WP_Error True if valid, WP_Error otherwise.
 	 */
-	public function validate_course_id( $value ) {
+	public function validate_lesson_id( $value ) {
 		// Allow null/empty for optional parameter.
 		if ( empty( $value ) ) {
 			return true;
@@ -473,10 +473,10 @@ class REST_API {
 
 		$post = get_post( (int) $value );
 
-		if ( ! $post || 'leaderspath_course' !== $post->post_type ) {
+		if ( ! $post || 'leaderspath_lesson' !== $post->post_type ) {
 			return new WP_Error(
 				'rest_invalid_param',
-				__( 'Invalid course ID.', 'leaderspath' ),
+				__( 'Invalid lesson ID.', 'leaderspath' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -484,7 +484,7 @@ class REST_API {
 		if ( 'publish' !== $post->post_status && ! current_user_can( 'edit_post', $post->ID ) ) {
 			return new WP_Error(
 				'rest_forbidden',
-				__( 'You cannot access this course.', 'leaderspath' ),
+				__( 'You cannot access this lesson.', 'leaderspath' ),
 				[ 'status' => 403 ]
 			);
 		}
@@ -493,20 +493,20 @@ class REST_API {
 	}
 
 	/**
-	 * Validate course ID for meta endpoint (required).
+	 * Validate lesson ID for meta endpoint (required).
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param mixed $value Course ID.
+	 * @param mixed $value Lesson ID.
 	 * @return bool|WP_Error True if valid, WP_Error otherwise.
 	 */
-	public function validate_course_id_for_meta( $value ) {
+	public function validate_lesson_id_for_meta( $value ) {
 		$post = get_post( (int) $value );
 
-		if ( ! $post || 'leaderspath_course' !== $post->post_type ) {
+		if ( ! $post || 'leaderspath_lesson' !== $post->post_type ) {
 			return new WP_Error(
 				'rest_invalid_param',
-				__( 'Invalid course ID.', 'leaderspath' ),
+				__( 'Invalid lesson ID.', 'leaderspath' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -607,7 +607,7 @@ class REST_API {
 	/**
 	 * Handle chat request.
 	 *
-	 * Supports both activity-level (activity_id) and course-level (course_id) chatbots.
+	 * Supports both activity-level (activity_id) and lesson-level (lesson_id) chatbots.
 	 *
 	 * @since 0.1.0
 	 *
@@ -616,24 +616,24 @@ class REST_API {
 	 */
 	public function handle_chat( WP_REST_Request $request ) {
 		$activity_id = $request->get_param( 'activity_id' );
-		$course_id   = $request->get_param( 'course_id' );
+		$lesson_id   = $request->get_param( 'lesson_id' );
 		$message     = $request->get_param( 'message' );
 		$history     = $request->get_param( 'history' ) ?? [];
 		$model       = $request->get_param( 'model' );
 
-		// Must have either activity_id or course_id.
-		if ( empty( $activity_id ) && empty( $course_id ) ) {
+		// Must have either activity_id or lesson_id.
+		if ( empty( $activity_id ) && empty( $lesson_id ) ) {
 			return new WP_Error(
 				'missing_context',
-				__( 'Either activity_id (for activity sandbox) or course_id (for course Q&A) is required.', 'leaderspath' ),
+				__( 'Either activity_id (for activity sandbox) or lesson_id (for lesson Q&A) is required.', 'leaderspath' ),
 				[ 'status' => 400 ]
 			);
 		}
 
 		// Determine which chatbot mode we're in.
-		if ( ! empty( $course_id ) ) {
-			// Course Q&A chatbot mode.
-			return $this->handle_course_chat( (int) $course_id, $message, $history, $model );
+		if ( ! empty( $lesson_id ) ) {
+			// Lesson Q&A chatbot mode.
+			return $this->handle_lesson_chat( (int) $lesson_id, $message, $history, $model );
 		}
 
 		// Activity sandbox mode.
@@ -687,37 +687,37 @@ class REST_API {
 	}
 
 	/**
-	 * Handle course Q&A chat.
+	 * Handle lesson Q&A chat.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int         $course_id Course ID.
+	 * @param int         $lesson_id Lesson ID.
 	 * @param string      $message   User message.
 	 * @param array       $history   Conversation history.
 	 * @param string|null $model     Model override.
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	private function handle_course_chat( int $course_id, string $message, array $history, ?string $model ) {
-		// Check if Q&A chatbot is enabled for this course.
-		$chatbot_enabled = get_field( 'course_chatbot_enabled', $course_id );
+	private function handle_lesson_chat( int $lesson_id, string $message, array $history, ?string $model ) {
+		// Check if Q&A chatbot is enabled for this lesson.
+		$chatbot_enabled = get_field( 'lesson_chatbot_enabled', $lesson_id );
 		if ( ! $chatbot_enabled ) {
 			return new WP_Error(
 				'chatbot_disabled',
-				__( 'Q&A chatbot is not enabled for this course.', 'leaderspath' ),
+				__( 'Q&A chatbot is not enabled for this lesson.', 'leaderspath' ),
 				[ 'status' => 400 ]
 			);
 		}
 
-		// Determine model to use (course chatbot doesn't support model switching).
+		// Determine model to use (lesson chatbot doesn't support model switching).
 		if ( empty( $model ) ) {
-			$model = get_field( 'course_chatbot_model', $course_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
+			$model = get_field( 'lesson_chatbot_model', $lesson_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
 		}
 
 		// Get Claude API handler.
 		$claude = new Claude_API();
 
-		// Send message (course mode).
-		$response = $claude->send_course_message( $course_id, $message, $history, $model );
+		// Send message (lesson mode).
+		$response = $claude->send_lesson_message( $lesson_id, $message, $history, $model );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -867,9 +867,9 @@ class REST_API {
 	}
 
 	/**
-	 * Get course meta data for VB preview.
+	 * Get lesson meta data for VB preview.
 	 *
-	 * Returns course metadata (duration, difficulty, activity count) for rendering
+	 * Returns lesson metadata (duration, difficulty, activity count) for rendering
 	 * in the Visual Builder preview.
 	 *
 	 * @since 0.1.0
@@ -877,25 +877,25 @@ class REST_API {
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	public function get_course_meta( WP_REST_Request $request ) {
-		$course_id = (int) $request->get_param( 'id' );
+	public function get_lesson_meta( WP_REST_Request $request ) {
+		$lesson_id = (int) $request->get_param( 'id' );
 
-		return new WP_REST_Response( $this->build_course_meta_response( $course_id ), 200 );
+		return new WP_REST_Response( $this->build_lesson_meta_response( $lesson_id ), 200 );
 	}
 
 	/**
-	 * Get first available course meta for VB fallback.
+	 * Get first available lesson meta for VB fallback.
 	 *
-	 * Used when editing Theme Builder templates where no specific course context exists.
+	 * Used when editing Theme Builder templates where no specific lesson context exists.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	public function get_first_course_meta() {
-		$courses = get_posts(
+	public function get_first_lesson_meta() {
+		$lessons = get_posts(
 			[
-				'post_type'      => 'leaderspath_course',
+				'post_type'      => 'leaderspath_lesson',
 				'posts_per_page' => 1,
 				'post_status'    => 'publish',
 				'orderby'        => 'date',
@@ -903,11 +903,11 @@ class REST_API {
 			]
 		);
 
-		if ( empty( $courses ) ) {
+		if ( empty( $lessons ) ) {
 			return new WP_REST_Response(
 				[
-					'course_id'      => 0,
-					'course_title'   => '',
+					'lesson_id'      => 0,
+					'lesson_title'   => '',
 					'duration'       => '',
 					'difficulty'     => '',
 					'difficulty_name'=> '',
@@ -918,23 +918,23 @@ class REST_API {
 			);
 		}
 
-		$data              = $this->build_course_meta_response( $courses[0]->ID );
+		$data              = $this->build_lesson_meta_response( $lessons[0]->ID );
 		$data['is_sample'] = true;
 
 		return new WP_REST_Response( $data, 200 );
 	}
 
 	/**
-	 * Build course meta response data.
+	 * Build lesson meta response data.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int $course_id Course ID.
-	 * @return array Course meta data.
+	 * @param int $lesson_id Lesson ID.
+	 * @return array Lesson meta data.
 	 */
-	private function build_course_meta_response( int $course_id ): array {
-		$activities = get_field( 'course_activities', $course_id );
-		$difficulty = get_field( 'course_difficulty', $course_id ) ?: '';
+	private function build_lesson_meta_response( int $lesson_id ): array {
+		$activities = get_field( 'lesson_activities', $lesson_id );
+		$difficulty = get_field( 'lesson_difficulty', $lesson_id ) ?: '';
 
 		$difficulty_names = [
 			'beginner'     => __( 'Beginner', 'leaderspath' ),
@@ -943,9 +943,9 @@ class REST_API {
 		];
 
 		return [
-			'course_id'       => $course_id,
-			'course_title'    => get_the_title( $course_id ),
-			'duration'        => get_field( 'course_total_duration', $course_id ) ?: '',
+			'lesson_id'       => $lesson_id,
+			'lesson_title'    => get_the_title( $lesson_id ),
+			'duration'        => get_field( 'lesson_total_duration', $lesson_id ) ?: '',
 			'difficulty'      => $difficulty,
 			'difficulty_name' => $difficulty_names[ $difficulty ] ?? ucfirst( $difficulty ),
 			'activity_count'  => is_array( $activities ) ? count( $activities ) : 0,
@@ -1177,9 +1177,9 @@ class REST_API {
 	}
 
 	/**
-	 * Get course objectives for VB preview.
+	 * Get lesson objectives for VB preview.
 	 *
-	 * Returns course objectives from the course_objectives repeater field
+	 * Returns lesson objectives from the lesson_objectives repeater field
 	 * for rendering in the Visual Builder preview.
 	 *
 	 * @since 0.1.0
@@ -1187,25 +1187,25 @@ class REST_API {
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	public function get_course_objectives( WP_REST_Request $request ) {
-		$course_id = (int) $request->get_param( 'id' );
+	public function get_lesson_objectives( WP_REST_Request $request ) {
+		$lesson_id = (int) $request->get_param( 'id' );
 
-		return new WP_REST_Response( $this->build_course_objectives_response( $course_id ), 200 );
+		return new WP_REST_Response( $this->build_lesson_objectives_response( $lesson_id ), 200 );
 	}
 
 	/**
-	 * Get first available course objectives for VB fallback.
+	 * Get first available lesson objectives for VB fallback.
 	 *
-	 * Used when editing Theme Builder templates where no specific course context exists.
+	 * Used when editing Theme Builder templates where no specific lesson context exists.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	public function get_first_course_objectives() {
-		$courses = get_posts(
+	public function get_first_lesson_objectives() {
+		$lessons = get_posts(
 			[
-				'post_type'      => 'leaderspath_course',
+				'post_type'      => 'leaderspath_lesson',
 				'posts_per_page' => 1,
 				'post_status'    => 'publish',
 				'orderby'        => 'date',
@@ -1213,30 +1213,30 @@ class REST_API {
 			]
 		);
 
-		if ( empty( $courses ) ) {
+		if ( empty( $lessons ) ) {
 			return new WP_REST_Response(
 				[
-					'course_id'    => 0,
-					'course_title' => '',
+					'lesson_id'    => 0,
+					'lesson_title' => '',
 					'objectives'   => [],
 				],
 				200
 			);
 		}
 
-		return new WP_REST_Response( $this->build_course_objectives_response( $courses[0]->ID ), 200 );
+		return new WP_REST_Response( $this->build_lesson_objectives_response( $lessons[0]->ID ), 200 );
 	}
 
 	/**
-	 * Build course objectives response data.
+	 * Build lesson objectives response data.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int $course_id Course ID.
-	 * @return array Course objectives data.
+	 * @param int $lesson_id Lesson ID.
+	 * @return array Lesson objectives data.
 	 */
-	private function build_course_objectives_response( int $course_id ): array {
-		$objectives_repeater = get_field( 'course_objectives', $course_id );
+	private function build_lesson_objectives_response( int $lesson_id ): array {
+		$objectives_repeater = get_field( 'lesson_objectives', $lesson_id );
 		$objectives          = [];
 
 		if ( is_array( $objectives_repeater ) ) {
@@ -1248,16 +1248,16 @@ class REST_API {
 		}
 
 		return [
-			'course_id'    => $course_id,
-			'course_title' => get_the_title( $course_id ),
+			'lesson_id'    => $lesson_id,
+			'lesson_title' => get_the_title( $lesson_id ),
 			'objectives'   => $objectives,
 		];
 	}
 
 	/**
-	 * Get course activities for VB preview.
+	 * Get lesson activities for VB preview.
 	 *
-	 * Returns ordered list of activities from the course_activities relationship field
+	 * Returns ordered list of activities from the lesson_activities relationship field
 	 * for rendering in the Visual Builder preview.
 	 *
 	 * @since 0.1.0
@@ -1265,25 +1265,25 @@ class REST_API {
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	public function get_course_activities( WP_REST_Request $request ) {
-		$course_id = (int) $request->get_param( 'id' );
+	public function get_lesson_activities( WP_REST_Request $request ) {
+		$lesson_id = (int) $request->get_param( 'id' );
 
-		return new WP_REST_Response( $this->build_course_activities_response( $course_id ), 200 );
+		return new WP_REST_Response( $this->build_lesson_activities_response( $lesson_id ), 200 );
 	}
 
 	/**
-	 * Get first available course activities for VB fallback.
+	 * Get first available lesson activities for VB fallback.
 	 *
-	 * Used when editing Theme Builder templates where no specific course context exists.
+	 * Used when editing Theme Builder templates where no specific lesson context exists.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	public function get_first_course_activities() {
-		$courses = get_posts(
+	public function get_first_lesson_activities() {
+		$lessons = get_posts(
 			[
-				'post_type'      => 'leaderspath_course',
+				'post_type'      => 'leaderspath_lesson',
 				'posts_per_page' => 1,
 				'post_status'    => 'publish',
 				'orderby'        => 'date',
@@ -1291,30 +1291,30 @@ class REST_API {
 			]
 		);
 
-		if ( empty( $courses ) ) {
+		if ( empty( $lessons ) ) {
 			return new WP_REST_Response(
 				[
-					'course_id'    => 0,
-					'course_title' => '',
+					'lesson_id'    => 0,
+					'lesson_title' => '',
 					'activities'   => [],
 				],
 				200
 			);
 		}
 
-		return new WP_REST_Response( $this->build_course_activities_response( $courses[0]->ID ), 200 );
+		return new WP_REST_Response( $this->build_lesson_activities_response( $lessons[0]->ID ), 200 );
 	}
 
 	/**
-	 * Build course activities response data.
+	 * Build lesson activities response data.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int $course_id Course ID.
-	 * @return array Course activities data.
+	 * @param int $lesson_id Lesson ID.
+	 * @return array Lesson activities data.
 	 */
-	private function build_course_activities_response( int $course_id ): array {
-		$related_activities = get_field( 'course_activities', $course_id );
+	private function build_lesson_activities_response( int $lesson_id ): array {
+		$related_activities = get_field( 'lesson_activities', $lesson_id );
 		$activities         = [];
 
 		if ( is_array( $related_activities ) ) {
@@ -1332,8 +1332,8 @@ class REST_API {
 		}
 
 		return [
-			'course_id'    => $course_id,
-			'course_title' => get_the_title( $course_id ),
+			'lesson_id'    => $lesson_id,
+			'lesson_title' => get_the_title( $lesson_id ),
 			'activities'   => $activities,
 		];
 	}

@@ -40,7 +40,7 @@ class Taxonomies {
 	/**
 	 * Register the Topic taxonomy.
 	 *
-	 * Applies to Activities and Courses.
+	 * Applies to Activities and Lessons.
 	 *
 	 * @since 0.1.0
 	 */
@@ -86,7 +86,7 @@ class Taxonomies {
 
 		register_taxonomy(
 			'leaderspath_topic',
-			[ 'leaderspath_activity', 'leaderspath_course' ],
+			[ 'leaderspath_activity', 'leaderspath_lesson' ],
 			$args
 		);
 	}

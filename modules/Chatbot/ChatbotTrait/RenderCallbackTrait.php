@@ -27,14 +27,14 @@ use LeadersPath\Modules\Chatbot\Chatbot;
  *
  * Supports two modes:
  * - Activity Sandbox: AI configured to demonstrate specific behaviors (on Activity pages)
- * - Course Q&A: Helpful assistant for course content questions (on Course pages)
+ * - Lesson Q&A: Helpful assistant for lesson content questions (on Lesson pages)
  *
  * @since 0.1.0
  */
 trait RenderCallbackTrait {
 
 	/**
-	 * Get the current post context (Activity or Course).
+	 * Get the current post context (Activity or Lesson).
 	 *
 	 * Uses get_queried_object_id() for Theme Builder templates,
 	 * with get_the_ID() as fallback.
@@ -57,8 +57,8 @@ trait RenderCallbackTrait {
 		$mode = 'none';
 		if ( 'leaderspath_activity' === $post_type ) {
 			$mode = 'activity'; // Activity sandbox mode.
-		} elseif ( 'leaderspath_course' === $post_type ) {
-			$mode = 'course'; // Course Q&A mode.
+		} elseif ( 'leaderspath_lesson' === $post_type ) {
+			$mode = 'lesson'; // Lesson Q&A mode.
 		}
 
 		return [
@@ -98,8 +98,8 @@ trait RenderCallbackTrait {
 			return (bool) get_field( 'chatbot_enabled', $context['post_id'] );
 		}
 
-		if ( 'course' === $context['mode'] ) {
-			return (bool) get_field( 'course_chatbot_enabled', $context['post_id'] );
+		if ( 'lesson' === $context['mode'] ) {
+			return (bool) get_field( 'lesson_chatbot_enabled', $context['post_id'] );
 		}
 
 		return false;
@@ -123,12 +123,12 @@ trait RenderCallbackTrait {
 			];
 		}
 
-		if ( 'course' === $context['mode'] ) {
+		if ( 'lesson' === $context['mode'] ) {
 			return [
-				'model'              => get_field( 'course_chatbot_model', $context['post_id'] ) ?: 'sonnet',
-				'allow_model_switch' => false, // Course Q&A doesn't support model switching.
-				'max_tokens'         => (int) ( get_field( 'course_chatbot_max_tokens', $context['post_id'] ) ?: 4096 ),
-				'temperature'        => (float) ( get_field( 'course_chatbot_temperature', $context['post_id'] ) ?? 0.7 ),
+				'model'              => get_field( 'lesson_chatbot_model', $context['post_id'] ) ?: 'sonnet',
+				'allow_model_switch' => false, // Lesson Q&A doesn't support model switching.
+				'max_tokens'         => (int) ( get_field( 'lesson_chatbot_max_tokens', $context['post_id'] ) ?: 4096 ),
+				'temperature'        => (float) ( get_field( 'lesson_chatbot_temperature', $context['post_id'] ) ?? 0.7 ),
 			];
 		}
 
@@ -292,8 +292,8 @@ trait RenderCallbackTrait {
 		// Add context-specific IDs.
 		if ( 'activity' === $context['mode'] ) {
 			$js_config['activityId'] = $context['post_id'];
-		} elseif ( 'course' === $context['mode'] ) {
-			$js_config['courseId'] = $context['post_id'];
+		} elseif ( 'lesson' === $context['mode'] ) {
+			$js_config['lessonId'] = $context['post_id'];
 		}
 
 		// Pass configuration to JavaScript.
@@ -365,8 +365,8 @@ trait RenderCallbackTrait {
 
 		if ( 'activity' === $context['mode'] ) {
 			$data_attrs['data-activity-id'] = (string) $context['post_id'];
-		} elseif ( 'course' === $context['mode'] ) {
-			$data_attrs['data-course-id'] = (string) $context['post_id'];
+		} elseif ( 'lesson' === $context['mode'] ) {
+			$data_attrs['data-lesson-id'] = (string) $context['post_id'];
 		}
 
 		// Chat container with data attributes.

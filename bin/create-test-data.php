@@ -26,11 +26,11 @@ function leaderspath_create_test_data(): void {
 	// Create Activities.
 	$activity_ids = leaderspath_create_test_activities( $context_ids, $skill_ids );
 
-	// Create Courses (reference activities and context files).
-	$course_ids = leaderspath_create_test_courses( $activity_ids, $context_ids );
+	// Create Lessons (reference activities and context files).
+	$lesson_ids = leaderspath_create_test_lessons( $activity_ids, $context_ids );
 
-	// Create a Cohort.
-	leaderspath_create_test_cohort( $course_ids[0] ?? 0 );
+	// Create a Course (references lessons).
+	leaderspath_create_test_course( $lesson_ids );
 
 	echo "\nTest data creation complete!\n";
 }
@@ -285,16 +285,16 @@ function leaderspath_create_test_activities( array $context_ids, array $skill_id
 }
 
 /**
- * Create test courses.
+ * Create test lessons.
  *
  * @param array<int> $activity_ids Activity IDs.
- * @param array<int> $context_ids  Context file IDs (for course Q&A chatbot).
+ * @param array<int> $context_ids  Context file IDs (for lesson Q&A chatbot).
  * @return array<int> Created post IDs.
  */
-function leaderspath_create_test_courses( array $activity_ids, array $context_ids ): array {
-	echo "\nCreating Courses...\n";
+function leaderspath_create_test_lessons( array $activity_ids, array $context_ids ): array {
+	echo "\nCreating Lessons...\n";
 
-	$courses = [
+	$lessons = [
 		[
 			'title'      => 'AI Fundamentals',
 			'content'    => "<h2>Course Overview</h2>\n\n<p>This course introduces you to working with AI assistants. You'll learn the basics, practice prompt writing, and explore ethical considerations.</p>\n\n<p>By the end, you'll be confident in your ability to use AI tools effectively and responsibly.</p>",
@@ -338,8 +338,8 @@ function leaderspath_create_test_courses( array $activity_ids, array $context_id
 
 	$ids = [];
 
-	foreach ( $courses as $data ) {
-		$existing = get_page_by_title( $data['title'], OBJECT, 'leaderspath_course' );
+	foreach ( $lessons as $data ) {
+		$existing = get_page_by_title( $data['title'], OBJECT, 'leaderspath_lesson' );
 		if ( $existing ) {
 			echo "  - Skipping '{$data['title']}' (already exists)\n";
 			$ids[] = $existing->ID;
@@ -350,7 +350,7 @@ function leaderspath_create_test_courses( array $activity_ids, array $context_id
 			'post_title'   => $data['title'],
 			'post_content' => $data['content'],
 			'post_excerpt' => $data['excerpt'],
-			'post_type'    => 'leaderspath_course',
+			'post_type'    => 'leaderspath_lesson',
 			'post_status'  => 'publish',
 		] );
 
@@ -362,19 +362,19 @@ function leaderspath_create_test_courses( array $activity_ids, array $context_id
 		// Set ACF fields.
 		if ( function_exists( 'update_field' ) ) {
 			// Activities (relationship).
-			$activities_for_course = [];
+			$activities_for_lesson = [];
 			foreach ( $data['activities'] as $idx ) {
 				if ( isset( $activity_ids[ $idx ] ) ) {
-					$activities_for_course[] = $activity_ids[ $idx ];
+					$activities_for_lesson[] = $activity_ids[ $idx ];
 				}
 			}
-			if ( ! empty( $activities_for_course ) ) {
-				update_field( 'course_activities', $activities_for_course, $post_id );
+			if ( ! empty( $activities_for_lesson ) ) {
+				update_field( 'lesson_activities', $activities_for_lesson, $post_id );
 			}
 
-			// Course Settings.
-			update_field( 'course_difficulty', $data['difficulty'], $post_id );
-			update_field( 'course_total_duration', $data['total_duration'], $post_id );
+			// Lesson Settings.
+			update_field( 'lesson_difficulty', $data['difficulty'], $post_id );
+			update_field( 'lesson_total_duration', $data['total_duration'], $post_id );
 
 			// Learning Objectives (repeater).
 			if ( ! empty( $data['objectives'] ) ) {
@@ -382,35 +382,35 @@ function leaderspath_create_test_courses( array $activity_ids, array $context_id
 				foreach ( $data['objectives'] as $objective ) {
 					$objectives_data[] = [ 'objective' => $objective ];
 				}
-				update_field( 'course_objectives', $objectives_data, $post_id );
+				update_field( 'lesson_objectives', $objectives_data, $post_id );
 			}
 
 			// Facilitator Content.
 			if ( ! empty( $data['facilitator_guide'] ) ) {
-				update_field( 'course_facilitator_guide', $data['facilitator_guide'], $post_id );
+				update_field( 'lesson_facilitator_guide', $data['facilitator_guide'], $post_id );
 			}
 
 			// Learner Content.
 			if ( ! empty( $data['learner_overview'] ) ) {
-				update_field( 'course_learner_overview', $data['learner_overview'], $post_id );
+				update_field( 'lesson_learner_overview', $data['learner_overview'], $post_id );
 			}
 
-			// Course Q&A Chatbot.
+			// Lesson Q&A Chatbot.
 			if ( ! empty( $data['chatbot_enabled'] ) ) {
-				update_field( 'course_chatbot_enabled', 1, $post_id );
-				update_field( 'course_chatbot_model', $data['chatbot_model'] ?? 'sonnet', $post_id );
-				update_field( 'course_chatbot_system_prompt', $data['chatbot_system_prompt'] ?? '', $post_id );
+				update_field( 'lesson_chatbot_enabled', 1, $post_id );
+				update_field( 'lesson_chatbot_model', $data['chatbot_model'] ?? 'sonnet', $post_id );
+				update_field( 'lesson_chatbot_system_prompt', $data['chatbot_system_prompt'] ?? '', $post_id );
 
-				// Context files for course chatbot.
+				// Context files for lesson chatbot.
 				if ( ! empty( $data['chatbot_context_files'] ) ) {
-					$context_for_course = [];
+					$context_for_lesson = [];
 					foreach ( $data['chatbot_context_files'] as $idx ) {
 						if ( isset( $context_ids[ $idx ] ) ) {
-							$context_for_course[] = $context_ids[ $idx ];
+							$context_for_lesson[] = $context_ids[ $idx ];
 						}
 					}
-					if ( ! empty( $context_for_course ) ) {
-						update_field( 'course_chatbot_context_files', $context_for_course, $post_id );
+					if ( ! empty( $context_for_lesson ) ) {
+						update_field( 'lesson_chatbot_context_files', $context_for_lesson, $post_id );
 					}
 				}
 			}
@@ -424,21 +424,21 @@ function leaderspath_create_test_courses( array $activity_ids, array $context_id
 }
 
 /**
- * Create a test cohort.
+ * Create a test course.
  *
- * @param int $course_id Course ID.
+ * @param array<int> $lesson_ids Lesson IDs to include in the course.
  */
-function leaderspath_create_test_cohort( int $course_id ): void {
-	echo "\nCreating Cohort...\n";
+function leaderspath_create_test_course( array $lesson_ids ): void {
+	echo "\nCreating Course...\n";
 
-	if ( ! $course_id ) {
-		echo "  - Skipping cohort (no course available)\n";
+	if ( empty( $lesson_ids ) ) {
+		echo "  - Skipping course (no lessons available)\n";
 		return;
 	}
 
-	$title = 'Spring 2026 Cohort';
+	$title = 'Spring 2026 AI Leadership';
 
-	$existing = get_page_by_title( $title, OBJECT, 'leaderspath_cohort' );
+	$existing = get_page_by_title( $title, OBJECT, 'leaderspath_course' );
 	if ( $existing ) {
 		echo "  - Skipping '{$title}' (already exists)\n";
 		return;
@@ -446,7 +446,7 @@ function leaderspath_create_test_cohort( int $course_id ): void {
 
 	$post_id = wp_insert_post( [
 		'post_title'  => $title,
-		'post_type'   => 'leaderspath_cohort',
+		'post_type'   => 'leaderspath_course',
 		'post_status' => 'publish',
 	] );
 
@@ -457,13 +457,13 @@ function leaderspath_create_test_cohort( int $course_id ): void {
 
 	// Set ACF fields.
 	if ( function_exists( 'update_field' ) ) {
-		update_field( 'cohort_course', $course_id, $post_id );
-		update_field( 'cohort_status', 'upcoming', $post_id );
-		update_field( 'cohort_start_date', '2026-03-01', $post_id );
-		update_field( 'cohort_end_date', '2026-05-31', $post_id );
-		update_field( 'cohort_language', 'en', $post_id );
-		update_field( 'cohort_timezone', 'America/New_York', $post_id );
-		update_field( 'cohort_max_participants', 25, $post_id );
+		update_field( 'course_lessons', $lesson_ids, $post_id );
+		update_field( 'course_status', 'upcoming', $post_id );
+		update_field( 'course_start_date', '2026-03-01', $post_id );
+		update_field( 'course_end_date', '2026-05-31', $post_id );
+		update_field( 'course_language', 'en', $post_id );
+		update_field( 'course_timezone', 'America/New_York', $post_id );
+		update_field( 'course_max_participants', 25, $post_id );
 	}
 
 	echo "  - Created '{$title}' (ID: {$post_id})\n";
