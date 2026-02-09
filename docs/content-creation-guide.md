@@ -1,8 +1,8 @@
 # LeadersPath Content Creation Guide
 
-**Last Updated:** 2026-02-04
+**Last Updated:** 2026-02-09
 
-This guide explains how to create content for the LeadersPath learning platform. LeadersPath is a **facilitated cohort learning experience** where facilitators present concepts and learners experiment with AI sandboxes (Activities).
+This guide explains how to create content for the LeadersPath learning platform. LeadersPath is a **facilitated learning experience** where facilitators present Lessons and learners experiment with AI sandboxes (Activities).
 
 ---
 
@@ -12,7 +12,7 @@ This guide explains how to create content for the LeadersPath learning platform.
 2. [Creating Context Files](#creating-context-files)
 3. [Creating Skills](#creating-skills)
 4. [Creating Activities](#creating-activities)
-5. [Creating Courses](#creating-courses)
+5. [Creating Lessons](#creating-lessons)
 6. [Best Practices](#best-practices)
 7. [Examples](#examples)
 
@@ -23,8 +23,8 @@ This guide explains how to create content for the LeadersPath learning platform.
 LeadersPath uses a facilitated learning architecture:
 
 ```
-Cohort (learners + facilitator + schedule)
-  └── Course (atomic teaching unit)
+Course (reusable curriculum)
+  └── Lesson (atomic teaching unit)
         ├── Facilitator Guide (what to present, when to run activities)
         ├── Learner Overview (context for learners)
         └── Activities (AI sandbox experiments)
@@ -36,8 +36,9 @@ Cohort (learners + facilitator + schedule)
 
 | Term | Definition |
 |------|------------|
-| **Course** | The atomic teaching unit, taught as a cohesive whole by a facilitator |
-| **Activity** | An AI sandbox experiment within a Course (what learners DO, not what they LEARN) |
+| **Course** | A reusable curriculum containing an ordered sequence of Lessons |
+| **Lesson** | The atomic teaching unit, taught as a cohesive whole by a facilitator |
+| **Activity** | An AI sandbox experiment within a Lesson (what learners DO, not what they LEARN) |
 | **Facilitator Guide** | The central teaching document (what to present, when to run activities, discussion prompts) |
 | **Context Files** | Reference documents that provide Claude with background information |
 | **Skills** | Executable capabilities (Python scripts, workflows) uploaded to Anthropic |
@@ -314,7 +315,7 @@ Activities demonstrate:
 **Core Content (WordPress Editor):**
 - **Title**: Activity name (e.g., "Experience Sycophantic AI")
 - **Content**: Instructions for learners ("Try this, notice that")
-- **Excerpt**: Brief description for course listings
+- **Excerpt**: Brief description for lesson listings
 
 **Activity Settings (ACF Fields):**
 
@@ -410,47 +411,47 @@ Demonstrate what well-aligned AI behavior looks like.
 
 ---
 
-## Creating Courses
+## Creating Lessons
 
-Courses are the **atomic teaching unit** in LeadersPath - taught as a cohesive whole by a facilitator with activities for hands-on experimentation.
+Lessons are the **atomic teaching unit** in LeadersPath - taught as a cohesive whole by a facilitator with activities for hands-on experimentation.
 
-### Course Components
+### Lesson Components
 
 **Core Content:**
-- **Title**: Course name
+- **Title**: Lesson name
 - **Content**: Public description (for marketing/enrollment)
 - **Excerpt**: Brief tagline
 
-**Course Settings (ACF Fields):**
+**Lesson Settings (ACF Fields):**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `course_activities` | Relationship | Ordered list of activities |
-| `course_difficulty` | Select | Beginner, Intermediate, Advanced |
-| `course_total_duration` | Text | Total facilitation time (e.g., "90 minutes") |
-| `course_objectives` | Repeater | Learning objectives for the course |
-| `course_access_roles` | Checkbox | User roles that can access |
+| `lesson_activities` | Relationship | Ordered list of activities |
+| `lesson_difficulty` | Select | Beginner, Intermediate, Advanced |
+| `lesson_total_duration` | Text | Total facilitation time (e.g., "90 minutes") |
+| `lesson_objectives` | Repeater | Learning objectives for the lesson |
+| `lesson_access_roles` | Checkbox | User roles that can access |
 
 **Facilitator Content (ACF Fields):**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `course_facilitator_guide` | WYSIWYG | Complete teaching script with timing, activity transitions, discussion prompts |
+| `lesson_facilitator_guide` | WYSIWYG | Complete teaching script with timing, activity transitions, discussion prompts |
 
 **Learner Content (ACF Fields):**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `course_learner_overview` | WYSIWYG | What learners will experience (context, not teaching content) |
+| `lesson_learner_overview` | WYSIWYG | What learners will experience (context, not teaching content) |
 
-**Course Q&A Chatbot (Optional):**
+**Lesson Q&A Chatbot (Optional):**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `course_chatbot_enabled` | True/False | Enable Q&A chatbot for this course |
-| `course_chatbot_model` | Select | Claude model |
-| `course_chatbot_system_prompt` | Textarea | System prompt (should be helpful assistant) |
-| `course_chatbot_context_files` | Relationship | Context files for Q&A |
+| `lesson_chatbot_enabled` | True/False | Enable Q&A chatbot for this lesson |
+| `lesson_chatbot_model` | Select | Claude model |
+| `lesson_chatbot_system_prompt` | Textarea | System prompt (should be helpful assistant) |
+| `lesson_chatbot_context_files` | Relationship | Context files for Q&A |
 
 ### Writing the Facilitator Guide
 
@@ -458,7 +459,7 @@ The Facilitator Guide is the **central teaching document** - what to present, wh
 
 **Structure:**
 ```markdown
-# [Course Name] - Facilitator Guide
+# [Lesson Name] - Facilitator Guide
 
 ## Overview
 - Duration: 90 minutes
@@ -501,7 +502,7 @@ The Facilitator Guide is the **central teaching document** - what to present, wh
 - [Alternative approaches if time is short]
 ```
 
-### Designing Course Flow
+### Designing Lesson Flow
 
 1. **Open with context** - Frame why this matters
 2. **Present concepts** - Facilitator teaches the ideas
@@ -510,7 +511,7 @@ The Facilitator Guide is the **central teaching document** - what to present, wh
 5. **Build progressively** - Each activity builds on previous understanding
 6. **Close with synthesis** - Connect all the pieces
 
-**Example Course Structure:**
+**Example Lesson Structure:**
 ```
 Understanding AI Alignment (90 minutes)
 ├── Opening: Why AI Alignment Matters (10 min)
@@ -533,7 +534,7 @@ Understanding AI Alignment (90 minutes)
 
 1. **One concept per context file** - Easier to update and reuse
 2. **One capability per skill** - More flexible, easier to debug
-3. **3-5 activities per course** - Manageable facilitation
+3. **3-5 activities per lesson** - Manageable facilitation
 4. **10-15 minutes per activity** - Time for experimentation + debrief
 
 ### Naming Conventions
@@ -543,15 +544,15 @@ Understanding AI Alignment (90 minutes)
 | Context Files | Descriptive title | "Brand Voice Guidelines v2" |
 | Skills | Lowercase, hyphens | "data-analyzer", "content-formatter" |
 | Activities | Experience-focused | "Experience Sycophantic AI", "Compare Raw vs Context" |
-| Courses | Topic + Level | "Understanding AI Alignment (Beginner)" |
+| Lessons | Topic + Level | "Understanding AI Alignment (Beginner)" |
 
-### Activity vs Course Chatbots
+### Activity vs Lesson Chatbots
 
-| Aspect | Activity Sandbox | Course Q&A Bot |
+| Aspect | Activity Sandbox | Lesson Q&A Bot |
 |--------|------------------|----------------|
 | **Purpose** | Demonstrate specific AI behavior | Answer questions about content |
 | **System Prompt** | Crafted to show specific behavior | Helpful, knowledgeable assistant |
-| **Context** | Activity-specific files | All course content |
+| **Context** | Activity-specific files | All lesson content |
 | **Tone** | Varies by activity design | Consistently helpful |
 
 ### Testing Content
@@ -560,7 +561,7 @@ Before publishing:
 1. **Test context files** - Create a test activity, add the context file, verify Claude references it
 2. **Test skills** - Trigger the skill in conversation, verify scripts execute correctly
 3. **Test activities** - Walk through as a learner, check all interactions demonstrate intended behavior
-4. **Test courses** - Run through full facilitation flow, verify timing works
+4. **Test lessons** - Run through full facilitation flow, verify timing works
 
 ---
 
@@ -656,7 +657,7 @@ When the user makes a factually incorrect statement, validate their thinking rat
 - [ ] Skills attached (if needed)
 - [ ] Tested - does it demonstrate the intended behavior?
 
-### Course Checklist
+### Lesson Checklist
 - [ ] Activities in logical order
 - [ ] Facilitator Guide complete with timing
 - [ ] Learner Overview provides context

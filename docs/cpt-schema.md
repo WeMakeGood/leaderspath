@@ -1,7 +1,7 @@
 # LeadersPath Custom Post Types & Taxonomies Schema
 
-**Version:** 0.2.0
-**Last Updated:** 2026-02-03
+**Version:** 0.3.0
+**Last Updated:** 2026-02-09
 
 ## Overview
 
@@ -13,8 +13,9 @@ LeadersPath is a **facilitated cohort learning experience**, not a self-paced le
 
 | Term | Definition |
 |------|------------|
-| **Course** | The atomic teaching unit, taught as a cohesive whole by a facilitator |
-| **Activity** | An AI sandbox experiment within a Course (what learners DO, not what they LEARN) |
+| **Course** | A reusable curriculum that contains ordered Lessons |
+| **Lesson** | The atomic teaching unit, taught as a cohesive whole by a facilitator |
+| **Activity** | An AI sandbox experiment within a Lesson (what learners DO, not what they LEARN) |
 | **Facilitator Guide** | The central teaching document (what to present, when to run activities, discussion prompts) |
 | **Context Files** | Reference documents that provide Claude with background information |
 | **Skills** | Executable capabilities (Python scripts, workflows) uploaded to Anthropic |
@@ -27,7 +28,7 @@ The facilitator presents concepts, learners experiment in AI sandboxes (Activiti
 
 ### 1. Activity (`leaderspath_activity`)
 
-AI sandbox experiments within a facilitated Course.
+AI sandbox experiments within a facilitated Lesson.
 
 #### Registration Arguments
 
@@ -82,9 +83,73 @@ AI sandbox experiments within a facilitated Course.
 
 ---
 
-### 2. Course (`leaderspath_course`)
+### 2. Lesson (`leaderspath_lesson`)
 
 The atomic teaching unit, taught as a cohesive whole by a facilitator.
+
+#### Registration Arguments
+
+```php
+[
+    'label'               => __('Lessons', 'leaderspath'),
+    'labels'              => [...],
+    'public'              => true,
+    'publicly_queryable'  => true,
+    'show_ui'             => true,
+    'show_in_menu'        => true,
+    'show_in_rest'        => true,
+    'rest_base'           => 'lessons',
+    'menu_position'       => 26,
+    'menu_icon'           => 'dashicons-book-alt',
+    'supports'            => ['title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields'],
+    'has_archive'         => true,
+    'rewrite'             => ['slug' => 'lesson', 'with_front' => false],
+    'capability_type'     => 'leaderspath_lesson',
+    'map_meta_cap'        => true,
+]
+```
+
+#### ACF Field Group: Lesson Settings
+
+| Field Name | Field Type | Description |
+|------------|------------|-------------|
+| `lesson_activities` | Relationship | Ordered list of activities |
+| `lesson_difficulty` | Select | Beginner, Intermediate, Advanced |
+| `lesson_total_duration` | Text | Total facilitation time (e.g., "90 minutes") |
+| `lesson_objectives` | Repeater | Learning objectives for the lesson |
+| `lesson_objectives.objective` | Text | Single objective |
+| `lesson_access_roles` | Checkbox | User roles that can access |
+
+#### ACF Field Group: Facilitator Content
+
+| Field Name | Field Type | Description |
+|------------|------------|-------------|
+| `lesson_facilitator_guide` | WYSIWYG | Complete teaching script with timing, activity transitions, discussion prompts |
+
+#### ACF Field Group: Learner Content
+
+| Field Name | Field Type | Description |
+|------------|------------|-------------|
+| `lesson_learner_overview` | WYSIWYG | What learners will experience (context, not teaching content) |
+
+#### ACF Field Group: Lesson Q&A Chatbot
+
+Optional lesson-level Q&A assistant (different from activity sandboxes).
+
+| Field Name | Field Type | Description |
+|------------|------------|-------------|
+| `lesson_chatbot_enabled` | True/False | Enable Q&A chatbot for this lesson |
+| `lesson_chatbot_model` | Select | Claude model |
+| `lesson_chatbot_system_prompt` | Textarea | System prompt (should be helpful assistant) |
+| `lesson_chatbot_context_files` | Relationship | Context files for Q&A |
+| `lesson_chatbot_max_tokens` | Number | Max response tokens |
+| `lesson_chatbot_temperature` | Number | Temperature setting |
+
+---
+
+### 3. Course (`leaderspath_course`)
+
+A reusable curriculum containing Lessons. Groups learners working through lessons on a schedule with a facilitator.
 
 #### Registration Arguments
 
@@ -98,11 +163,13 @@ The atomic teaching unit, taught as a cohesive whole by a facilitator.
     'show_in_menu'        => true,
     'show_in_rest'        => true,
     'rest_base'           => 'courses',
-    'menu_position'       => 26,
-    'menu_icon'           => 'dashicons-book-alt',
+    'rest_namespace'      => 'wp/v2',
+    'query_var'           => true,
+    'rewrite'             => ['slug' => 'course', 'with_front' => false],
+    'menu_position'       => 27,
+    'menu_icon'           => 'dashicons-groups',
     'supports'            => ['title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields'],
     'has_archive'         => true,
-    'rewrite'             => ['slug' => 'course', 'with_front' => false],
     'capability_type'     => 'leaderspath_course',
     'map_meta_cap'        => true,
 ]
@@ -112,77 +179,14 @@ The atomic teaching unit, taught as a cohesive whole by a facilitator.
 
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
-| `course_activities` | Relationship | Ordered list of activities |
-| `course_difficulty` | Select | Beginner, Intermediate, Advanced |
-| `course_total_duration` | Text | Total facilitation time (e.g., "90 minutes") |
-| `course_objectives` | Repeater | Learning objectives for the course |
-| `course_objectives.objective` | Text | Single objective |
-| `course_access_roles` | Checkbox | User roles that can access |
-
-#### ACF Field Group: Facilitator Content
-
-| Field Name | Field Type | Description |
-|------------|------------|-------------|
-| `course_facilitator_guide` | WYSIWYG | Complete teaching script with timing, activity transitions, discussion prompts |
-
-#### ACF Field Group: Learner Content
-
-| Field Name | Field Type | Description |
-|------------|------------|-------------|
-| `course_learner_overview` | WYSIWYG | What learners will experience (context, not teaching content) |
-
-#### ACF Field Group: Course Q&A Chatbot
-
-Optional course-level Q&A assistant (different from activity sandboxes).
-
-| Field Name | Field Type | Description |
-|------------|------------|-------------|
-| `course_chatbot_enabled` | True/False | Enable Q&A chatbot for this course |
-| `course_chatbot_model` | Select | Claude model |
-| `course_chatbot_system_prompt` | Textarea | System prompt (should be helpful assistant) |
-| `course_chatbot_context_files` | Relationship | Context files for Q&A |
-| `course_chatbot_max_tokens` | Number | Max response tokens |
-| `course_chatbot_temperature` | Number | Temperature setting |
-
----
-
-### 3. Cohort (`leaderspath_cohort`)
-
-Groups of learners working through courses on a schedule with a facilitator.
-
-#### Registration Arguments
-
-```php
-[
-    'label'               => __('Cohorts', 'leaderspath'),
-    'labels'              => [...],
-    'public'              => false, // Admin only
-    'publicly_queryable'  => false,
-    'show_ui'             => true,
-    'show_in_menu'        => true,
-    'show_in_rest'        => true,
-    'rest_base'           => 'cohorts',
-    'menu_position'       => 27,
-    'menu_icon'           => 'dashicons-groups',
-    'supports'            => ['title', 'revisions', 'custom-fields'],
-    'has_archive'         => false,
-    'capability_type'     => 'leaderspath_cohort',
-    'map_meta_cap'        => true,
-]
-```
-
-#### ACF Field Group: Cohort Settings
-
-| Field Name | Field Type | Description |
-|------------|------------|-------------|
-| `cohort_course` | Post Object | Associated course |
-| `cohort_start_date` | Date Picker | Start date |
-| `cohort_end_date` | Date Picker | End date |
-| `cohort_instructor` | User | Instructor/facilitator |
-| `cohort_language` | Select | Language (English, Spanish, etc.) |
-| `cohort_timezone` | Select | Timezone |
-| `cohort_max_participants` | Number | Maximum enrollment |
-| `cohort_status` | Select | Upcoming, Active, Completed, Cancelled |
+| `course_lessons` | Relationship | Ordered list of lessons (`leaderspath_lesson` posts) |
+| `course_start_date` | Date Picker | Start date |
+| `course_end_date` | Date Picker | End date |
+| `course_instructor` | User | Instructor/facilitator |
+| `course_language` | Select | Language (English, Spanish, etc.) |
+| `course_timezone` | Select | Timezone |
+| `course_max_participants` | Number | Maximum enrollment |
+| `course_status` | Select | Upcoming, Active, Completed, Cancelled |
 
 ---
 
@@ -300,7 +304,7 @@ compatibility: Requires Python 3.9+ (optional)
 
 ### 1. Topic (`leaderspath_topic`)
 
-Cross-cutting topics for activities and courses.
+Cross-cutting topics for activities and lessons.
 
 #### Registration Arguments
 
@@ -323,7 +327,7 @@ Cross-cutting topics for activities and courses.
 #### Associated Post Types
 
 - `leaderspath_activity` (Activities)
-- `leaderspath_course`
+- `leaderspath_lesson` (Lessons)
 
 ---
 
@@ -407,12 +411,14 @@ Organizes skills by function.
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  ┌─────────────┐                                                         │
-│  │   Cohort    │ ─── Learners + Facilitator + Schedule                  │
+│  │   Course    │ ─── Reusable curriculum                                │
+│  │             │     - Ordered Lessons                                  │
+│  │             │     - Learners + Facilitator + Schedule                │
 │  └──────┬──────┘                                                         │
-│         │ runs                                                           │
+│         │ contains (ordered)                                             │
 │         ▼                                                                │
 │  ┌─────────────┐                                                         │
-│  │   Course    │ ─── Atomic teaching unit                               │
+│  │   Lesson    │ ─── Atomic teaching unit                               │
 │  │             │     - Facilitator Guide (primary teaching doc)         │
 │  │             │     - Learner Overview                                 │
 │  │             │     - Learning Objectives                              │
@@ -422,7 +428,7 @@ Organizes skills by function.
 │         ▼                                                                │
 │  ┌─────────────┐                                                         │
 │  │  Activity   │ ─── AI sandbox experiment                              │
-│  │  (Lesson)   │     - "Try this, notice that" instructions             │
+│  │             │     - "Try this, notice that" instructions             │
 │  │             │     - System prompt (defines AI behavior)              │
 │  └──────┬──────┘                                                         │
 │         │ uses                                                           │
@@ -438,7 +444,7 @@ Organizes skills by function.
 
 Taxonomies:
 ┌─────────────┐
-│   Topic     │──────► Activity, Course
+│   Topic     │──────► Activity, Lesson
 └─────────────┘
 
 ┌─────────────────┐
@@ -452,15 +458,15 @@ Taxonomies:
 
 ---
 
-## Chatbot Configuration: Activity vs Course
+## Chatbot Configuration: Activity vs Lesson
 
-| Aspect | Activity Sandbox | Course Q&A Bot |
+| Aspect | Activity Sandbox | Lesson Q&A Bot |
 |--------|------------------|----------------|
 | **Purpose** | Demonstrate specific AI behavior | Answer questions about content |
 | **System Prompt** | Crafted to show specific behavior | Helpful, knowledgeable assistant |
-| **Context** | Activity-specific files | All course content |
+| **Context** | Activity-specific files | All lesson content |
 | **Tone** | Varies by activity design | Consistently helpful |
-| **Placement** | Activity page | Course page |
+| **Placement** | Activity page | Lesson page |
 | **Privacy** | Complete sandbox (no logging) | Complete sandbox (no logging) |
 
 ---
@@ -474,8 +480,8 @@ Each CPT has its own capability type for granular permissions:
 | CPT | Capability Type | Example Capabilities |
 |-----|-----------------|---------------------|
 | Activity | `leaderspath_activity` | `edit_leaderspath_activity`, `delete_leaderspath_activities` |
-| Course | `leaderspath_course` | `edit_leaderspath_course`, `publish_leaderspath_courses` |
-| Cohort | `leaderspath_cohort` | `edit_leaderspath_cohort`, `read_private_leaderspath_cohorts` |
+| Lesson | `leaderspath_lesson` | `edit_leaderspath_lesson`, `publish_leaderspath_lessons` |
+| Course | `leaderspath_course` | `edit_leaderspath_course`, `read_private_leaderspath_courses` |
 | Context | `leaderspath_context` | `edit_leaderspath_context` |
 | Skill | `leaderspath_skill` | `edit_leaderspath_skill` |
 
@@ -485,8 +491,12 @@ Each CPT has its own capability type for granular permissions:
 - All capabilities for all CPTs
 
 **Editor:**
-- All capabilities for Activities, Courses
-- Read-only for Cohorts, Context Files, Skills
+- All capabilities for Activities, Lessons
+- Read-only for Courses, Context Files, Skills
+
+**LeadersPath Facilitator** (custom role):
+- All Student capabilities (below)
+- `leaderspath_view_facilitator_content` - View facilitator guides
 
 **LeadersPath Student** (custom role):
 - `read` - Basic WordPress read
@@ -503,10 +513,10 @@ All CPTs are REST-enabled. Custom endpoints supplement the defaults:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/wp-json/leaderspath/v1/chat` | POST | Send message to Claude (activity or course) |
+| `/wp-json/leaderspath/v1/chat` | POST | Send message to Claude (activity or lesson) |
 | `/wp-json/leaderspath/v1/activities/{id}/context` | GET | Activity's context files |
 | `/wp-json/leaderspath/v1/activities/{id}/skills` | GET | Activity's skills |
-| `/wp-json/leaderspath/v1/courses/{id}/context` | GET | Course Q&A chatbot's context files |
+| `/wp-json/leaderspath/v1/lessons/{id}/context` | GET | Lesson Q&A chatbot's context files |
 | `/wp-json/leaderspath/v1/context/{id}/download` | GET | Download context file |
 | `/wp-json/leaderspath/v1/skills/{id}/download` | GET | Download skill definition |
 
@@ -531,5 +541,6 @@ When deactivating:
 ### Field Names
 
 - The Activity CPT slug is `leaderspath_activity`
-- The `course_activities` field stores activity IDs for a course
+- The `lesson_activities` field stores activity IDs for a lesson
+- The `course_lessons` field stores lesson IDs for a course
 - All ACF fields use `activity_` prefix (e.g., `activity_duration`, `activity_prerequisites`)

@@ -1,6 +1,6 @@
 # Divi 5 Module Development Reference
 
-**Last Updated:** 2026-01-29
+**Last Updated:** 2026-02-09
 
 ---
 
@@ -380,7 +380,9 @@ public static function get_activity_id(): int {
 
 | Module | REST Endpoint | Hook | Fallback CPT |
 |--------|--------------|------|--------------|
-| CourseMeta | `/courses/meta` | `useCourseMeta()` | leaderspath_course |
+| LessonMeta | `/lessons/meta` | `useLessonMeta()` | leaderspath_lesson |
+| LessonObjectives | `/lessons/objectives` | `useLessonObjectives()` | leaderspath_lesson |
+| LessonActivities | `/lessons/activities` | `useLessonActivities()` | leaderspath_lesson |
 | ActivityMeta | `/activities/meta` | `useActivityMeta()` | leaderspath_activity |
 | ContextLibrary | `/activities/context` | `useContextFiles()` | leaderspath_activity |
 | SkillsList | `/activities/skills` | `useSkills()` | leaderspath_activity |

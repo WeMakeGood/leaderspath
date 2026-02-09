@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
 **Last Updated:** 2026-02-09
-**Current Phase:** Phase 5b - Course Divi 5 Modules
+**Current Phase:** Phase 5b - Lesson Divi 5 Modules
 
 This file tracks all development tasks across Claude Code sessions. Each session should read this file at startup and update it when tasks are completed or new tasks are discovered.
 
@@ -36,24 +36,24 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 ### Custom Post Types
 - [x] Create `includes/class-post-types.php`
 - [x] Register `leaderspath_activity` CPT
+- [x] Register `leaderspath_lesson` CPT
 - [x] Register `leaderspath_course` CPT
-- [x] Register `leaderspath_cohort` CPT
 - [x] Register `leaderspath_context` CPT (context files)
 - [x] Register `leaderspath_skill` CPT
 
 ### Taxonomies
 - [x] Create `includes/class-taxonomies.php`
-- [x] Register `leaderspath_topic` taxonomy (for lessons, courses)
+- [x] Register `leaderspath_topic` taxonomy (for activities, lessons)
 - [x] Register `leaderspath_context_cat` taxonomy (for context files)
 - [x] Register `leaderspath_skill_cat` taxonomy (for skills)
 - [x] Create default terms on activation
 
 ### ACF Field Groups (Programmatic via ACF Pro API)
 - [x] Create `includes/class-acf-fields.php`
+- [x] Register Activity Settings field group
+- [x] Register Activity Chatbot Configuration field group
 - [x] Register Lesson Settings field group
-- [x] Register Lesson Chatbot Configuration field group
 - [x] Register Course Settings field group
-- [x] Register Cohort Settings field group
 - [x] Register Context File Settings field group
 - [x] Register Skill Settings field group
 
@@ -76,9 +76,9 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 - [x] Debug/logging toggle
 
 ### Admin Enhancements
-- [x] Custom admin columns for Lessons (duration, course, chatbot status)
-- [x] Custom admin columns for Courses (lesson count, difficulty, total duration)
-- [x] Quick edit support (lesson duration, chatbot enabled, course difficulty)
+- [x] Custom admin columns for Activities (duration, lesson, chatbot status)
+- [x] Custom admin columns for Lessons (activity count, difficulty, total duration)
+- [x] Quick edit support (activity duration, chatbot enabled, lesson difficulty)
 - [x] Admin notices for missing API key
 
 ---
@@ -90,19 +90,19 @@ Building inside-out: schemas → CPTs → taxonomies → ACF fields
 ### REST API Endpoints
 - [x] Create `includes/class-rest-api.php`
 - [x] `POST /wp-json/leaderspath/v1/chat` - Send message to Claude
-- [x] `GET /wp-json/leaderspath/v1/lessons/{id}/context` - Get lesson context files
-- [x] `GET /wp-json/leaderspath/v1/lessons/{id}/skills` - Get lesson skills
+- [x] `GET /wp-json/leaderspath/v1/activities/{id}/context` - Get activity context files
+- [x] `GET /wp-json/leaderspath/v1/activities/{id}/skills` - Get activity skills
 - [x] `GET /wp-json/leaderspath/v1/context/{id}/download` - Download context file
 - [x] `GET /wp-json/leaderspath/v1/skills/{id}/download` - Download skill definition
 - [x] Implement authentication (nonce for logged-in, capability checks)
-- [x] Update chat endpoint for container API response format (container_id in response)
+- [x] Update chat endpoint for container API response format (container_id in response, activity_id or lesson_id)
 - [x] Handle pause_turn responses (continuation loop in Claude_API)
 - [ ] Handle file outputs from code execution (deferred - not critical for MVP)
 
 ### Claude API Handler (COMPLETED)
 - [x] Create `includes/class-claude-api.php`
 - [x] Implement Messages API integration with container + code execution
-- [x] Context assembly from lesson files
+- [x] Context assembly from activity files
 - [x] Model selection (dynamic from API, with fallbacks)
 - [x] Error handling and logging
 - [x] Test connection button in settings (queries available models)
@@ -144,10 +144,10 @@ Now that data layer exists, build the UI modules.
 
 **Reference:** See `docs/divi-modules.md` for Divi 5 module development guide.
 **Working Examples:**
-- `modules/LessonMeta/` - Theme Builder pattern (ACF data from current lesson)
-- `modules/ContextLibrary/` - Theme Builder pattern with compound elements and modal
-- `modules/SkillsList/` - Theme Builder pattern (similar to Context Library, no modal)
-- `modules/Chatbot/` - Theme Builder pattern with interactive frontend JavaScript
+- `modules/ActivityMeta/` - Theme Builder pattern (ACF data from current activity)
+- `modules/ContextLibrary/` - Theme Builder pattern with compound elements and modal (activity context files)
+- `modules/SkillsList/` - Theme Builder pattern (similar to Context Library, no modal, activity skills)
+- `modules/Chatbot/` - Theme Builder pattern with interactive frontend JavaScript (Activity + Lesson modes)
 
 ### Chatbot Module (COMPLETED)
 - [x] Create PHP module class and traits
@@ -177,7 +177,7 @@ Now that data layer exists, build the UI modules.
 - [x] Configurable empty state message (rich text)
 - [x] Button element using Divi button elementType for styling consistency
 
-### Lesson Meta Module (REWRITTEN)
+### Activity Meta Module (REWRITTEN, was Lesson Meta)
 - [x] Create PHP module class and traits (following PostTitle pattern)
 - [x] Create TypeScript/React edit component (with StyleContainer)
 - [x] Display duration, objectives, model info
@@ -187,9 +187,9 @@ Now that data layer exists, build the UI modules.
 
 ---
 
-## Phase 5b: Course Divi 5 Modules
+## Phase 5b: Lesson Divi 5 Modules
 
-Course-specific modules to display course data in Divi 5 Theme Builder templates.
+Lesson-specific modules to display lesson data in Divi 5 Theme Builder templates.
 
 **Reference:** Existing Activity modules use Theme Builder pattern with `get_queried_object_id()`.
 
@@ -199,38 +199,38 @@ Add a `leaderspath_facilitator` role to distinguish facilitators from students.
 - [x] Grant facilitator role: all student capabilities + `leaderspath_view_facilitator_content`
 - [x] Add new capability: `leaderspath_view_facilitator_content`
 - [x] Map capability to Administrator, Editor, and Facilitator roles
-- [ ] Update documentation in `docs/cpt-schema.md`
+- [x] Update documentation in `docs/cpt-schema.md`
 
-### CourseMeta Module (COMPLETED)
-Display course metadata (similar to ActivityMeta).
+### LessonMeta Module (COMPLETED)
+Display lesson metadata (similar to ActivityMeta).
 - [x] Create PHP module class and traits
 - [x] Create TypeScript/React edit component
 - [x] Display: duration, difficulty badge, activity count
 - [x] Visibility toggles for each element
 - [x] Configurable labels for each element
-- [x] REST API endpoint (`/courses/meta`) for VB preview
+- [x] REST API endpoint (`/lessons/meta`) for VB preview
 
-### CourseObjectives Module (COMPLETED)
+### LessonObjectives Module (COMPLETED)
 Display learning objectives as a styled list.
 - [x] Create PHP module class and traits
 - [x] Create TypeScript/React edit component
-- [x] Render `course_objectives` repeater as list items
+- [x] Render `lesson_objectives` repeater as list items
 - [x] Configurable title and empty state message
-- [x] REST API endpoint (`/courses/objectives`) for VB preview
+- [x] REST API endpoint (`/lessons/objectives`) for VB preview
 
-### CourseActivities Module (COMPLETED)
+### LessonActivities Module (COMPLETED)
 Display ordered list of activities with navigation.
 - [x] Create PHP module class and traits
 - [x] Create TypeScript/React edit component
-- [x] Render `course_activities` relationship as ordered list with links
+- [x] Render `lesson_activities` relationship as ordered list with links
 - [x] Display activity: numbered badge + linked title
-- [x] REST API endpoint (`/courses/activities`) for VB preview
+- [x] REST API endpoint (`/lessons/activities`) for VB preview
 
 ### LearnerOverview Module
 Display the learner-facing WYSIWYG content (visible to all users).
 - [ ] Create PHP module class and traits
 - [ ] Create TypeScript/React edit component
-- [ ] Render `course_learner_overview` WYSIWYG content
+- [ ] Render `lesson_learner_overview` WYSIWYG content
 - [ ] Standard text styling options
 - [ ] Configurable wrapper/container styles
 - [ ] No access control (visible to all, including logged-out users)
@@ -239,19 +239,19 @@ Display the learner-facing WYSIWYG content (visible to all users).
 Display facilitator guide with role-based access control.
 - [ ] Create PHP module class and traits
 - [ ] Create TypeScript/React edit component
-- [ ] Render `course_facilitator_guide` WYSIWYG content
+- [ ] Render `lesson_facilitator_guide` WYSIWYG content
 - [ ] Access control: only show to users with `leaderspath_view_facilitator_content` capability
 - [ ] Module setting: "When hidden" - show nothing OR show configurable message
 - [ ] Configurable "access denied" message (rich text)
 - [ ] Standard text styling options
 
 ### Integration
-- [x] Register CourseMeta, CourseObjectives, CourseActivities in `modules/Modules.php`
-- [x] Register CourseMeta, CourseObjectives, CourseActivities in `src/index.ts`
+- [x] Register LessonMeta, LessonObjectives, LessonActivities in `modules/Modules.php`
+- [x] Register LessonMeta, LessonObjectives, LessonActivities in `src/index.ts`
 - [x] Verify build completes successfully for all completed modules
 - [ ] Register LearnerOverview, FacilitatorGuide in `modules/Modules.php` and `src/index.ts`
 - [ ] Test in Divi 5 Visual Builder
-- [ ] Test frontend rendering with Course template
+- [ ] Test frontend rendering with Lesson template
 - [ ] Test access control for FacilitatorGuide (student vs facilitator view)
 
 ---
@@ -264,6 +264,18 @@ Display facilitator guide with role-based access control.
 - [ ] Performance optimization
 - [ ] User documentation
 - [ ] Code documentation cleanup
+
+---
+
+## Phase 7: WooCommerce Cohort Product
+
+Cohorts will become a WooCommerce product type for enrollment management.
+
+- [ ] Create WooCommerce Cohort product type
+- [ ] Cohort product linked to Course CPT
+- [ ] Enrollment management via WooCommerce orders
+- [ ] Cohort-specific settings (start/end dates, max participants)
+- [ ] Access control: learner enrollment gates Lesson/Activity access
 
 ---
 
@@ -303,11 +315,12 @@ Key decisions made during development:
 | 2026-01-29 | Inside-out development order | Build data layer first (CPTs, ACF), then admin, then frontend modules |
 | 2026-01-29 | ACF fields via PHP API | Programmatic registration for version control, but uses ACF Pro UI/rendering |
 | 2026-01-29 | Skills as ZIP packages | Skills follow Agent Skills Spec - directories with SKILL.md, references/, scripts/, assets/. Upload ZIP, extract frontmatter for metadata. |
-| 2026-02-03 | Facilitated cohort learning model | LeadersPath is facilitator-led, not self-paced. Course = atomic unit, Activities = AI sandboxes |
+| 2026-02-03 | Facilitated cohort learning model | LeadersPath is facilitator-led, not self-paced. Lesson = atomic unit, Activities = AI sandboxes |
 | 2026-02-03 | Rename Lessons to Activities | Full migration to `leaderspath_activity` CPT slug |
-| 2026-02-03 | Learning objectives at Course level | Moved from Activity to Course since Course is the teaching unit |
-| 2026-02-03 | Dual chatbot modes | Activity Sandbox (demonstrate behaviors) vs Course Q&A (helpful assistant) |
+| 2026-02-03 | Learning objectives at Lesson level | Moved from Activity to Lesson since Lesson is the teaching unit |
+| 2026-02-03 | Dual chatbot modes | Activity Sandbox (demonstrate behaviors) vs Lesson Q&A (helpful assistant) |
 | 2026-02-03 | Privacy-first Q&A bot | No logging, no access restrictions - maintains sandbox trust |
+| 2026-02-09 | Nomenclature swap: Course->Lesson, Cohort->Course | `leaderspath_course` renamed to `leaderspath_lesson` (atomic teaching unit); `leaderspath_cohort` renamed to `leaderspath_course` (curriculum containing Lessons) |
 
 ---
 
@@ -738,6 +751,18 @@ Brief notes from each development session:
   - Styled with card-like appearance for each activity item
 - Updated TASKS.md with all completed Phase 5b items and session notes
 
+### Session 21 (2026-02-09)
+- **Nomenclature rename: Course->Lesson, Cohort->Course**
+  - Renamed `leaderspath_course` CPT to `leaderspath_lesson` (atomic teaching unit)
+  - Renamed `leaderspath_cohort` CPT to `leaderspath_course` (curriculum containing Lessons)
+  - Updated ALL code: PHP classes, REST API, Claude API, admin, Divi modules (PHP + TypeScript), build scripts, test data
+  - All ACF fields renamed: `course_*` -> `lesson_*`, `cohort_*` -> `course_*`
+  - `cohort_course` (post_object) -> `course_lessons` (relationship to multiple lessons)
+  - Divi modules renamed: CourseMeta->LessonMeta, CourseObjectives->LessonObjectives, CourseActivities->LessonActivities
+  - REST endpoints: `/courses/*` -> `/lessons/*`
+  - Build verified successful, stale modules-json cleaned up
+  - Added Phase 7: WooCommerce Cohort Product to task list
+
 ---
 
 ## Quick Reference for Next Session
@@ -746,10 +771,10 @@ Brief notes from each development session:
 | Type | IDs | Notes |
 |------|-----|-------|
 | Activities | 74-77 | All have chatbot enabled, various context/skills |
-| Courses | 78-79 | AI Fundamentals (3 activities), AI in Practice (1 activity) |
+| Lessons | 78-79 | AI Fundamentals (3 activities), AI in Practice (1 activity) |
 | Context Files | 69-71 | Ethics, Prompt Engineering, Conversation Flows |
 | Skills | 72-73 | Code Review, Writing Editor |
-| Cohort | 80 | Spring 2026, linked to Course 78 |
+| Course | 80 | Spring 2026, linked to Lesson 78 |
 
 ### Key Files for Module Development
 ```
@@ -760,9 +785,9 @@ modules/
 ├── ContextLibrary/          # Theme Builder pattern - compound elements, modal, buttons
 ├── SkillsList/              # Theme Builder pattern - similar to ContextLibrary, no modal
 ├── Chatbot/                 # Theme Builder pattern - interactive frontend JavaScript
-├── CourseMeta/              # Theme Builder pattern - course duration, difficulty, activity count
-├── CourseObjectives/        # Theme Builder pattern - learning objectives list
-├── CourseActivities/        # Theme Builder pattern - ordered activity list with links
+├── LessonMeta/              # Theme Builder pattern - lesson duration, difficulty, activity count
+├── LessonObjectives/        # Theme Builder pattern - learning objectives list
+├── LessonActivities/        # Theme Builder pattern - ordered activity list with links
 src/
 ├── index.ts                 # JS module registration (add registerModule() here)
 └── components/
@@ -771,9 +796,9 @@ src/
     ├── context-library/     # Theme Builder pattern with REST API hook + modal
     ├── skills-list/         # Theme Builder pattern with REST API hook
     ├── chatbot/             # Theme Builder pattern with interactive chat
-    ├── course-meta/         # REST API hook for course metadata
-    ├── course-objectives/   # REST API hook for course objectives
-    └── course-activities/   # REST API hook for course activities
+    ├── lesson-meta/         # REST API hook for lesson metadata
+    ├── lesson-objectives/   # REST API hook for lesson objectives
+    └── lesson-activities/   # REST API hook for lesson activities
 assets/
 ├── js/context-modal.js      # Modal JavaScript for View Content (Context Library only)
 ├── js/chatbot.js            # Chatbot frontend interactivity (REST API calls)
@@ -791,7 +816,7 @@ assets/
 **Module Pattern Selection:**
 | Use Case | Pattern | Primary Reference |
 |----------|---------|-------------------|
-| Current post data (lesson meta, context) | Theme Builder | `PostTitle/PostTitleModule.php` |
+| Current post data (activity/lesson meta, context) | Theme Builder | `PostTitle/PostTitleModule.php` |
 | Query multiple posts | Dynamic Query | `Blog/BlogController.php` |
 | User-entered content only | Static | Example repo `StaticModule/` |
 
@@ -841,17 +866,17 @@ Container:
 - `POST /v1/skills/{id}/versions` - Create new version
 
 ### WordPress REST Endpoints
-- `POST /leaderspath/v1/chat` - Chat with Claude (needs activity_id or course_id, message, optional history/model)
+- `POST /leaderspath/v1/chat` - Chat with Claude (needs activity_id or lesson_id, message, optional history/model)
 - `GET /leaderspath/v1/activities/{id}/context` - Get context files for activity
 - `GET /leaderspath/v1/activities/{id}/skills` - Get skills for activity
 - `GET /leaderspath/v1/context/{id}/download` - Get context file content
 - `GET /leaderspath/v1/skills/{id}/download` - Get skill definition
-- `GET /leaderspath/v1/courses/meta` - Course meta for VB preview (fallback to first course)
-- `GET /leaderspath/v1/courses/{id}/meta` - Course meta for specific course
-- `GET /leaderspath/v1/courses/objectives` - Course objectives for VB preview
-- `GET /leaderspath/v1/courses/{id}/objectives` - Course objectives for specific course
-- `GET /leaderspath/v1/courses/activities` - Course activities for VB preview
-- `GET /leaderspath/v1/courses/{id}/activities` - Course activities for specific course
+- `GET /leaderspath/v1/lessons/meta` - Lesson meta for VB preview (fallback to first lesson)
+- `GET /leaderspath/v1/lessons/{id}/meta` - Lesson meta for specific lesson
+- `GET /leaderspath/v1/lessons/objectives` - Lesson objectives for VB preview
+- `GET /leaderspath/v1/lessons/{id}/objectives` - Lesson objectives for specific lesson
+- `GET /leaderspath/v1/lessons/activities` - Lesson activities for VB preview
+- `GET /leaderspath/v1/lessons/{id}/activities` - Lesson activities for specific lesson
 - `GET /leaderspath/v1/activities/meta` - Activity meta for VB preview (fallback to first activity)
 - `GET /leaderspath/v1/activities/{id}/meta` - Activity meta for specific activity
 - `GET /leaderspath/v1/activities/context` - Context files for VB preview (first activity)

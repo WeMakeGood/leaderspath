@@ -26,12 +26,12 @@
 
 ## Project Overview
 
-LeadersPath is a WordPress plugin developed by WeMakeGood that powers an interactive AI learning community. The plugin provides chatbot-powered lesson experiences where learners interact with Claude AI to understand the difference between raw LLM interactions and context-enhanced AI implementations.
+LeadersPath is a WordPress plugin developed by WeMakeGood that powers a facilitated cohort learning experience. Facilitators present concepts while learners experiment with AI sandboxes (Activities) to experience specific AI behaviors. The plugin demonstrates the difference between raw LLM interactions and context-enhanced AI implementations.
 
 **Key Features:**
-- Custom post types for Lessons, Courses, Cohorts, Context Files, and Skills
+- Custom post types for Activities, Lessons, Courses, Context Files, and Skills
 - Claude API integration for interactive chatbot experiences
-- Divi 5 modules for flexible lesson template design
+- Divi 5 modules for flexible lesson/activity template design
 - Transparency features showing learners the context and skills used by AI
 - Role-based access control for content and features
 
@@ -56,7 +56,10 @@ leaderspath/
 │   ├── Chatbot/
 │   ├── ContextLibrary/
 │   ├── SkillsList/
-│   └── LessonMeta/
+│   ├── ActivityMeta/
+│   ├── LessonMeta/
+│   ├── LessonObjectives/
+│   └── LessonActivities/
 │
 ├── src/                     # Divi 5 modules (TypeScript/React)
 │   └── components/
@@ -444,11 +447,15 @@ Maintain `CHANGELOG.md` using [Keep a Changelog](https://keepachangelog.com/) fo
 // After plugin loads
 do_action('leaderspath_loaded');
 
-// Before chatbot renders
+// Before activity chatbot renders
 apply_filters('leaderspath_chatbot_system_prompt', $prompt, $activity_id);
+
+// Before lesson chatbot renders
+apply_filters('leaderspath_lesson_chatbot_system_prompt', $prompt, $lesson_id);
 
 // After chat message sent
 do_action('leaderspath_chat_message_sent', $message, $response, $user_id);
+do_action('leaderspath_lesson_chat_message_sent', $message, $response, $user_id);
 
 // Filter context files for an activity
 apply_filters('leaderspath_activity_context_files', $files, $activity_id);
