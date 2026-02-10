@@ -53,8 +53,6 @@
   &__item-badge {
     display: inline-block;
     padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.025em;
     white-space: nowrap;
@@ -99,8 +97,6 @@
   &__empty {
     padding: 2rem;
     text-align: center;
-    background: #f7f7f7;
-    border-radius: 8px;
   }
 }
 

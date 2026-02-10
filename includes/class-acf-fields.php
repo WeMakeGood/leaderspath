@@ -344,7 +344,7 @@ class ACF_Fields {
 					'elements'      => [ 'featured_image' ],
 					'min'           => 0,
 					'max'           => 100,
-					'return_format' => 'id',
+					'return_format' => 'object',
 				],
 				[
 					'key'           => 'field_lesson_difficulty',
@@ -652,88 +652,7 @@ class ACF_Fields {
 					'max'           => 100,
 					'return_format' => 'id',
 				],
-				[
-					'key'           => 'field_course_status',
-					'label'         => __( 'Status', 'leaderspath' ),
-					'name'          => 'course_status',
-					'type'          => 'select',
-					'instructions'  => __( 'Current status of this course.', 'leaderspath' ),
-					'required'      => 1,
-					'choices'       => [
-						'upcoming'  => __( 'Upcoming', 'leaderspath' ),
-						'active'    => __( 'Active', 'leaderspath' ),
-						'completed' => __( 'Completed', 'leaderspath' ),
-						'cancelled' => __( 'Cancelled', 'leaderspath' ),
-					],
-					'default_value' => 'upcoming',
-					'return_format' => 'value',
 				],
-				[
-					'key'           => 'field_course_start_date',
-					'label'         => __( 'Start Date', 'leaderspath' ),
-					'name'          => 'course_start_date',
-					'type'          => 'date_picker',
-					'instructions'  => __( 'When this course begins.', 'leaderspath' ),
-					'required'      => 1,
-					'display_format' => 'F j, Y',
-					'return_format' => 'Y-m-d',
-				],
-				[
-					'key'           => 'field_course_end_date',
-					'label'         => __( 'End Date', 'leaderspath' ),
-					'name'          => 'course_end_date',
-					'type'          => 'date_picker',
-					'instructions'  => __( 'When this course ends.', 'leaderspath' ),
-					'required'      => 1,
-					'display_format' => 'F j, Y',
-					'return_format' => 'Y-m-d',
-				],
-				[
-					'key'           => 'field_course_instructor',
-					'label'         => __( 'Instructor', 'leaderspath' ),
-					'name'          => 'course_instructor',
-					'type'          => 'user',
-					'instructions'  => __( 'The facilitator for this course.', 'leaderspath' ),
-					'required'      => 0,
-					'role'          => [ 'administrator', 'editor', 'author' ],
-					'return_format' => 'id',
-				],
-				[
-					'key'           => 'field_course_language',
-					'label'         => __( 'Language', 'leaderspath' ),
-					'name'          => 'course_language',
-					'type'          => 'select',
-					'instructions'  => __( 'Primary language for this course.', 'leaderspath' ),
-					'choices'       => [
-						'en' => __( 'English', 'leaderspath' ),
-						'es' => __( 'Spanish', 'leaderspath' ),
-						'fr' => __( 'French', 'leaderspath' ),
-						'de' => __( 'German', 'leaderspath' ),
-						'pt' => __( 'Portuguese', 'leaderspath' ),
-					],
-					'default_value' => 'en',
-					'return_format' => 'value',
-				],
-				[
-					'key'           => 'field_course_timezone',
-					'label'         => __( 'Timezone', 'leaderspath' ),
-					'name'          => 'course_timezone',
-					'type'          => 'select',
-					'instructions'  => __( 'Timezone for scheduling.', 'leaderspath' ),
-					'choices'       => $this->get_timezone_choices(),
-					'default_value' => 'America/New_York',
-					'return_format' => 'value',
-				],
-				[
-					'key'           => 'field_course_max_participants',
-					'label'         => __( 'Max Participants', 'leaderspath' ),
-					'name'          => 'course_max_participants',
-					'type'          => 'number',
-					'instructions'  => __( 'Maximum number of participants. Leave empty for unlimited.', 'leaderspath' ),
-					'min'           => 1,
-					'max'           => 1000,
-				],
-			],
 			'location' => [
 				[
 					[
@@ -969,22 +888,4 @@ class ACF_Fields {
 	 *
 	 * @return array<string, string> Timezone choices.
 	 */
-	private function get_timezone_choices(): array {
-		return [
-			'America/New_York'    => __( 'Eastern Time (US)', 'leaderspath' ),
-			'America/Chicago'     => __( 'Central Time (US)', 'leaderspath' ),
-			'America/Denver'      => __( 'Mountain Time (US)', 'leaderspath' ),
-			'America/Los_Angeles' => __( 'Pacific Time (US)', 'leaderspath' ),
-			'America/Anchorage'   => __( 'Alaska Time', 'leaderspath' ),
-			'Pacific/Honolulu'    => __( 'Hawaii Time', 'leaderspath' ),
-			'Europe/London'       => __( 'London (GMT)', 'leaderspath' ),
-			'Europe/Paris'        => __( 'Central European', 'leaderspath' ),
-			'Europe/Berlin'       => __( 'Berlin', 'leaderspath' ),
-			'Asia/Tokyo'          => __( 'Tokyo', 'leaderspath' ),
-			'Asia/Shanghai'       => __( 'China Standard', 'leaderspath' ),
-			'Asia/Dubai'          => __( 'Dubai', 'leaderspath' ),
-			'Australia/Sydney'    => __( 'Sydney', 'leaderspath' ),
-			'UTC'                 => __( 'UTC', 'leaderspath' ),
-		];
-	}
 }

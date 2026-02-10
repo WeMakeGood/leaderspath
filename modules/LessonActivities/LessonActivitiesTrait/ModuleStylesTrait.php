@@ -47,10 +47,9 @@ trait ModuleStylesTrait {
 	 * @return void
 	 */
 	public static function module_styles( array $args ): void {
-		$attrs       = $args['attrs'] ?? [];
-		$elements    = $args['elements'];
-		$settings    = $args['settings'] ?? [];
-		$order_class = $args['orderClass'] ?? '';
+		$attrs    = $args['attrs'] ?? [];
+		$elements = $args['elements'];
+		$settings = $args['settings'] ?? [];
 
 		Style::add(
 			[
@@ -64,17 +63,8 @@ trait ModuleStylesTrait {
 						[
 							'attrName'   => 'module',
 							'styleProps' => [
-								'disabledOn'     => [
+								'disabledOn' => [
 									'disabledModuleVisibility' => $settings['disabledModuleVisibility'] ?? null,
-								],
-								'advancedStyles' => [
-									[
-										'componentName' => 'divi/text',
-										'props'         => [
-											'selector' => "{$order_class} .leaderspath-lesson-activities__content",
-											'attr'     => $attrs['module']['advanced']['text'] ?? [],
-										],
-									],
 								],
 							],
 						]
@@ -94,10 +84,38 @@ trait ModuleStylesTrait {
 						]
 					),
 
+					// List layout.
+					$elements->style(
+						[
+							'attrName' => 'list',
+						]
+					),
+
+					// Item card.
+					$elements->style(
+						[
+							'attrName' => 'item',
+						]
+					),
+
+					// Number badge.
+					$elements->style(
+						[
+							'attrName' => 'numberBadge',
+						]
+					),
+
+					// Link text.
+					$elements->style(
+						[
+							'attrName' => 'link',
+						]
+					),
+
 					// Custom CSS - must be last so it can override module styles.
 					CssStyle::style(
 						[
-							'selector'  => $order_class,
+							'selector'  => $args['orderClass'] ?? '',
 							'attr'      => $attrs['css'] ?? [],
 							'cssFields' => LessonActivities::custom_css(),
 						]

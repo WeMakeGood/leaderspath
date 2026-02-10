@@ -226,33 +226,115 @@ Display ordered list of activities with navigation.
 - [x] Display activity: numbered badge + linked title
 - [x] REST API endpoint (`/lessons/activities`) for VB preview
 
-### LearnerOverview Module
-Display the learner-facing WYSIWYG content (visible to all users).
-- [ ] Create PHP module class and traits
-- [ ] Create TypeScript/React edit component
-- [ ] Render `lesson_learner_overview` WYSIWYG content
-- [ ] Standard text styling options
-- [ ] Configurable wrapper/container styles
-- [ ] No access control (visible to all, including logged-out users)
+### LearnerOverview & FacilitatorGuide (NO CUSTOM MODULES NEEDED)
+These WYSIWYG fields (`lesson_learner_overview`, `lesson_facilitator_guide`) can be displayed
+using Divi 5's native Text module with ACF dynamic field output. Access control for the
+facilitator guide is handled via Divi 5's built-in display conditions (role-based visibility).
 
-### FacilitatorGuide Module
-Display facilitator guide with role-based access control.
-- [ ] Create PHP module class and traits
-- [ ] Create TypeScript/React edit component
-- [ ] Render `lesson_facilitator_guide` WYSIWYG content
-- [ ] Access control: only show to users with `leaderspath_view_facilitator_content` capability
-- [ ] Module setting: "When hidden" - show nothing OR show configurable message
-- [ ] Configurable "access denied" message (rich text)
-- [ ] Standard text styling options
+### Module Styling Consistency Pass (COMPLETED)
+Made all 4 list/card modules consistent in structure and Design tab configurability.
+Hardcoded SCSS colors/spacing moved to Divi `defaultPrintedStyle` for point-and-click override.
+
+**Phase A: Card Grid Modules (ContextLibrary + SkillsList)**
+- [x] Normalize `moduleClassName` to dashes (BEM convention)
+- [x] Remove hardcoded empty state background colors from SCSS
+- [x] Normalize badge `defaultPrintedStyle` font-size (SkillsList: 11px → 12px)
+- [x] Add `__content` flex column layout to SkillsList SCSS
+- [x] Normalize SkillsList title margin to match ContextLibrary
+
+**Phase B: LessonObjectives upgrade**
+- [x] Add `defaultPrintedStyle` to title (22px, 600 weight, 1.3em lineHeight)
+- [x] Add `list` attribute with `decoration.layout` (flex column, 8px gap)
+- [x] Add `item` attribute with `decoration.bodyFont` (1.5em lineHeight default)
+- [x] Change `emptyState` from `<p>` to `<div>` with richText editor
+- [x] Split content groups: `contentTitle` + `contentEmptyState`
+- [x] Add `designLayout` group to Design tab
+- [x] Add `content` custom CSS field
+- [x] Remove hardcoded empty state colors/borders from SCSS
+- [x] Remove advancedStyles text block from styles.tsx and PHP
+- [x] Set module text color `render: false`
+
+**Phase C: LessonActivities upgrade (largest scope)**
+- [x] Add `defaultPrintedStyle` to title (22px, 600 weight, 1.3em lineHeight)
+- [x] Add `list` attribute with `decoration.layout` (flex column, 12px gap)
+- [x] Add `item` attribute with `decoration.background` (#f8f9fa), `border` (4px radius), `spacing` (12px/16px padding)
+- [x] Add `numberBadge` attribute with `decoration.background` (#0073aa) and `font` (14px, 600, white)
+- [x] Add `link` attribute with `decoration.font` (#0073aa, 500 weight)
+- [x] Change `emptyState` from `<p>` to `<div>` with richText editor
+- [x] Split content groups: `contentTitle` + `contentEmptyState`
+- [x] Add `designLayout` group to Design tab
+- [x] Add `content` custom CSS field
+- [x] Remove all hardcoded colors/padding/border-radius from SCSS (kept structural flex/shape)
+- [x] Remove advancedStyles text block from styles.tsx and PHP
+- [x] Set module text color `render: false`
 
 ### Integration
 - [x] Register LessonMeta, LessonObjectives, LessonActivities in `modules/Modules.php`
 - [x] Register LessonMeta, LessonObjectives, LessonActivities in `src/index.ts`
 - [x] Verify build completes successfully for all completed modules
-- [ ] Register LearnerOverview, FacilitatorGuide in `modules/Modules.php` and `src/index.ts`
 - [ ] Test in Divi 5 Visual Builder
 - [ ] Test frontend rendering with Lesson template
-- [ ] Test access control for FacilitatorGuide (student vs facilitator view)
+
+### CourseLessons Module
+Display ordered list of lessons for a Course, with navigation links.
+Template: LessonActivities module (clone and adapt).
+
+**Data Source:**
+- ACF field: `course_lessons` (relationship, `return_format: 'id'`, post_type: `leaderspath_lesson`)
+- Note: returns IDs (not objects) — must call `get_post()` to resolve each ID
+
+**REST API (to create):**
+- `GET /leaderspath/v1/courses/lessons` — fallback to first course (VB preview)
+- `GET /leaderspath/v1/courses/{id}/lessons` — specific course
+
+**PHP Files (to create):**
+- `modules/CourseLessons/CourseLessons.php` — main class (DependencyInterface)
+- `modules/CourseLessons/CourseLessonsTrait/RenderCallbackTrait.php` — `get_course_id()`, `get_lessons()`, `render_callback()`
+- `modules/CourseLessons/CourseLessonsTrait/ModuleClassnamesTrait.php`
+- `modules/CourseLessons/CourseLessonsTrait/ModuleStylesTrait.php`
+- `modules/CourseLessons/CourseLessonsTrait/CustomCssTrait.php`
+
+**TypeScript Files (to create):**
+- `src/components/course-lessons/module.json` — follow LessonActivities pattern:
+  - `title` with `defaultPrintedStyle` (22px, 600, 1.3em)
+  - `emptyState` with `tagName: "div"`, `inlineEditor: "richText"`, `decoration.bodyFont`
+  - `list` with `decoration.layout` (flex column, 12px gap)
+  - `item` with `decoration.background` (#f8f9fa), `border` (4px radius), `spacing` (12px/16px)
+  - `numberBadge` with `decoration.background` + `font`
+  - `link` with `decoration.font`
+  - `css` attribute, `module.advanced.text.color.render: false`
+  - Content groups: `contentTitle` + `contentEmptyState`
+  - Design group: `designLayout`
+- `src/components/course-lessons/edit.tsx`
+- `src/components/course-lessons/styles.tsx`
+- `src/components/course-lessons/types.ts`
+- `src/components/course-lessons/use-course-lessons.ts`
+- `src/components/course-lessons/module-classnames.ts`
+- `src/components/course-lessons/custom-css.ts`
+- `src/components/course-lessons/placeholder-content.ts`
+- `src/components/course-lessons/style.scss` — structural only (flex, circle shape, text-decoration)
+- `src/components/course-lessons/index.ts`
+
+**Registration:**
+- Add `CourseLessons` to `modules/Modules.php`
+- Add `courseLessonsModule` to `src/index.ts`
+
+**Tasks:**
+- [ ] Add REST API endpoints (`/courses/lessons` and `/courses/{id}/lessons`) to `class-rest-api.php`
+- [ ] Create PHP module class and 4 traits
+- [ ] Create TypeScript module (10 files)
+- [ ] Register module in `Modules.php` and `src/index.ts`
+- [ ] Build and verify
+- [ ] Test in Divi 5 Visual Builder
+- [ ] Test frontend rendering with Course template
+
+### Course CPT Cleanup (COMPLETED)
+Removed cohort-specific fields that belong on WooCommerce product (Phase 7), not Course CPT:
+- [x] Remove `course_status`, `course_start_date`, `course_end_date` ACF fields
+- [x] Remove `course_instructor`, `course_language`, `course_timezone`, `course_max_participants` ACF fields
+- [x] Remove `get_timezone_choices()` helper method
+- [x] Update test data script (removed stale field references)
+- [x] Update cpt-schema.md documentation
 
 ---
 
@@ -890,6 +972,31 @@ wp eval-file wp-content/plugins/leaderspath/bin/test-chat.php [activity_id] [mes
 # Show assembled system prompt for an activity
 wp eval-file wp-content/plugins/leaderspath/bin/show-system-prompt.php [activity_id]
 ```
+
+### Session 22 (2026-02-09)
+- **Module Styling Consistency Pass** — made all 4 list/card modules consistent
+- **Phase A: Card Grid Modules (ContextLibrary + SkillsList)**
+  - Normalized `moduleClassName`/`moduleOrderClassName` to BEM dashes (was underscores)
+  - Removed hardcoded empty state background colors from SCSS
+  - Normalized SkillsList badge `defaultPrintedStyle` from 11px to 12px
+  - Added `__content` flex column layout to SkillsList SCSS
+- **Phase B: LessonObjectives upgrade**
+  - Rewrote module.json: added `list` (decoration.layout), `item` (bodyFont), title `defaultPrintedStyle`
+  - Changed emptyState from `<p>` to `<div>` with richText editor and bodyFont
+  - Split content groups: `contentTitle` + `contentEmptyState` + `designLayout`
+  - Removed advancedStyles divi/text from styles.tsx and ModuleStylesTrait.php
+  - Removed hardcoded empty state styling from SCSS
+  - Updated types.ts to match ContextLibrary pattern (InternalAttrs, Element types)
+- **Phase C: LessonActivities upgrade** (largest scope)
+  - Rewrote module.json: added `list` (decoration.layout), `item` (background/border/spacing), `numberBadge` (background/font), `link` (font)
+  - All hardcoded colors (#f8f9fa, #0073aa, #fff) moved to `defaultPrintedStyle`
+  - SCSS stripped to structural-only (flex layout, circle shape, text-decoration reset)
+  - Updated styles.tsx, types.ts, custom-css.ts, ModuleStylesTrait.php
+- Key design decisions:
+  - `decoration.layout` for list modules (flex column) — Divi's `gridColumnCount` only supports fixed counts, not CSS `auto-fill`
+  - Keep SCSS `auto-fill` grid for card modules (ContextLibrary, SkillsList)
+  - `defaultPrintedStyle` provides visual defaults that users can override via Design tab
+- Build verified successful after each phase
 
 ### Build Commands
 ```bash

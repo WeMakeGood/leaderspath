@@ -16,6 +16,11 @@ import { type Module } from '@divi/types';
  * @since 0.1.0
  */
 export const cssFields: Module.Options.Css.FieldConfig = {
+  content: {
+    subName: 'content',
+    selectorSuffix: ' .leaderspath-lesson-objectives__content',
+    label: 'Content',
+  },
   title: {
     subName: 'title',
     selectorSuffix: ' .leaderspath-lesson-objectives__title',

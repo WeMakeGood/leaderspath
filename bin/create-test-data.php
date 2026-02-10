@@ -12,9 +12,47 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Delete all existing LeadersPath CPT posts.
+ */
+function leaderspath_cleanup_test_data(): void {
+	$post_types = [
+		'leaderspath_course',
+		'leaderspath_lesson',
+		'leaderspath_activity',
+		'leaderspath_skill',
+		'leaderspath_context',
+	];
+
+	echo "Cleaning up existing LeadersPath data...\n";
+
+	foreach ( $post_types as $post_type ) {
+		$posts = get_posts( [
+			'post_type'      => $post_type,
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		] );
+
+		$count = count( $posts );
+		foreach ( $posts as $post_id ) {
+			wp_delete_post( $post_id, true ); // Force delete, skip trash.
+		}
+
+		if ( $count > 0 ) {
+			echo "  - Deleted {$count} {$post_type} post(s)\n";
+		}
+	}
+
+	echo "Cleanup complete.\n\n";
+}
+
+/**
  * Create test data.
  */
 function leaderspath_create_test_data(): void {
+	// Clean up existing data first.
+	leaderspath_cleanup_test_data();
+
 	echo "Creating LeadersPath test data...\n\n";
 
 	// Create Context Files first (referenced by activities).
@@ -458,12 +496,6 @@ function leaderspath_create_test_course( array $lesson_ids ): void {
 	// Set ACF fields.
 	if ( function_exists( 'update_field' ) ) {
 		update_field( 'course_lessons', $lesson_ids, $post_id );
-		update_field( 'course_status', 'upcoming', $post_id );
-		update_field( 'course_start_date', '2026-03-01', $post_id );
-		update_field( 'course_end_date', '2026-05-31', $post_id );
-		update_field( 'course_language', 'en', $post_id );
-		update_field( 'course_timezone', 'America/New_York', $post_id );
-		update_field( 'course_max_participants', 25, $post_id );
 	}
 
 	echo "  - Created '{$title}' (ID: {$post_id})\n";

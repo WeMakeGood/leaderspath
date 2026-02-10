@@ -4,8 +4,8 @@
   "title": "LeadersPath Skills List",
   "titles": "LeadersPath Skills Lists",
   "moduleIcon": "divi/module-code",
-  "moduleClassName": "leaderspath_skills_list",
-  "moduleOrderClassName": "leaderspath_skills_list",
+  "moduleClassName": "leaderspath-skills-list",
+  "moduleOrderClassName": "leaderspath-skills-list",
   "category": "module",
   "childrenName": [],
   "attributes": {
@@ -436,7 +436,7 @@
             "font": {
               "desktop": {
                 "value": {
-                  "size": "11px",
+                  "size": "12px",
                   "weight": "500"
                 }
               }

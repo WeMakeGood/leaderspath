@@ -35,8 +35,6 @@ export const ModuleStyles = ({
   state,
   noStyleTag,
 }: StylesProps<LessonObjectivesAttrs>): ReactElement => {
-  const textSelector = `${orderClass} .leaderspath-lesson-objectives__content`;
-
   return (
     <StyleContainer mode={mode} state={state} noStyleTag={noStyleTag}>
       {/* Module */}
@@ -46,15 +44,6 @@ export const ModuleStyles = ({
           disabledOn: {
             disabledModuleVisibility: settings?.disabledModuleVisibility,
           },
-          advancedStyles: [
-            {
-              componentName: 'divi/text',
-              props: {
-                selector: textSelector,
-                attr: attrs?.module?.advanced?.text,
-              },
-            },
-          ],
         },
       })}
 
@@ -66,6 +55,16 @@ export const ModuleStyles = ({
       {/* Empty State */}
       {elements.style({
         attrName: 'emptyState',
+      })}
+
+      {/* List layout */}
+      {elements.style({
+        attrName: 'list',
+      })}
+
+      {/* Item text */}
+      {elements.style({
+        attrName: 'item',
       })}
 
       {/* Custom CSS - must be last so it can override module styles */}

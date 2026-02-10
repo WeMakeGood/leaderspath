@@ -4,8 +4,8 @@
   "title": "LeadersPath Context Library",
   "titles": "LeadersPath Context Libraries",
   "moduleIcon": "divi/module-code",
-  "moduleClassName": "leaderspath_context_library",
-  "moduleOrderClassName": "leaderspath_context_library",
+  "moduleClassName": "leaderspath-context-library",
+  "moduleOrderClassName": "leaderspath-context-library",
   "category": "module",
   "childrenName": [],
   "attributes": {

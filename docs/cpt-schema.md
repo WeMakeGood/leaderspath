@@ -180,13 +180,6 @@ A reusable curriculum containing Lessons. Groups learners working through lesson
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
 | `course_lessons` | Relationship | Ordered list of lessons (`leaderspath_lesson` posts) |
-| `course_start_date` | Date Picker | Start date |
-| `course_end_date` | Date Picker | End date |
-| `course_instructor` | User | Instructor/facilitator |
-| `course_language` | Select | Language (English, Spanish, etc.) |
-| `course_timezone` | Select | Timezone |
-| `course_max_participants` | Number | Maximum enrollment |
-| `course_status` | Select | Upcoming, Active, Completed, Cancelled |
 
 ---
 
