@@ -19,6 +19,7 @@ import { lessonMeta } from './components/lesson-meta';
 import { lessonObjectives } from './components/lesson-objectives';
 import { lessonActivities } from './components/lesson-activities';
 import { activityMeta } from './components/activity-meta';
+import { courseLessons } from './components/course-lessons';
 
 /**
  * Register all LeadersPath modules after Divi's module library store is ready.
@@ -28,4 +29,5 @@ addAction('divi.moduleLibrary.registerModuleLibraryStore.after', 'leaderspath', 
     registerModule(lessonObjectives.metadata, omit(lessonObjectives, 'metadata'));
     registerModule(lessonActivities.metadata, omit(lessonActivities, 'metadata'));
     registerModule(activityMeta.metadata, omit(activityMeta, 'metadata'));
+    registerModule(courseLessons.metadata, omit(courseLessons, 'metadata'));
 });

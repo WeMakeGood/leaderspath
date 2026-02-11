@@ -1,0 +1,51 @@
+{
+  "module": {
+    "meta": {
+      "adminLabel": {
+        "desktop": {
+          "value": "Course Lessons"
+        }
+      }
+    }
+  },
+  "content": {
+    "innerContent": {
+      "desktop": {
+        "value": {
+          "showHeading": "on",
+          "headingText": "Lessons",
+          "showNumber": "on",
+          "showDuration": "on",
+          "showDifficulty": "on",
+          "showActivityCount": "on",
+          "showExcerpt": "on",
+          "showPrerequisites": "off"
+        }
+      }
+    }
+  },
+  "number": {
+    "decoration": {
+      "background": {
+        "desktop": {
+          "value": {
+            "color": "#e0e0e0"
+          }
+        }
+      },
+      "border": {
+        "desktop": {
+          "value": {
+            "radius": {
+              "sync": "on",
+              "topLeft": "50%",
+              "topRight": "50%",
+              "bottomRight": "50%",
+              "bottomLeft": "50%"
+            }
+          }
+        }
+      }
+    }
+  }
+}

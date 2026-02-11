@@ -103,10 +103,21 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 - [x] Data: duration, model name (with human-readable labels), model switching indicator
 - [x] Content tab: show/hide toggles + custom label text for all three data points
 
+### Completed: Course Lessons Module (2026-02-11)
+
+- [x] Layer 1: Core PHP renderer (`CourseLessonsRenderer`) — ACF relationship + semantic HTML (`<ul>`/`<li>`/`<article>`)
+- [x] Layer 2: SCSS — structural resets, meta container flex layout, prerequisites section styling
+- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder lessons
+- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Content tab toggles, Number Badge group, Custom CSS fields
+- [x] Data: title (linked), difficulty badge, duration, activity count, excerpt
+- [x] Prerequisites section — linked course names with toggle visibility
+- [x] Content tab: 8 toggles (heading, numbers, difficulty, duration, activity count, excerpt, prerequisites) + heading text
+- [x] Number badge styling — same pattern as Lesson Activities (background, border, spacing, box shadow)
+
 ### Pending Tasks
 
 - [ ] Rebuild remaining modules from validated patterns (see `docs/divi5-module-architecture.md` section 9 for build order)
-- [ ] Test Theme Builder template with multiple lesson/activity pages
+- [ ] Test Theme Builder template with multiple lesson/activity/course pages
 
 ---
 
