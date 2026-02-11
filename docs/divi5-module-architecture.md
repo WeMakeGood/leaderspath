@@ -1,612 +1,547 @@
-# Divi 5 Module Architecture
+# Divi 5 Module Architecture for LeadersPath
 
 **Last Updated:** 2026-02-11
-**Source:** Research from installed `@divi/types` packages, official extension example repo, and Divi 5 internals analysis
+**Source:** Official `d5-extension-example-modules` repo + Divi 5 theme source analysis
 
 ---
 
-## 1. Architecture Overview
-
-### How Divi 5 Relates to WordPress Blocks
-
-- Divi 5 stores page layouts as JSON inside a `<!-- wp:divi/placeholder {...} /-->` block comment wrapper in `post_content`
-- This wrapper exists for WP compatibility only — Divi's renderer completely takes over
-- Divi hooks into `the_content` filter. When it detects Divi layout JSON, it renders using its own engine
-- The JSON contains a tree of module nodes (sections > rows > columns > modules) with their attributes
-- ACF fields/meta stored separately in `wp_postmeta` as usual
-- WordPress revision history works because layout lives in `post_content`
+## 1. Core Concepts
 
 ### Dual Rendering Model
 
 | Context | Technology | What Runs |
 |---------|------------|-----------|
-| Visual Builder (editing) | React/TypeScript | `edit.tsx` components, `@divi/*` packages |
-| Frontend (visitor) | PHP | `render_callback`, server-side HTML |
+| Visual Builder (editing) | React/TypeScript | `edit.tsx` — placeholder UI for design purposes |
+| Frontend (visitor) | PHP | `render_callback` — real data, real HTML |
 
-**The frontend is 100% server-rendered PHP.** No React, no hydration. The VB is 100% client-side React.
+**The frontend is 100% server-rendered PHP.** No React, no hydration.
 
-### Rendering Strategy: Shared Structure, Separate Content
+### Two Types of Dynamic Modules
 
-LeadersPath modules are data-driven — they display ACF field data (relationships, repeaters, meta fields), not user-authored block content. This means the PHP `render_callback` is the **single source of truth** for output. The VB edit component exists to make the module draggable, configurable, and styled — not to replicate the full rendering logic.
+This distinction is critical and was the source of our first failed implementation:
 
-**The sync contract between PHP and React is the DOM structure, not the content:**
+| Type | Example | Data Source | VB Strategy |
+|------|---------|-------------|-------------|
+| **Generic query** | DynamicModule (reference repo) | `get_posts()` — any posts | `useFetch` + REST API |
+| **Current post** | LeadersPath modules | ACF fields on the viewed post | Static placeholders |
 
-```
-PHP render_callback (frontend):
-<div class="leaderspath-lesson-activities">              ← same wrapper class
-    <a class="leaderspath-lesson-activities__item">       ← same child class
-        AI Fundamentals                                   ← real ACF data
-    </a>
-    <a class="leaderspath-lesson-activities__item">
-        Prompt Engineering Basics
-    </a>
-</div>
+**LeadersPath modules are "current post" modules.** They read ACF fields from the specific lesson/activity/course being viewed. The VB edit component shows placeholder content with the same DOM/class structure so that design controls apply identically.
 
-React edit component (VB):
-<ModuleContainer ...>                                     ← generates same wrapper class
-    <div className="leaderspath-lesson-activities__item"> ← same child class
-        Sample Activity 1                                 ← placeholder or REST-fetched data
-    </div>
-    <div className="leaderspath-lesson-activities__item">
-        Sample Activity 2
-    </div>
-</ModuleContainer>
-```
+### Post ID Resolution (CRITICAL)
 
-**Why this works:** Divi's design panels (layout, fonts, spacing, borders, etc.) generate CSS that targets **selectors defined in `module.json`**. The selectors reference CSS classes, not content. As long as both renderers output the same class structure, all VB styling applies identically to both contexts.
+Divi's Theme Builder overrides WordPress globals. When a TB layout renders, `get_the_ID()` and `get_queried_object_id()` may return the **layout template post**, not the post being viewed.
 
-```json
-// module.json — selectors are the contract
-"attributes": {
-    "module": {
-        "selector": "{{selector}}",
-        "tag": "div"
-    },
-    "activityItem": {
-        "selector": "{{selector}} .leaderspath-lesson-activities__item",
-        "tag": "a"
-    }
+**Correct pattern** (from Divi's own `DynamicContentPosts`):
+
+```php
+if ( ET_Theme_Builder_Layout::is_theme_builder_layout() && is_singular() ) {
+    $post_id = ET_Post_Stack::get_main_post_id();
+} else {
+    $post_id = get_the_ID();
 }
 ```
 
-**Per-module strategy:**
+This is implemented in `modules/Shared/PostIdHelper.php`. All modules use it.
 
-| Module Type | PHP (frontend) | React (VB) | Content Parity |
-|-------------|----------------|------------|----------------|
-| Display fields (Meta) | Real ACF data | REST-fetched sample or placeholders | Low — structure matters, not values |
-| Display lists (Activities, Lessons, Objectives) | Real ACF relationship/repeater data | REST-fetched sample data or N placeholder items | Medium — item count affects layout preview |
-| Display cards (Context Library, Skills List) | Real card grid | Placeholder cards with sample data | Medium — card count affects grid preview |
-| Interactive (Chatbot) | Full chat UI with JS | Static mockup (bubble layout) | None — interactivity only on frontend |
+### Semantic Markup
 
-**Rules:**
-1. CSS class names are defined once and shared (BEM: `leaderspath-{module}__{element}--{modifier}`)
-2. `module.json` selectors reference those classes — this is the binding between VB styling and both renderers
-3. PHP `render_callback` is authoritative; never duplicate rendering logic in React
-4. VB edit components should fetch sample data via REST when possible, fall back to static placeholders
-5. The `PostIdHelper` trait provides the current post ID (or first published post as fallback) for VB preview data
+Core renderers **must use semantic HTML elements**, not generic `div`/`span` soup:
 
----
+- **Metadata pairs** → `<dl>` / `<dt>` / `<dd>` (e.g., Lesson Meta)
+- **Ordered content** → `<ol>` (e.g., Lesson Activities, Learning Objectives)
+- **Card grids** → `<ul>` with `<article>` children (e.g., Context Library, Skills List)
+- **Headings** → appropriate `<h2>`–`<h6>` level for context
+- **Interactive elements** → `<button>`, `<input>`, `<form>` — never `<div onclick>`
 
-## 2. Module Registration
+Divi's module wrapper handles the outer container. The core renderer produces the inner content with correct semantics. SCSS targets these elements via their BEM classes.
 
-### PHP Side (VB Asset Registration)
+### Layout (Flex/Grid) via Divi's Layout Panel
 
-From the official example repo's main plugin file:
+Divi provides a Layout panel in the Design tab that gives users full control over flex/grid properties.
 
-```php
-// Register VB bundle
-add_action('divi_visual_builder_assets_before_enqueue_scripts', function() {
-    if (et_builder_d5_enabled() && et_core_is_fb_enabled()) {
-        $url = plugin_dir_url(__FILE__);
-
-        \ET\Builder\VisualBuilder\Assets\PackageBuildManager::register_package_build([
-            'name' => 'leaderspath-builder-bundle',
-            'version' => LEADERSPATH_VERSION,
-            'script' => [
-                'src' => "{$url}scripts/bundle.js",
-                'deps' => ['divi-module-library', 'divi-vendor-wp-hooks'],
-                'enqueue_top_window' => false,
-                'enqueue_app_window' => true,
-            ],
-        ]);
-
-        \ET\Builder\VisualBuilder\Assets\PackageBuildManager::register_package_build([
-            'name' => 'leaderspath-builder-vb-style',
-            'version' => LEADERSPATH_VERSION,
-            'style' => [
-                'src' => "{$url}styles/vb-bundle.css",
-                'deps' => [],
-                'enqueue_top_window' => false,
-                'enqueue_app_window' => true,
-            ],
-        ]);
-    }
-});
-
-// Register frontend CSS
-add_action('wp_enqueue_scripts', function() {
-    wp_enqueue_style(
-        'leaderspath-modules',
-        plugin_dir_url(__FILE__) . 'styles/bundle.css',
-        [],
-        LEADERSPATH_VERSION
-    );
-});
-```
-
-### TypeScript Side (Module Registration)
-
-Entry point `src/index.ts`:
-
-```typescript
-import { omit } from 'lodash';
-import { addAction } from '@wordpress/hooks';
-import { registerModule } from '@divi/module-library';
-import { lessonMeta } from './components/lesson-meta';
-// ... import other modules
-
-addAction('divi.moduleLibrary.registerModuleLibraryStore.after', 'leaderspath', () => {
-    registerModule(lessonMeta.metadata, omit(lessonMeta, 'metadata'));
-    // ... register other modules
-});
-```
-
-### Module Definition (RegisterDefinition)
-
-Each module exports a `RegisterDefinition`:
-
-```typescript
-import { type Metadata, type ModuleLibrary } from '@divi/types';
-import metadata from './module.json';
-import { MyModuleEdit } from './edit';
-import { MyModuleAttrs } from './types';
-
-export const myModule: ModuleLibrary.Module.RegisterDefinition<MyModuleAttrs> = {
-    metadata: metadata as Metadata.Values<MyModuleAttrs>,
-    renderers: {
-        edit: MyModuleEdit,
-    },
-    // Optional:
-    settings: {
-        content: SettingsContent,
-        design: SettingsDesign,
-    },
-};
-```
-
-### Icon Registration
-
-```typescript
-import { addFilter } from '@wordpress/hooks';
-import { myModuleIcon } from './icons';
-
-addFilter('divi.iconLibrary.icon.map', 'leaderspath', (icons) => ({
-    ...icons, // IMPORTANT: spread existing icons first
-    [myModuleIcon.name]: myModuleIcon,
-}));
-```
-
-Icon structure:
-
-```typescript
-export const name = 'leaderspath/lesson-meta';
-export const viewBox = '0 96 960 960';
-export const component = (): ReactElement => (
-    <path d="M114 838V710h491v128H114Z..." />
-);
-```
-
----
-
-## 3. Module JSON Schema (module.json)
-
-### Example module.json
+**Where to put Layout:** On a **child attribute** targeting the inner container, NOT on `module`. The `module` wrapper's layout is controlled by Divi's own `.et_flex_module`/`.et_grid_module` classes. For custom inner containers (like a `<dl>`), create a dedicated attribute:
 
 ```json
-{
-    "name": "leaderspath/lesson-meta",
-    "d4Shortcode": "leaderspath_lesson_meta",
-    "title": "Lesson Meta",
-    "titles": ["Lesson Meta"],
-    "moduleIcon": "leaderspath/lesson-meta",
-    "category": "leaderspath",
-    "settings": "auto",
-    "attributes": {
-        "module": {
-            "type": "object",
-            "selector": "{{selector}}",
-            "default": {
-                "meta": {
-                    "adminLabel": { "desktop": { "value": "Lesson Meta" } }
+"list": {
+    "type": "object",
+    "selector": "{{selector}} .leaderspath_lesson_meta__list",
+    "tagName": "dl",
+    "elementType": "element",
+    "settings": {
+        "decoration": {
+            "layout": {
+                "groupType": "group-item",
+                "item": {
+                    "groupSlug": "designLayout",
+                    "priority": 10,
+                    "render": true,
+                    "component": {
+                        "type": "group",
+                        "name": "divi/layout",
+                        "props": {
+                            "grouped": false,
+                            "defaultGroupAttr": {
+                                "desktop": {
+                                    "value": {
+                                        "display": "flex",
+                                        "flexDirection": "row",
+                                        "flexWrap": "wrap",
+                                        "columnGap": "1.5em",
+                                        "rowGap": "0.5em"
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-            },
-            "tag": "div",
-            "styleProps": {}
-        },
-        "difficulty": {
-            "type": "object",
-            "selector": "{{selector}} .leaderspath-lesson-meta__difficulty",
-            "tag": "span",
-            "default": {}
+            }
         }
     }
 }
 ```
 
-### Key module.json Properties
+**CRITICAL: Layout panel does NOT output `display`.** Divi's Layout panel generates flex/grid CSS properties (`flex-direction`, `flex-wrap`, `grid-template-columns`, etc.) and CSS custom properties (`--horizontal-gap`, `--vertical-gap`, `--flex-direction`), but it does NOT generate the `display` property. That comes from `.et_flex_*`/`.et_grid_*` classes which are only added to the `module` wrapper (via `Module.php` line 339). Child elements don't get these classes.
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `name` | string | `vendor/module-name` format |
-| `d4Shortcode` | string | CSS class prefix, snake_case |
-| `title` / `titles` | string/string[] | Display name |
-| `moduleIcon` | string | References icon registered via filter |
-| `category` | string | Module picker category |
-| `settings` | string/`"auto"` | `"auto"` generates settings from attributes |
-| `attributes` | object | Attribute schema with types, selectors, defaults |
-| `childModuleName` | string | For parent modules |
-| `childrenName` | string[] | Allowed child module names |
+**Three-part solution for child element layout:**
 
-### Attribute Value Format (CRITICAL)
-
-ALL values use breakpoint-state format:
-
-```json
-{ "desktop": { "value": "Hello World" } }
-```
-
-Types: `FormatBreakpointStateAttr<T>` -- supports `desktop`, `tablet`, `phone` breakpoints with `value` and optional `hover`/`sticky` states.
-
-Boolean toggles use `'on'`/`'off'` strings (type `OnOff`), NOT `true`/`false`.
-
----
-
-## 4. React Components (edit.tsx)
-
-### Edit Component Pattern
-
-```tsx
-import React, { ReactElement } from 'react';
-import { ModuleContainer } from '@divi/module';
-import { MyModuleAttrs } from './types';
-import { ModuleEditProps } from '@divi/module-library';
-
-const MyModuleEdit = ({
-    attrs,
-    id,
-    name,
-    elements,
-}: ModuleEditProps<MyModuleAttrs>): ReactElement => (
-    <ModuleContainer
-        attrs={attrs}
-        elements={elements}
-        id={id}
-        name={name}
-        stylesComponent={ModuleStyles}
-        classnamesFunction={moduleClassnames}
-        scriptDataComponent={ModuleScriptData}
-        tag="div"
-    >
-        {elements.render({
-            attrName: 'title',
-        })}
-        {elements.render({
-            attrName: 'content',
-        })}
-    </ModuleContainer>
-);
-```
-
-Key points:
-
-- **Must use `ModuleContainer`** (not `Module`) -- it is the HOC that connects to the store
-- **Use `elements.render()`** for content -- enables inline editing, dynamic content, responsive content
-- **Use `elements.style()`** for CSS -- in the styles component
-- `elements.scriptData()` -- passes data to frontend JS
-
-### For Data-Driven Modules (like LeadersPath)
-
-The VB edit component can:
-
-- Make REST API calls to fetch preview data
-- Show a simplified/placeholder preview
-- You do NOT need pixel-perfect parity with the PHP frontend output
-
----
-
-## 5. Field Library
-
-### Settings Panels
-
-Three tabs: Content, Design, Advanced
-
-When `"settings": "auto"` in module.json, Divi auto-generates panels from attribute definitions.
-
-For custom panels:
-
-```typescript
-export const SettingsContent = ({
-    defaultSettingsAttrs,
-    parentAttrs,
-    groupConfiguration,
-}: Module.Settings.Panel.Props<MyAttrs>): ReactElement => (
-    <ModuleGroups groups={groupConfiguration} />
-);
-```
-
-### Available Setting Groups (from @divi/types)
-
-admin-label, animation, background, border, box-shadow, button, composite, conditions, css, disabled-on, dividers, filters, font, font-body, font-header, form-field, gutter, icon, id-classes, link, overflow, position, scroll, sizing, spacing, sticky, text, text-shadow, transform, transition, visibility-settings, z-index
-
-### Field Types (from @divi/field-library)
-
-text, textarea, rich-text, color, range, select, multi-select, toggle, radio, upload, icon-picker, date-picker, code, composite, and more
-
----
-
-## 6. Style Library
-
-### StyleContainer Component
-
-```tsx
-import { StyleContainer } from '@divi/module';
-
-const ModuleStyles = ({ attrs, elements, settings, mode, state, noStyleTag }) => (
-    <StyleContainer mode={mode} state={state} noStyleTag={noStyleTag}>
-        {elements.style({
-            attrName: 'module',
-            styleProps: {
-                disabledOn: {
-                    disabledModuleVisibility: settings?.disabledModuleVisibility,
-                },
-            },
-        })}
-        {elements.style({ attrName: 'title' })}
-        {elements.style({ attrName: 'content' })}
-    </StyleContainer>
-);
-```
-
-### StyleDeclarations
-
-```typescript
-import { StyleDeclarations } from '@divi/style-library';
-const declarations = new StyleDeclarations({ returnType: 'string', important: false });
-declarations.add('color', '#333');
-declarations.add('font-size', '16px');
-const css = declarations.value; // "color: #333; font-size: 16px;"
-```
-
-### CSS Property Groups Handled by Style System
-
-Background, Border, Box Shadow, Spacing, Sizing, Font, Filters, Transform, Position, Overflow, Z-Index, Animation, Transition, Text, Text Shadow, Icon, Button, Dividers, Disabled On
-
----
-
-## 7. Frontend Rendering (PHP)
-
-### render_callback
-
+1. **PHP (`ModuleStylesTrait.php`)** — Read `list.decoration.layout.desktop.value.display` and output `display` via `Style::add()` with a **2D array**:
 ```php
-public static function render_callback(array $attrs, string $content, \WP_Block $block): string {
-    $post_id = PostIdHelper::get_post_id('lesson');
-    if (!$post_id) return '';
+[[ 'selector' => $list_selector, 'declaration' => "display: {$list_display};" ]]
+```
 
-    $activities = get_field('lesson_activities', $post_id) ?: [];
-    $output = '<div class="leaderspath-lesson-activities">';
-    foreach ($activities as $activity_id) {
-        $output .= sprintf(
-            '<a href="%s">%s</a>',
-            esc_url(get_permalink($activity_id)),
-            esc_html(get_the_title($activity_id))
-        );
-    }
-    return $output . '</div>';
+2. **VB (`edit.tsx`)** — Apply inline style: `<dl style={{ display: listDisplay }}>`
+
+3. **SCSS (`module.scss`)** — Reset inherited CSS variables only (NO `display`):
+```scss
+.module .module__list {
+    --flex-direction: row;
+    --flex-wrap: wrap;
+    --horizontal-gap: 1.5em;
+    --vertical-gap: 0.5em;
+    flex-direction: var(--flex-direction);
+    flex-wrap: var(--flex-wrap);
+    column-gap: var(--horizontal-gap);
+    row-gap: var(--vertical-gap);
 }
 ```
 
-### module_classnames (PHP)
+Parent `.et_flex_module` sets `--flex-direction: column`, `--horizontal-gap: var(--module-gutter)`, etc. which cascade into child elements. SCSS must reset these on the target selector so defaults are correct before user customization.
 
-```php
-public static function module_classnames(array $args): void {
-    $classnames_instance = $args['classnamesInstance'];
-    $attrs = $args['attrs'];
+**`Style::add()` 2D array format:** Each item in the `styles` array must be a **2D array** (array of style entry arrays). `$elements->style()` returns this format. Raw declarations must be wrapped: `[[ 'selector' => ..., 'declaration' => ... ]]`. A single-level array gets silently filtered out.
 
-    $classnames_instance->add(
-        TextClassnames::text_options_classnames($attrs['module']['advanced']['text'] ?? []),
-        true
-    );
+### CSS Class Naming Convention
 
-    $classnames_instance->add(
-        ElementClassnames::classnames([
-            'attrs' => array_merge(
-                $attrs['module']['decoration'] ?? [],
-                ['link' => $attrs['module']['advanced']['link'] ?? []]
-            ),
-        ])
-    );
-}
+CSS classes use **underscores** matching `moduleClassName`, not BEM hyphens:
+
+```
+{moduleClassName}__{element}
 ```
 
-### module_styles (PHP)
-
-Generates CSS for the frontend from attributes. Each module's PHP class implements a `module_styles` static method that receives the same `$args` array and outputs `<style>` declarations for the module's selector.
-
-### module_script_data (PHP)
-
-Passes data from PHP to frontend JavaScript:
-
-```php
-public static function module_script_data(array $args): array {
-    return [
-        'chatEndpoint' => rest_url('leaderspath/v1/chat'),
-        'nonce'        => wp_create_nonce('wp_rest'),
-    ];
-}
-```
-
-### Frontend Asset Loading
-
-- Module JS/CSS only loaded when the module is present on the page
-- Use `wp_enqueue_script()` / `wp_enqueue_style()` in the render callback
-- Frontend JS is vanilla JavaScript (no React)
-- VB bundle only loads in the Visual Builder
+Example: `leaderspath_lesson_meta__duration` (NOT `leaderspath-lesson-meta__duration`)
 
 ---
 
-## 8. Theme Builder & Dynamic Content
+## 2. File Structure
 
-### Theme Builder
-
-- Templates assigned to post types (e.g., `leaderspath_activity`)
-- `get_the_ID()` / `get_queried_object_id()` returns the actual post being viewed
-- Custom modules placed in Theme Builder templates, not in post content
-- Template resolution: specific post > taxonomy > post type > global default
-
-### Dynamic Content
-
-- Divi has built-in ACF dynamic content providers for simple fields
-- Complex fields (repeaters, relationships) need custom module PHP `render_callback`
-- LeadersPath modules should query ACF directly in `render_callback` -- NOT use dynamic content tokens
-
-### VB Preview Data
-
-For data-driven modules, fetch preview data via REST API in the edit component. The `PostIdHelper` class (see section 12) provides fallback to the first published post of the expected CPT when the VB context does not have a specific post.
-
----
-
-## 9. Parent/Child Module Pattern
-
-### Parent Module Definition
-
-```typescript
-export const parentModule: ModuleLibrary.Module.RegisterDefinition<ParentModuleAttrs> = {
-    metadata: metadata as Metadata.Values<ParentModuleAttrs>,
-    childrenName: ['example/child-module'],
-    template: [['example/child-module', {}], ['example/child-module', {}]],
-    renderers: { edit: ParentModuleEdit },
-};
-```
-
-### Child Module Definition
-
-```typescript
-export const childModule: ModuleLibrary.Module.RegisterDefinition<ChildModuleAttrs> = {
-    metadata: metadata as Metadata.Values<ChildModuleAttrs>,
-    parentsName: ['example/parent-module'],
-    settings: { content: SettingsContent, design: SettingsDesign },
-    renderers: { edit: ChildModuleEdit },
-};
-```
-
-### Settings with Parent Attribute Inheritance
-
-```typescript
-export const SettingsContent = ({
-    defaultSettingsAttrs,
-    parentAttrs,
-    groupConfiguration,
-}: Module.Settings.Panel.Props<ChildModuleAttrs, ParentModuleAttrs>): ReactElement => {
-    if (groupConfiguration?.contentIcon?.component?.props) {
-        const defaultIconAttrs = mergeAttrs({
-            defaultAttrs: defaultSettingsAttrs?.icon?.innerContent,
-            attrs: parentAttrs?.asMutable({ deep: true })?.icon?.innerContent,
-        });
-        set(groupConfiguration, ['contentIcon', 'component', 'props', 'fields', 'iconInnercontent', 'defaultAttr'], defaultIconAttrs);
-    }
-    return <ModuleGroups groups={groupConfiguration} />;
-};
-```
-
----
-
-## 10. File Structure
-
-### Per-Module Structure
+### Per-Module Files
 
 ```
-src/components/{module-name}/
-  index.ts              -- Exports RegisterDefinition
-  module.json           -- Module metadata (copied to modules-json/)
-  types.ts              -- TypeScript interfaces
-  edit.tsx              -- VB edit component
-  module-classnames.ts  -- Classnames function
-  module-styles.tsx     -- Styles component
-  settings-content.tsx  -- Content settings panel (optional if "auto")
-  module.scss           -- Module-specific styles
-
 modules/{ModuleName}/
-  {ModuleName}.php      -- PHP module class
+  {ModuleName}.php                        -- DependencyInterface class
+  {ModuleName}Trait/
+    RenderCallbackTrait.php               -- PHP render (real data)
+    ModuleClassnamesTrait.php             -- PHP classnames
+    ModuleStylesTrait.php                 -- PHP styles
+    CustomCssTrait.php                    -- Custom CSS fields
+    ModuleScriptDataTrait.php             -- Script data
+
+src/components/{module-name}/
+  module.json                             -- Module schema + attribute definitions
+  module-default-render-attributes.json   -- Default attr values
+  module-default-printed-style-attributes.json
+  types.ts                                -- TypeScript interfaces
+  index.ts                                -- RegisterDefinition export
+  edit.tsx                                -- VB edit component (placeholder content)
+  module-classnames.ts                    -- Classnames function
+  styles.tsx                              -- Styles component
+  custom-css.ts                           -- Custom CSS with i18n labels
+  module-script-data.tsx                  -- Script data component
+  placeholder-content.ts                  -- Default content for new instances
+  module.scss                             -- FE+VB styles → bundle.css
+  style.scss                              -- VB-only styles → vb-bundle.css
+
+src/icons/{icon-name}/
+  index.tsx                               -- SVG icon (no props)
 ```
+
+### SCSS Convention
+
+| File | Builds To | Loaded In |
+|------|-----------|-----------|
+| `module.scss` | `styles/bundle.css` | Frontend + VB |
+| `style.scss` | `styles/vb-bundle.css` | VB only |
 
 ### Build Output
 
 ```
-scripts/bundle.js       -- Compiled TS (VB only)
-styles/bundle.css       -- Frontend CSS
-styles/vb-bundle.css    -- VB-specific CSS
-modules-json/*/module.json -- Copied metadata
+scripts/bundle.js         -- VB JavaScript
+styles/bundle.css         -- Frontend + VB CSS (from module.scss)
+styles/vb-bundle.css      -- VB-only CSS (from style.scss)
+modules-json/*/           -- Copied module.json + default attr JSONs
 ```
 
-### Key webpack externals (NOT bundled)
+---
 
-`@divi/module`, `@divi/module-library`, `@divi/module-utils`, `@divi/field-library`, `@divi/style-library`, `@divi/icon-library`, `@divi/data`, `@divi/rest`, `@divi/modal`, `@divi/types`, `@wordpress/hooks`, `@wordpress/i18n`, `react`, `react-dom`, `lodash`
+## 3. Rendering Pipeline (Bottom-Up)
+
+### Layer 1: Core Data (PHP — `RenderCallbackTrait`)
+
+This is the foundation. The render callback:
+
+1. Resolves the current post ID via `PostIdHelper::get_post_id()`
+2. Reads ACF fields with `get_field( $field_name, $post_id )`
+3. Builds HTML using `HTMLUtility::render()` (NOT `$elements->render()` for data-driven content)
+4. Wraps everything in `Module::render()` with decoration components
+
+```php
+public static function render_callback( $attrs, $content, $block, $elements ) {
+    // 1. Get the real post ID.
+    $post_id = PostIdHelper::get_post_id( 'lesson' );
+
+    // 2. Read ACF data.
+    $duration   = $post_id ? (string) get_field( 'lesson_total_duration', $post_id ) : '';
+    $difficulty = $post_id ? (string) get_field( 'lesson_difficulty', $post_id ) : '';
+
+    // 3. Build HTML with HTMLUtility (data-driven content).
+    $items = '';
+    if ( $duration ) {
+        $items .= HTMLUtility::render([
+            'tag'               => 'span',
+            'attributes'        => [ 'class' => 'leaderspath_lesson_meta__duration' ],
+            'childrenSanitizer' => 'esc_html',
+            'children'          => $duration,
+        ]);
+    }
+
+    $inner = HTMLUtility::render([
+        'tag'               => 'div',
+        'attributes'        => [ 'class' => 'leaderspath_lesson_meta__inner' ],
+        'childrenSanitizer' => 'et_core_esc_previously',
+        'children'          => $items,
+    ]);
+
+    // 4. Wrap in Module::render() with decoration.
+    $parent       = BlockParserStore::get_parent(
+        $block->parsed_block['id'],
+        $block->parsed_block['storeInstance']
+    );
+    $parent_attrs = $parent->attrs ?? [];
+
+    return Module::render([
+        'orderIndex'          => $block->parsed_block['orderIndex'],
+        'storeInstance'       => $block->parsed_block['storeInstance'],
+        'attrs'               => $attrs,
+        'elements'            => $elements,
+        'id'                  => $block->parsed_block['id'],
+        'name'                => $block->block_type->name,
+        'moduleCategory'      => $block->block_type->category,
+        'classnamesFunction'  => [ self::class, 'module_classnames' ],
+        'stylesComponent'     => [ self::class, 'module_styles' ],
+        'scriptDataComponent' => [ self::class, 'module_script_data' ],
+        'parentAttrs'         => $parent_attrs,
+        'parentId'            => $parent->id ?? '',
+        'parentName'          => $parent->blockName ?? '',
+        'children'            => [
+            ElementComponents::component([
+                'attrs'         => $attrs['module']['decoration'] ?? [],
+                'id'            => $block->parsed_block['id'],
+                'orderIndex'    => $block->parsed_block['orderIndex'],
+                'storeInstance' => $block->parsed_block['storeInstance'],
+            ]),
+            $inner,
+        ],
+    ]);
+}
+```
+
+**Why `HTMLUtility::render()` instead of `$elements->render()`?**
+
+`$elements->render()` reads content from `attrs.*.innerContent` — values the user typed into VB settings fields. Our modules don't have user-entered content; they read ACF fields. The content is determined at render time, not at save time. `HTMLUtility::render()` generates HTML from runtime data.
+
+### Layer 2: Styles (PHP + TS — VB-agnostic)
+
+Styles are VB-agnostic — the same `$elements->style()` calls work identically in both PHP and the VB React components because they target **CSS selectors defined in module.json**, not content.
+
+**PHP (`ModuleStylesTrait`):**
+```php
+public static function module_styles( $args ) {
+    Style::add([
+        'id'            => $args['id'],
+        'name'          => $args['name'],
+        'orderIndex'    => $args['orderIndex'],
+        'storeInstance' => $args['storeInstance'],
+        'styles'        => [
+            $args['elements']->style([ 'attrName' => 'module', 'styleProps' => [
+                'disabledOn' => [
+                    'disabledModuleVisibility' => $args['settings']['disabledModuleVisibility'] ?? null,
+                ],
+            ]]),
+            $args['elements']->style([ 'attrName' => 'duration' ]),
+            CssStyle::style([
+                'selector'  => $args['orderClass'],
+                'attr'      => $args['attrs']['css'] ?? [],
+                'cssFields' => self::custom_css(),
+            ]),
+        ],
+    ]);
+}
+```
+
+**TS (`styles.tsx`):**
+```tsx
+export const ModuleStyles = ({
+    attrs, elements, settings, orderClass, mode, state, noStyleTag,
+}: StylesProps<Attrs>): ReactElement => (
+    <StyleContainer mode={mode} state={state} noStyleTag={noStyleTag}>
+        {elements.style({
+            attrName: 'module',
+            styleProps: {
+                disabledOn: { disabledModuleVisibility: settings?.disabledModuleVisibility },
+            },
+        })}
+        {elements.style({ attrName: 'duration' })}
+        <CssStyle selector={orderClass} attr={attrs.css} cssFields={cssFields} />
+    </StyleContainer>
+);
+```
+
+### Layer 3: VB Edit Component (React — placeholder content)
+
+For "current post" modules, the VB component renders **placeholder content** with the same DOM structure as the PHP render callback. This ensures VB design controls (fonts, colors, spacing) apply correctly — they target CSS selectors, not content.
+
+```tsx
+export const LessonMetaEdit = (props: EditProps): ReactElement => {
+    const { attrs, elements, id, name } = props;
+
+    return (
+        <ModuleContainer
+            attrs={attrs} elements={elements} id={id} name={name}
+            stylesComponent={ModuleStyles}
+            classnamesFunction={moduleClassnames}
+            scriptDataComponent={ModuleScriptData}
+        >
+            {elements.styleComponents({ attrName: 'module' })}
+            <ElementComponents attrs={attrs?.module?.decoration ?? {}} id={id} />
+            <div className="leaderspath_lesson_meta__inner">
+                <span className="leaderspath_lesson_meta__duration">
+                    {__('90 minutes', 'leaderspath')}
+                </span>
+            </div>
+        </ModuleContainer>
+    );
+};
+```
+
+### Layer 4: Settings (module.json — auto-generated panels)
+
+Settings panels auto-generate from `module.json` attribute definitions. No code needed in the edit component for settings panels.
+
+**Font settings pattern for data-driven elements** (direct, without group wrapping):
+
+```json
+"duration": {
+    "type": "object",
+    "selector": "{{selector}} .leaderspath_lesson_meta__duration",
+    "tagName": "span",
+    "elementType": "heading",
+    "settings": {
+        "decoration": {
+            "font": {
+                "priority": 10,
+                "component": {
+                    "props": {
+                        "groupLabel": "Duration Text",
+                        "fieldLabel": "Duration",
+                        "fields": {
+                            "headingLevel": { "render": false }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
 
 ---
 
-## 11. Gotchas and Critical Notes
+## 4. Registration
 
-1. **Registration timing:** Must use `divi.moduleLibrary.registerModuleLibraryStore.after` -- registering too early silently fails
-2. **Attribute format:** ALL values must be `{ desktop: { value: "..." } }` -- flat values break responsive editing
-3. **Boolean toggles:** Use `'on'`/`'off'` strings, not `true`/`false`
-4. **Frontend requires PHP:** `render_callback` is mandatory for every displayed module
-5. **CSS selectors:** Use `{{selector}}` placeholder in module.json
-6. **`ModuleContainer` required:** Edit components must use `ModuleContainer`, not `Module`
-7. **Use `elements.render()`:** Do not render HTML directly -- use the elements API for inline editing support
-8. **Webpack externals:** `@divi/*` packages are NOT bundled -- loaded from Divi runtime
-9. **ImmutableObject in settings:** Settings props use `seamless-immutable` -- do not mutate attrs directly
-10. **No Interactivity API:** Divi bypasses the WP block pipeline -- use standard `wp_enqueue_script` for frontend JS
+### PHP: DependencyInterface + ModuleRegistration
+
+```php
+class LessonMeta implements DependencyInterface {
+    use LessonMetaTrait\RenderCallbackTrait;
+    use LessonMetaTrait\ModuleClassnamesTrait;
+    use LessonMetaTrait\ModuleStylesTrait;
+    use LessonMetaTrait\ModuleScriptDataTrait;
+
+    public function load() {
+        $path = LEADERSPATH_MODULES_JSON_PATH . 'lesson-meta/';
+        add_action('init', function() use ($path) {
+            ModuleRegistration::register_module($path, [
+                'render_callback' => [ LessonMeta::class, 'render_callback' ],
+            ]);
+        });
+    }
+}
+```
+
+**Do NOT use `register_block_type()`.** Divi has its own registration system.
+
+### PHP: Modules.php (dependency tree hub)
+
+```php
+add_action('divi_module_library_modules_dependency_tree', function ($dependency_tree) {
+    $dependency_tree->add_dependency( new LessonMeta() );
+});
+```
+
+### TS: Module registration
+
+```typescript
+addAction('divi.moduleLibrary.registerModuleLibraryStore.after', 'leaderspath', () => {
+    registerModule(lessonMeta.metadata, omit(lessonMeta, 'metadata'));
+});
+```
 
 ---
 
-## 12. LeadersPath Module Plan
+## 5. module.json Reference
 
-### Modules to Build (in order)
+### Required Fields
 
-| Priority | Module | Type | Data Source | Complexity |
-|----------|--------|------|-------------|------------|
-| 1 | Lesson Meta | Display fields | lesson_* ACF fields | Low |
-| 2 | Lesson Activities | Display list | lesson_activities relationship | Medium |
-| 3 | Lesson Objectives | Display list | lesson_objectives repeater | Low |
-| 4 | Course Lessons | Display list | course_lessons relationship | Medium |
-| 5 | Activity Meta | Display fields | activity_* ACF fields | Low |
-| 6 | Context Library | Display cards | activity_context_files relationship | Medium |
-| 7 | Skills List | Display cards | activity_skills relationship | Medium |
-| 8 | Chatbot | Interactive | Claude API via REST | High |
+| Field | Description |
+|-------|-------------|
+| `name` | `vendor/module-name` format |
+| `d4Shortcode` | Empty string for new modules |
+| `title` | Display name (prefix "LeadersPath") |
+| `titles` | Plural — a **string**, NOT an array |
+| `moduleIcon` | References registered icon name |
+| `moduleClassName` | CSS base with underscores (e.g., `leaderspath_lesson_meta`) |
+| `moduleOrderClassName` | Same as `moduleClassName` |
+| `category` | One of: `module`, `child-module`, `fullwidth-module`, `structure`, `unsupported` |
+| `customCssFields` | Required for Advanced > Custom CSS tab |
+| `settings` | Must be object `{ "content": "auto", "design": "auto", "advanced": "auto" }` |
 
-### Shared PHP Traits (retained from previous build)
+### Attribute Value Format
 
-These traits live in `modules/Shared/` and are retained from the prior implementation. They have been reviewed and are consistent with patterns observed in the official extension example.
+ALL values use breakpoint-state format:
+```json
+{ "desktop": { "value": "Hello" } }
+```
 
-#### PostIdHelper (`modules/Shared/PostIdHelper.php`)
+Booleans use `'on'`/`'off'` strings, NOT `true`/`false`.
 
-Resolves the current CPT post ID with a fallback for VB/REST contexts. Call `PostIdHelper::get_post_id('lesson')` (pass the CPT slug without the `leaderspath_` prefix). When the queried object is not the expected CPT, it returns the first published post of that type as sample data. **Keep.**
+### Element Attribute Properties
 
-#### ModuleClassnamesTrait (`modules/Shared/ModuleClassnamesTrait.php`)
+| Property | Description |
+|----------|-------------|
+| `type` | Always `"object"` |
+| `selector` | CSS selector with `{{selector}}` placeholder |
+| `tagName` | HTML tag (NOT `tag`) |
+| `elementType` | `"heading"`, `"content"`, etc. |
+| `styleProps` | Style config with `important` flags |
+| `settings.decoration.font` | Font panel — use direct pattern (no `groupType` wrapping) for data-driven elements |
 
-Standard classname generation using Divi's `TextClassnames` and `ElementClassnames` helpers. Applied identically across all modules. **Keep.**
+---
 
-#### CustomCssTrait (`modules/Shared/CustomCssTrait.php`)
+## 6. TypeScript Types
 
-Reads custom CSS fields from the registered block type metadata. Each module using this trait implements `block_name()` to return its `vendor/module-name` string. **Keep.**
+```typescript
+import { ModuleEditProps } from '@divi/module-library';
+import { FormatBreakpointStateAttr, InternalAttrs, type Element, type Module } from '@divi/types';
+import { StylesProps, ModuleClassnamesParams, ModuleScriptDataProps } from '@divi/module';
 
-### Data Contracts
+// Attrs extend InternalAttrs
+interface MyAttrs extends InternalAttrs {
+    css?: FormatBreakpointStateAttr<MyCssAttr>;
+    module?: { /* meta, advanced, decoration */ };
+    duration?: Element.Types.Title.Attributes;
+}
 
-All ACF fields consumed by modules are documented in `docs/data-contracts.md`. When adding or modifying a module, check that document for the field names, types, and return formats. Key notes:
+// Component prop types
+type MyEditProps = ModuleEditProps<MyAttrs>;
+// StylesProps<MyAttrs>
+// ModuleClassnamesParams<MyAttrs>
+// ModuleScriptDataProps<MyAttrs>
+```
 
-- All relationship fields use `return_format => 'id'` (returns `array<int>`)
-- Repeater fields (e.g., `lesson_objectives`) return nested arrays
-- WYSIWYG fields (facilitator guide, learner overview) can use Divi's native Text module with ACF dynamic content -- no custom module needed
+---
+
+## 7. Shared PHP Utilities
+
+### PostIdHelper (`modules/Shared/PostIdHelper.php`)
+
+Resolves current CPT post ID with Theme Builder awareness:
+
+```php
+$post_id = PostIdHelper::get_post_id('lesson');
+// Resolution order:
+// 1. TB + singular → ET_Post_Stack::get_main_post_id()
+// 2. Regular       → get_the_ID()
+// 3. Fallback      → first published post of CPT (sample data for VB)
+```
+
+### ModuleClassnamesTrait (`modules/Shared/ModuleClassnamesTrait.php`)
+
+Adds text option classnames. Uses `TextClassnames` only (NOT `ElementClassnames`).
+
+---
+
+## 8. Gotchas
+
+1. `render_callback` has **4 params**: `($attrs, $content, $block, $elements)` — the 4th is `ModuleElements`
+2. `$elements->render()` reads from `attrs.*.innerContent` — only for user-entered content, NOT ACF data
+3. `HTMLUtility::render()` is for data-driven content (ACF fields, computed values)
+4. `get_queried_object_id()` / `get_the_ID()` return **wrong post** in Theme Builder — use `PostIdHelper`
+5. `ET_Theme_Builder_Layout::is_theme_builder_layout()` detects TB context
+6. `ET_Post_Stack::get_main_post_id()` reads `$wp_query->post` directly, bypassing Divi's global overrides
+7. Font settings: use direct pattern (no `groupType`/`groupSlug`) for data-driven elements
+8. Font settings WITH `groupType: "group-item"` is for static modules with `innerContent` fields
+9. `module.scss` → `bundle.css` (FE+VB); `style.scss` → `vb-bundle.css` (VB only) — counterintuitive naming
+10. `settings` must be object `{ "content": "auto" }`, NOT bare string `"auto"`
+11. `titles` is a string, NOT an array
+12. `tagName` not `tag` for element HTML tag
+13. Icon component takes **no props**: `(): ReactElement`
+14. Registration timing: `divi.moduleLibrary.registerModuleLibraryStore.after` — too early silently fails
+15. Webpack `splitChunks` required for CSS separation between FE and VB bundles
+16. `ElementComponents` must be in both VB and PHP children (renders decoration layers)
+17. `elements.styleComponents({ attrName: 'module' })` required in edit.tsx
+18. `scriptDataComponent` required on both `ModuleContainer` (TS) and `Module::render()` (PHP)
+19. VB edit component shows **placeholders** for current-post modules — same DOM structure, fake content
+20. `ModuleRegistration::register_module()` NOT `register_block_type()` — Divi has its own system
+21. **group-items Content tab:** data shape is `content.innerContent.desktop.value.{subName}` — flat object, NOT per-field breakpoint wrapping. Each item needs `"attrName": "content.innerContent"` to bind correctly.
+22. **group-items VB defaults:** Use `"default"` on the attribute object in module.json. `defaultAttr` on items does NOT work for `group-items` (only `group-item`). `module-default-render-attributes.json` provides frontend PHP defaults only — both files needed.
+23. **Layout panel does NOT output `display`:** Must be generated by PHP (`Style::add()` 2D array) and VB (inline `style`). See Layout section above.
+24. **`Style::add()` 2D format:** Items in `styles` array must be 2D arrays. `$elements->style()` returns this. Raw declarations need wrapping: `[[ 'selector' => ..., 'declaration' => ... ]]`
+25. **CSS variable cascade:** Parent `.et_flex_module` sets `--flex-direction: column`, `--horizontal-gap`, `--vertical-gap`. Child element SCSS must reset these explicitly or they override your defaults.
+26. **DD/DT margin reset specificity:** Divi theme sets `dd { margin-left: 1.5em }`. Reset with `element.class` specificity inside parent: `.module dd.module__value { margin: 0; }`
+
+---
+
+## 9. Implementation Order
+
+| Priority | Module | Data Source | Complexity |
+|----------|--------|-------------|------------|
+| 1 | Lesson Meta | lesson_total_duration, lesson_difficulty, lesson_activities count | Low |
+| 2 | Lesson Objectives | lesson_objectives repeater | Low |
+| 3 | Lesson Activities | lesson_activities relationship | Medium |
+| 4 | Activity Meta | activity_* ACF fields | Low |
+| 5 | Course Lessons | course_lessons relationship | Medium |
+| 6 | Context Library | activity_context_files relationship | Medium |
+| 7 | Skills List | activity_skills relationship | Medium |
+| 8 | Chatbot | Claude API via REST | High |
 
 ---
 
@@ -614,10 +549,8 @@ All ACF fields consumed by modules are documented in `docs/data-contracts.md`. W
 
 | Source | Location |
 |--------|----------|
-| `@divi/types` (v1.0.10+) | `node_modules/@divi/types/src/` |
-| `@types/divi__module` | `node_modules/@types/divi__module/build-types/` |
-| `@types/divi__module-library` | `node_modules/@types/divi__module-library/build-types/` |
-| `@types/divi__field-library` | `node_modules/@types/divi__field-library/build-types/` |
-| `@types/divi__style-library` | `node_modules/@types/divi__style-library/build-types/` |
-| Official example repo | https://github.com/elegantthemes/d5-extension-example-modules |
-| Existing shared traits | `modules/Shared/*.php` |
+| Official extension example repo | `github.com/elegantthemes/d5-extension-example-modules` (cloned to `/tmp/`) |
+| Divi theme source (WooCommerce modules) | `themes/divi/includes/builder-5/server/Packages/ModuleLibrary/WooCommerce/` |
+| DynamicContentPosts (post ID resolution) | `themes/divi/includes/builder-5/server/Packages/Module/Layout/Components/DynamicContent/DynamicContentPosts.php` |
+| ET_Post_Stack | `themes/divi/includes/builder/post/PostStack.php` |
+| ET_Theme_Builder_Layout | `themes/divi/includes/builder/` |

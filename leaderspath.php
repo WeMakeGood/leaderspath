@@ -29,6 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'LEADERSPATH_VERSION', '0.1.0' );
 define( 'LEADERSPATH_PATH', plugin_dir_path( __FILE__ ) );
 define( 'LEADERSPATH_URL', plugin_dir_url( __FILE__ ) );
+define( 'LEADERSPATH_MODULES_JSON_PATH', LEADERSPATH_PATH . 'modules-json/' );
 
 /**
  * Composer autoloader.
@@ -50,6 +51,7 @@ require LEADERSPATH_PATH . 'admin/class-admin-columns.php';
 require LEADERSPATH_PATH . 'includes/class-claude-api.php';
 require LEADERSPATH_PATH . 'includes/class-rest-api.php';
 require LEADERSPATH_PATH . 'includes/class-skill-processor.php';
+require LEADERSPATH_PATH . 'modules/Modules.php';
 
 /**
  * Initialize core functionality.

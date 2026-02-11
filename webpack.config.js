@@ -83,11 +83,38 @@ module.exports = {
         test: /\.s?css$/,
         use: [
           MiniCssExtractPlugin.loader,
-          'css-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              url: false,
+              importLoaders: 2,
+            },
+          },
           'sass-loader',
         ],
       },
     ],
+  },
+
+  // Split CSS: style.scss → vb-bundle.css (VB only), module.scss → bundle.css (FE + VB)
+  optimization: {
+    splitChunks: {
+      cacheGroups: {
+        vb: {
+          type: 'css/mini-extract',
+          test: /[\\/]style(\.module)?\.(sc|sa|c)ss$/,
+          chunks: 'all',
+          enforce: true,
+          name( _, chunks, cacheGroupKey ) {
+            const chunkName = chunks[ 0 ].name;
+            return `${ path.dirname(
+              chunkName
+            ) }/${ cacheGroupKey }-${ path.basename( chunkName ) }`;
+          },
+        },
+        default: false,
+      },
+    },
   },
 
   // Resolve extensions
@@ -103,14 +130,15 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         {
-          from: 'src/components/**/module.json',
-          to({ absoluteFilename }) {
-            // Extract the module directory name (e.g., "hello-module" from path)
-            const parts = absoluteFilename.split('/');
-            const moduleIndex = parts.indexOf('components') + 1;
-            const moduleName = parts[moduleIndex];
-            return `../modules-json/${moduleName}/module.json`;
-          },
+          from: '**/module.json',
+          context: 'src/components',
+          to: path.resolve(__dirname, 'modules-json'),
+          noErrorOnMissing: true,
+        },
+        {
+          from: '**/module-default-render-attributes.json',
+          context: 'src/components',
+          to: path.resolve(__dirname, 'modules-json'),
           noErrorOnMissing: true,
         },
       ],

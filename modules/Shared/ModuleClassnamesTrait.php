@@ -2,8 +2,8 @@
 /**
  * Shared Module Classnames trait for all LeadersPath Divi 5 modules.
  *
- * Adds text option classnames and element classnames based on
- * module attributes. All modules use identical classname logic.
+ * Adds text option classnames based on module attributes.
+ * All modules use identical classname logic.
  *
  * JS equivalent: src/components/shared/module-classnames.ts
  *
@@ -19,7 +19,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access forbidden.' );
 }
 
-use ET\Builder\Packages\Module\Options\Element\ElementClassnames;
 use ET\Builder\Packages\Module\Options\Text\TextClassnames;
 
 /**
@@ -47,24 +46,10 @@ trait ModuleClassnamesTrait {
 		$classnames_instance = $args['classnamesInstance'];
 		$attrs               = $args['attrs'];
 
-		// Add text option classnames.
-		$classnames_instance->add(
-			TextClassnames::text_options_classnames( $attrs['module']['advanced']['text'] ?? [] ),
-			true
-		);
+		$text_options_classnames = TextClassnames::text_options_classnames( $attrs['module']['advanced']['text'] ?? [] );
 
-		// Add element classnames.
-		$classnames_instance->add(
-			ElementClassnames::classnames(
-				[
-					'attrs' => array_merge(
-						$attrs['module']['decoration'] ?? [],
-						[
-							'link' => $attrs['module']['advanced']['link'] ?? [],
-						]
-					),
-				]
-			)
-		);
+		if ( $text_options_classnames ) {
+			$classnames_instance->add( $text_options_classnames, true );
+		}
 	}
 }
