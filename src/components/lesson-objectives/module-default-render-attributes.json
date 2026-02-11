@@ -1,0 +1,21 @@
+{
+  "module": {
+    "meta": {
+      "adminLabel": {
+        "desktop": {
+          "value": "Lesson Objectives"
+        }
+      }
+    }
+  },
+  "content": {
+    "innerContent": {
+      "desktop": {
+        "value": {
+          "showHeading": "on",
+          "headingText": "Learning Objectives"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+// Lesson Objectives — Visual Builder only styles.
+//
+// Compiles into styles/vb-bundle.css (loaded in VB only).
+// Use for VB-specific overrides or placeholder styling.
+
+.leaderspath_lesson_objectives {
+	// Placeholder content in VB gets a subtle indicator.
+	&__list {
+		min-height: 1.5em;
+	}
+}

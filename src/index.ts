@@ -16,10 +16,12 @@ import { omit } from 'lodash';
 import './module-icons';
 
 import { lessonMeta } from './components/lesson-meta';
+import { lessonObjectives } from './components/lesson-objectives';
 
 /**
  * Register all LeadersPath modules after Divi's module library store is ready.
  */
 addAction('divi.moduleLibrary.registerModuleLibraryStore.after', 'leaderspath', () => {
     registerModule(lessonMeta.metadata, omit(lessonMeta, 'metadata'));
+    registerModule(lessonObjectives.metadata, omit(lessonObjectives, 'metadata'));
 });

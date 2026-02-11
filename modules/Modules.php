@@ -17,6 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use LeadersPath\Modules\LessonMeta\LessonMeta;
+use LeadersPath\Modules\LessonObjectives\LessonObjectives;
 
 /**
  * Register modules with Divi's dependency tree.
@@ -25,6 +26,7 @@ add_action(
 	'divi_module_library_modules_dependency_tree',
 	function ( $dependency_tree ) {
 		$dependency_tree->add_dependency( new LessonMeta() );
+		$dependency_tree->add_dependency( new LessonObjectives() );
 	}
 );
 
