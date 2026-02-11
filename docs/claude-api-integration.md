@@ -474,37 +474,18 @@ Consider adding:
 
 ---
 
-## Implementation Checklist
+## Implementation Status
 
-### Phase 1: Skill Upload
+All Claude API integration work is complete:
 
-- [ ] Add `skill_anthropic_id` and `skill_anthropic_version` ACF fields
-- [ ] Update Skill_Processor to upload to Anthropic Skills API
-- [ ] Store returned skill_id and version
-- [ ] Handle upload errors with admin notices
-- [ ] Add re-sync button for failed uploads
+- **Skill Upload:** ACF fields, Skill_Processor upload/sync, error handling, re-sync button
+- **Chat Integration:** Container API, code execution tool, skills array, pause_turn handling, container reuse
+- **Settings:** Configurable beta header versions, tool type version
+- **Response Handling:** Code execution result parsing, multi-block content extraction
 
-### Phase 2: Chat Integration
-
-- [ ] Update Claude_API to use container parameter
-- [ ] Add code execution tool to requests
-- [ ] Build skills array from activity's linked skills
-- [ ] Handle pause_turn responses
-- [ ] Store container_id in session for reuse
-
-### Phase 3: Settings
-
-- [ ] Add beta header version fields to settings
-- [ ] Add tool type version field
-- [ ] Add "Test Skills API" button
-- [ ] Document version update process
-
-### Phase 4: Response Handling
-
-- [ ] Parse code execution results
-- [ ] Handle file outputs (if needed)
-- [ ] Format execution results for display
-- [ ] Error display in chat UI
+**Remaining:**
+- [ ] Handle file outputs from code execution (deferred — not critical for MVP)
+- [ ] Error display in chat UI (requires frontend module rebuild)
 
 ---
 

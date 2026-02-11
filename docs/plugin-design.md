@@ -1,8 +1,8 @@
 # LeadersPath Plugin Design Document
 
-**Version:** 0.3.0
-**Last Updated:** 2026-02-09
-**Status:** Implemented
+**Version:** 0.4.0
+**Last Updated:** 2026-02-10
+**Status:** Core infrastructure implemented; frontend modules pending rebuild
 
 ## Executive Summary
 
@@ -15,7 +15,7 @@ LeadersPath is a WordPress plugin that powers a **facilitated learning experienc
 1. **Facilitated Learning** - Lessons are taught by facilitators; activities let learners experiment
 2. **Transparency First** - Learners can always see and download the context and skills powering the AI
 3. **WordPress Native** - Uses CPTs, taxonomies, ACF, and standard WordPress patterns
-4. **Divi Integration** - Visual Builder modules for flexible page design
+4. **Divi Integration** - Visual Builder modules for flexible page design (pending rebuild)
 5. **Stateless Conversations** - No persistence; page reload clears history for experimentation
 6. **Context vs Skills** - Clear separation between reference material (context) and capabilities (skills)
 
@@ -35,15 +35,15 @@ LeadersPath is a WordPress plugin that powers a **facilitated learning experienc
 │  └─────────────────────────────────────────────────────────────────┘│
 │                                                                      │
 │  ┌──────────────────────┐  ┌────────────────────────────────────┐  │
-│  │    Claude API        │  │         Divi 5 Modules             │  │
-│  │  ┌────────────────┐  │  │  ┌──────────┐  ┌────────────────┐  │  │
-│  │  │ Messages API   │  │  │  │ Chatbot  │  │ Context Library│  │  │
-│  │  │ + Container    │  │  │  └──────────┘  └────────────────┘  │  │
-│  │  │ + Code Exec    │  │  │  ┌──────────┐  ┌────────────────┐  │  │
-│  │  └────────────────┘  │  │  │Skills    │  │  Activity Meta │  │  │
-│  │  ┌────────────────┐  │  │  │List      │  │                │  │  │
-│  │  │  Skills API    │  │  │  └──────────┘  └────────────────┘  │  │
-│  │  │  (Upload/Sync) │  │  └────────────────────────────────────┘  │
+│  │    Claude API        │  │      Divi 5 Modules (pending)     │  │
+│  │  ┌────────────────┐  │  │                                    │  │
+│  │  │ Messages API   │  │  │  Removed for clean rebuild.        │  │
+│  │  │ + Container    │  │  │  Will be rebuilt after proper       │  │
+│  │  │ + Code Exec    │  │  │  Divi 5 research phase.            │  │
+│  │  └────────────────┘  │  │                                    │  │
+│  │  ┌────────────────┐  │  └────────────────────────────────────┘  │
+│  │  │  Skills API    │  │                                          │
+│  │  │  (Upload/Sync) │  │                                          │
 │  │  └────────────────┘  │                                          │
 │  └──────────────────────┘                                          │
 │                                                                      │
@@ -176,12 +176,9 @@ The lesson is the atomic teaching unit, taught as a cohesive whole by a facilita
 A reusable curriculum containing an ordered sequence of Lessons:
 
 **Metadata (ACF):**
-- Associated Lessons (relationship, multiple)
-- Start/End Dates
-- Instructor (user)
-- Language, Timezone
-- Max Participants
-- Status (Upcoming/Active/Completed/Cancelled)
+- `course_lessons` - Ordered list of lessons (relationship to `leaderspath_lesson`)
+
+**Note:** Cohort-specific fields (start/end dates, instructor, enrollment) belong on the WooCommerce product type (Phase 7), not the Course CPT.
 
 ## Context vs Skills: The Critical Distinction
 
@@ -234,102 +231,6 @@ This is the most important architectural concept in LeadersPath:
 ```
 
 **Note:** The activity's `post_content` (what learners see on the page) is NOT included in the system prompt. Only the Custom System Prompt field and attached Context Files define Claude's behavior.
-
-## Divi 5 Module Architecture
-
-All modules use the **Theme Builder Pattern** - they read data from the current post (activity) using `get_queried_object_id()`.
-
-### Module Registration
-
-**PHP Side:** `modules/{ModuleName}/{ModuleName}.php`
-- Implements `DependencyInterface`
-- Registers via `ModuleRegistration::register_module()`
-- Uses traits: RenderCallbackTrait, ModuleStylesTrait, ModuleClassnamesTrait, CustomCssTrait
-
-**JavaScript Side:** `src/components/{module-name}/`
-- `module.json` - Attribute schema and settings
-- `edit.tsx` - Visual Builder preview
-- `styles.tsx` - Dynamic styles
-- `index.ts` - Module export
-
-### LeadersPath Chatbot Module
-
-**Files:**
-- `modules/Chatbot/Chatbot.php` + 4 traits
-- `src/components/chatbot/` (8 TypeScript files)
-- `assets/js/chatbot.js` (frontend interactivity)
-- `assets/css/chatbot.css` (runtime styles)
-
-**Dependencies:**
-- TinyMCE (from wp-includes, custom handle to avoid CSS conflicts)
-- marked.js (CDN, for markdown rendering)
-
-**Features:**
-- Rich text input with keyboard shortcuts (Ctrl+B, Ctrl+I, etc.)
-- Markdown rendering with GitHub Flavored Markdown
-- Smart scroll (new messages appear at top of visible area)
-- Loading indicators (animated dots)
-- Error display in conversation
-- Configurable styling for all elements
-- Supports Lesson Q&A mode (uses `lesson_id` to load lesson-level context)
-
-### LeadersPath Context Library Module
-
-Displays context files attached to current activity.
-
-**Features:**
-- Responsive card grid (auto-fill, min 280px)
-- View content modal (custom implementation)
-- Download buttons
-- Visibility toggles for all elements
-- Styling options for cards, titles, descriptions, badges, buttons
-
-### LeadersPath Skills List Module
-
-Displays skills attached to current activity.
-
-**Features:**
-- Responsive card grid (same as Context Library)
-- Compatibility badge (e.g., "Python 3.9+")
-- Version badge (e.g., "v1.2.0")
-- Download links to ZIP packages
-- Visibility toggles for all elements
-
-### LeadersPath Activity Meta Module
-
-Displays activity metadata.
-
-**Features:**
-- Duration display with configurable label
-- AI model indicator
-- Visibility toggles for each section
-
-### LeadersPath Lesson Meta Module
-
-Displays lesson metadata (duration, difficulty, activity count).
-
-**Features:**
-- Duration display
-- Difficulty badge
-- Activity count
-- Uses REST API for VB preview (`/leaderspath/v1/lessons/meta`)
-
-### LeadersPath Lesson Objectives Module
-
-Displays learning objectives for the current lesson.
-
-**Features:**
-- Ordered objectives list from `lesson_objectives` repeater field
-- Uses REST API for VB preview (`/leaderspath/v1/lessons/objectives`)
-
-### LeadersPath Lesson Activities Module
-
-Displays the ordered list of activities within the current lesson.
-
-**Features:**
-- Activity list with links
-- Duration per activity
-- Uses REST API for VB preview (`/leaderspath/v1/lessons/activities`)
 
 ## Claude API Integration
 
@@ -386,17 +287,12 @@ Configurable in Settings > LeadersPath:
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/leaderspath/v1/chat` | POST | Send message, receive Claude response |
-| `/leaderspath/v1/activities/{id}/context` | GET | Get activity's context files |
-| `/leaderspath/v1/activities/{id}/skills` | GET | Get activity's skills |
-| `/leaderspath/v1/activities/meta` | GET | VB preview: activity metadata |
-| `/leaderspath/v1/lessons/{id}/context` | GET | Get lesson Q&A chatbot's context files |
-| `/leaderspath/v1/lessons/meta` | GET | VB preview: lesson metadata |
-| `/leaderspath/v1/lessons/objectives` | GET | VB preview: lesson objectives |
-| `/leaderspath/v1/lessons/activities` | GET | VB preview: lesson activities list |
 | `/leaderspath/v1/context/{id}/download` | GET | Download context file content |
-| `/leaderspath/v1/skills/{id}/download` | GET | Download skill ZIP package |
+| `/leaderspath/v1/skills/{id}/download` | GET | Download skill package metadata |
 
 All endpoints require authentication (logged in + appropriate capability).
+
+**Note:** VB preview endpoints for Divi modules were removed and will be re-added during the frontend rebuild.
 
 ## Security Model
 
@@ -450,55 +346,20 @@ leaderspath/
 │   ├── class-settings.php       # Settings page
 │   └── class-admin-columns.php  # Custom admin columns
 │
-├── modules/                     # Divi 5 PHP modules
-│   ├── Modules.php              # Module registration hub
-│   ├── Chatbot/
-│   │   ├── Chatbot.php
-│   │   └── ChatbotTrait/
-│   │       ├── RenderCallbackTrait.php
-│   │       ├── ModuleStylesTrait.php
-│   │       ├── ModuleClassnamesTrait.php
-│   │       └── CustomCssTrait.php
-│   ├── ContextLibrary/
-│   ├── SkillsList/
-│   ├── ActivityMeta/
-│   ├── LessonMeta/
-│   ├── LessonObjectives/
-│   └── LessonActivities/
+├── modules/                     # Divi 5 PHP modules (pending rebuild)
+│   └── Shared/                  # Shared traits (may need re-evaluation)
+│       ├── PostIdHelper.php
+│       ├── CustomCssTrait.php
+│       └── ModuleClassnamesTrait.php
 │
-├── src/                         # Divi 5 TypeScript modules
-│   ├── index.ts                 # Module registration
-│   └── components/
-│       ├── chatbot/
-│       │   ├── module.json
-│       │   ├── edit.tsx
-│       │   ├── styles.tsx
-│       │   ├── types.ts
-│       │   └── ...
-│       ├── context-library/
-│       ├── skills-list/
-│       ├── activity-meta/
-│       ├── lesson-meta/
-│       ├── lesson-objectives/
-│       └── lesson-activities/
-│
-├── assets/
-│   ├── js/
-│   │   ├── chatbot.js           # Frontend chat interactivity
-│   │   └── context-modal.js     # Modal for viewing content
-│   └── css/
-│       ├── chatbot.css
-│       └── context-modal.css
-│
-├── modules-json/                # Built module.json files
-├── scripts/bundle.js            # Built VB JavaScript
-├── styles/bundle.css            # Built styles
+├── src/                         # Divi 5 TypeScript (pending rebuild)
+│   └── components/              # Empty — awaiting research phase
 │
 ├── docs/
 │   ├── plugin-design.md         # This file
 │   ├── cpt-schema.md            # CPT and ACF field details
 │   ├── claude-api-integration.md # API integration guide
-│   ├── divi-modules.md          # Module development guide
+│   ├── data-contracts.md        # ACF → REST endpoint mapping
 │   └── content-creation-guide.md # Content authoring guide
 │
 ├── bin/
@@ -520,8 +381,6 @@ leaderspath/
 | Streaming optional | Nice UX but adds complexity; implement if time permits |
 | Context files in system prompt | Simple, reliable; no additional API calls |
 | Skills uploaded to Anthropic | Required for code execution; progressive loading |
-| TinyMCE without toolbar | Clean UI; keyboard shortcuts are sufficient |
-| marked.js from CDN | Lightweight, reliable markdown parsing |
 
 ## Future Considerations
 

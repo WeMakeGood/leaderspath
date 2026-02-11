@@ -31,7 +31,7 @@ LeadersPath is a WordPress plugin developed by WeMakeGood that powers a facilita
 **Key Features:**
 - Custom post types for Activities, Lessons, Courses, Context Files, and Skills
 - Claude API integration for interactive chatbot experiences
-- Divi 5 modules for flexible lesson/activity template design
+- Divi 5 modules for flexible lesson/activity template design (pending rebuild)
 - Transparency features showing learners the context and skills used by AI
 - Role-based access control for content and features
 
@@ -52,22 +52,13 @@ leaderspath/
 │   ├── class-rest-api.php
 │   └── class-skill-processor.php
 │
-├── modules/                 # Divi 5 modules (PHP)
-│   ├── Chatbot/
-│   ├── ContextLibrary/
-│   ├── SkillsList/
-│   ├── ActivityMeta/
-│   ├── LessonMeta/
-│   ├── LessonObjectives/
-│   └── LessonActivities/
+├── modules/                 # Divi 5 modules (pending rebuild)
+│   └── Shared/              # Shared PHP traits (may need re-evaluation)
 │
-├── src/                     # Divi 5 modules (TypeScript/React)
-│   └── components/
+├── src/                     # Divi 5 TypeScript (pending rebuild)
+│   └── components/          # Empty — awaiting research phase
 │
 ├── admin/                   # Admin functionality
-├── assets/                  # Frontend CSS/JS
-├── templates/               # Template overrides
-├── languages/               # Translation files
 ├── docs/                    # Documentation
 ├── tests/                   # PHPUnit tests
 ├── bin/                     # Build scripts
@@ -109,9 +100,10 @@ All documentation lives in the `docs/` folder:
 |----------|---------|
 | [plugin-design.md](docs/plugin-design.md) | Architecture overview, design decisions |
 | [cpt-schema.md](docs/cpt-schema.md) | Custom post types, taxonomies, ACF fields |
-| [divi-modules.md](docs/divi-modules.md) | Divi 5 module development guide |
+| [divi-modules.md](docs/divi-modules.md) | Divi 5 module status (pending research) |
+| [data-contracts.md](docs/data-contracts.md) | ACF field → REST endpoint mapping |
 | [claude-api-integration.md](docs/claude-api-integration.md) | **Claude API integration (CRITICAL)** |
-| [api-reference.md](docs/api-reference.md) | REST API endpoints (TODO) |
+| [content-creation-guide.md](docs/content-creation-guide.md) | Content authoring guide |
 
 ## External Dependencies
 
@@ -430,17 +422,6 @@ Maintain `CHANGELOG.md` using [Keep a Changelog](https://keepachangelog.com/) fo
 | CSS Classes | `leaderspath-` |
 | JS Globals | `LeadersPath` |
 
-## Key Files
-
-| Purpose | File |
-|---------|------|
-| Plugin bootstrap | `leaderspath.php` |
-| Main class | `includes/class-leaderspath.php` |
-| Post types | `includes/class-post-types.php` |
-| Claude API | `includes/class-api-handler.php` |
-| REST endpoints | `includes/class-rest-api.php` |
-| Admin settings | `admin/class-settings.php` |
-
 ## Useful Hooks
 
 ```php
@@ -467,13 +448,14 @@ apply_filters('leaderspath_activity_context_files', $files, $activity_id);
 
 ## Completed Work
 
-- **Divi 5 Integration:** Proven working with Hello Module test case
+- **Data Layer:** 5 CPTs, 3 taxonomies, ACF field groups, roles & capabilities
+- **Admin Interface:** Settings page, custom columns, quick edit
+- **Claude API:** Container API with code execution + skills
 - **Build System:** Webpack + TypeScript configured and functional
-- **Documentation:** Plugin design, CPT schema, Divi module guide complete
 
-## In Progress
+## Current Status
 
-See `docs/TASKS.md` for current task list.
+Divi 5 module code was removed (`844094c`) due to incomplete research. Frontend rebuild pending comprehensive Divi 5 research phase. See `docs/TASKS.md` for details.
 
 ## Key Architectural Decisions
 
@@ -527,36 +509,14 @@ Container:
 4. **Chat request** → skill_id included in `container.skills` array
 5. **Update** → New ZIP creates version via `POST /v1/skills/{id}/versions`
 
-## Module Registration Pattern
+## Key Files
 
-**PHP Side** (in `modules/Modules.php`):
-```php
-add_action('divi_module_library_modules_dependency_tree', function($dependency_tree) {
-    $dependency_tree->add_dependency(new YourModule());
-});
-```
-
-**JavaScript Side** (in `src/index.ts`):
-```typescript
-addAction('divi.moduleLibrary.registerModuleLibraryStore.after', 'leaderspath', () => {
-    registerModule(yourModule.metadata, omit(yourModule, 'metadata'));
-});
-```
-
-## File Locations for New Modules
-
-| Component | Location |
-|-----------|----------|
-| PHP Module Class | `modules/{ModuleName}/{ModuleName}.php` |
-| PHP Traits | `modules/{ModuleName}/{ModuleName}Trait/*.php` |
-| React Component | `src/components/{module-name}/edit.tsx` |
-| Module Schema | `src/components/{module-name}/module.json` |
-| Styles | `src/components/{module-name}/style.scss` |
-
-## Build Output
-
-| File | Purpose |
-|------|---------|
-| `scripts/bundle.js` | Visual Builder JavaScript |
-| `styles/bundle.css` | Frontend + VB styles |
-| `modules-json/{module-name}/module.json` | Module metadata for PHP registration |
+| Purpose | File |
+|---------|------|
+| Plugin bootstrap | `leaderspath.php` |
+| Post types | `includes/class-post-types.php` |
+| ACF fields | `includes/class-acf-fields.php` |
+| Claude API | `includes/class-claude-api.php` |
+| REST endpoints | `includes/class-rest-api.php` |
+| Skill processor | `includes/class-skill-processor.php` |
+| Admin settings | `admin/class-settings.php` |
