@@ -322,7 +322,6 @@ Activities demonstrate:
 | Field | Type | Description |
 |-------|------|-------------|
 | `activity_duration` | Number | Estimated duration in minutes (1-480) |
-| `activity_prerequisites` | Relationship | Activities that should be completed first |
 | `activity_references` | Repeater | External resources (title, URL, description) |
 
 **AI Sandbox Configuration (ACF Fields):**
@@ -408,6 +407,21 @@ Demonstrate what well-aligned AI behavior looks like.
 | **Temperature: 0.3** | Consistent, predictable behavior for comparison |
 | **Temperature: 0.7** | Natural variation in responses |
 | **Temperature: 1.0** | Maximum creativity/unpredictability |
+
+---
+
+## Creating Courses
+
+Courses are **reusable curriculum structures** containing an ordered sequence of Lessons. They define what is taught and in what order.
+
+### Course Settings (ACF Fields)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `course_lessons` | Relationship | Ordered list of lessons |
+| `course_prerequisites` | Relationship | Courses that should be completed before this one |
+
+**Prerequisites** are other courses, not individual lessons or activities. For example, "Advanced AI Ethics" might require "Intro to AI" as a prerequisite. Prerequisites are checked at the cohort level — when a cohort links to courses, all prerequisite courses are aggregated automatically.
 
 ---
 

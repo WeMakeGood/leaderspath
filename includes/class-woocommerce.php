@@ -442,6 +442,51 @@ class WooCommerce {
 	}
 
 	// -------------------------------------------------------------------------
+	// Prerequisite Resolution
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Get all prerequisite courses for a cohort.
+	 *
+	 * Aggregates the `course_prerequisites` from every course linked to
+	 * the cohort, de-duplicates, and excludes courses that are already
+	 * included in the cohort itself (a course can't be both required AND
+	 * delivered by the same cohort).
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $cohort_id WooCommerce product (cohort) ID.
+	 * @return array<int> Unique prerequisite course post IDs.
+	 */
+	public static function get_cohort_prerequisites( int $cohort_id ): array {
+		$cohort_courses = get_field( 'cohort_courses', $cohort_id );
+
+		if ( ! is_array( $cohort_courses ) || empty( $cohort_courses ) ) {
+			return [];
+		}
+
+		$prerequisites = [];
+
+		foreach ( $cohort_courses as $course_id ) {
+			$course_prereqs = get_field( 'course_prerequisites', $course_id );
+
+			if ( is_array( $course_prereqs ) ) {
+				foreach ( $course_prereqs as $prereq_id ) {
+					$prerequisites[] = (int) $prereq_id;
+				}
+			}
+		}
+
+		// De-duplicate and exclude courses already in the cohort.
+		$prerequisites = array_unique( $prerequisites );
+		$prerequisites = array_values(
+			array_diff( $prerequisites, array_map( 'intval', $cohort_courses ) )
+		);
+
+		return $prerequisites;
+	}
+
+	// -------------------------------------------------------------------------
 	// Access Chain Resolution
 	// -------------------------------------------------------------------------
 

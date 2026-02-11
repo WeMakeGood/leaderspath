@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-02-10
-**Current Phase:** Phase 7 complete; Frontend Rebuild (research pending)
+**Last Updated:** 2026-02-11
+**Current Phase:** Phase 8 complete; Frontend Rebuild (research pending)
 
 ---
 
@@ -81,6 +81,16 @@ Cohorts are a WooCommerce product type for enrollment management.
 
 ---
 
+## Phase 8: Schema Refinements
+
+- [x] Move prerequisites from Activity level to Course level (ACF field migration)
+- [x] Add `course_prerequisites` relationship field to Course Settings
+- [x] Add `WooCommerce::get_cohort_prerequisites()` for aggregated prerequisite resolution
+- [x] Normalize `lesson_activities` return_format from `object` to `id` for consistency
+- [x] Update documentation (data-contracts, cpt-schema, content-creation-guide, TASKS)
+
+---
+
 ## Discovered Tasks
 
 - [ ] Handle file outputs from code execution (deferred — not critical for MVP)
@@ -113,6 +123,9 @@ Cohorts are a WooCommerce product type for enrollment management.
 | 2026-02-10 | Cohort phase derived from dates | No manual status field; auto-computed from start/end dates |
 | 2026-02-10 | Multiple courses per cohort | Supports bundled curricula / certificate programs |
 | 2026-02-10 | Graceful WC degradation | Plugin works without WC; enrollment not enforced |
+| 2026-02-11 | Prerequisites at Course level, not Activity | Courses are the right abstraction for sequencing; activities are experiments within lessons |
+| 2026-02-11 | All ACF relationship fields return IDs | Consistent `return_format => 'id'` across all relationship fields |
+| 2026-02-11 | Cohort prereq aggregation via helper method | `get_cohort_prerequisites()` collects from linked courses, de-duplicates, excludes self |
 
 ---
 

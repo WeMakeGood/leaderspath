@@ -62,7 +62,6 @@ AI sandbox experiments within a facilitated Lesson.
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
 | `activity_duration` | Number | Estimated duration in minutes |
-| `activity_prerequisites` | Relationship | Activities that should be completed before this one |
 | `activity_references` | Repeater | External resources |
 | `activity_references.title` | Text | Resource title |
 | `activity_references.url` | URL | Resource link |
@@ -180,6 +179,7 @@ A reusable curriculum containing Lessons. Groups learners working through lesson
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
 | `course_lessons` | Relationship | Ordered list of lessons (`leaderspath_lesson` posts) |
+| `course_prerequisites` | Relationship | Courses that should be completed before this one (`leaderspath_course` posts) |
 
 ---
 
@@ -577,4 +577,4 @@ When deactivating:
 - The Activity CPT slug is `leaderspath_activity`
 - The `lesson_activities` field stores activity IDs for a lesson
 - The `course_lessons` field stores lesson IDs for a course
-- All ACF fields use `activity_` prefix (e.g., `activity_duration`, `activity_prerequisites`)
+- All ACF fields use `activity_` prefix (e.g., `activity_duration`, `activity_references`)

@@ -19,7 +19,6 @@ When you add, change, or remove an ACF field, check this document to find every 
 | `chatbot_max_tokens` | `POST /chat` (internal) | API param |
 | `chatbot_temperature` | `POST /chat` (internal) | API param |
 | `chatbot_allow_model_switch` | `POST /chat` (internal) | Model selector toggle |
-| `activity_prerequisites` | — | Not yet surfaced |
 | `activity_references` | — | Not yet surfaced |
 
 ## Lesson (`leaderspath_lesson`)
@@ -45,6 +44,7 @@ When you add, change, or remove an ACF field, check this document to find every 
 | ACF Field | REST Endpoint | Usage |
 |-----------|--------------|-------|
 | `course_lessons` | — | Ordered lesson list |
+| `course_prerequisites` | — | Prerequisite courses (relationship, returns IDs) |
 
 ## Context (`leaderspath_context`)
 
@@ -79,6 +79,8 @@ When you add, change, or remove an ACF field, check this document to find every 
 | `cohort_start_date` | — | Derives cohort phase (upcoming/active/completed) |
 | `cohort_end_date` | — | Derives cohort phase |
 | `cohort_facilitator` | — | Admin display |
+
+**Prerequisite Aggregation:** `WooCommerce::get_cohort_prerequisites( $cohort_id )` returns a flat `array<int>` of prerequisite course IDs aggregated from the cohort's linked courses, de-duplicated and excluding courses already in the cohort.
 
 **Max Participants:** Uses WooCommerce stock management (`_stock` meta / Inventory tab) rather than a custom field.
 
