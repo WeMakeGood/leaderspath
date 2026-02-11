@@ -85,6 +85,15 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 4. **group-items `attrName`:** Each item needs `"attrName": "content.innerContent"` to bind correctly.
 5. **CSS variable cascade:** Parent `.et_flex_module` sets `--flex-direction: column`, `--horizontal-gap`, `--vertical-gap`. SCSS must explicitly reset these on inner container.
 
+### Completed: Lesson Activities Module (2026-02-11)
+
+- [x] Layer 1: Core PHP renderer (`LessonActivitiesRenderer`) — ACF relationship + semantic HTML (`<ul>`/`<li>`/`<article>`)
+- [x] Layer 2: SCSS — structural resets only; visual styling deferred to Divi controls
+- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder activities
+- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Content tab toggles, Custom CSS fields
+- [x] Number badge styling — Design > Number Badge group with background color, border/radius, spacing, box shadow (pattern from Divi Blurb imageIcon)
+- [x] Default appearance — gray (#e0e0e0) circle (50% border-radius) via `module-default-render-attributes.json`
+
 ### Pending Tasks
 
 - [ ] Rebuild remaining modules from validated patterns (see `docs/divi5-module-architecture.md` section 9 for build order)
@@ -183,6 +192,7 @@ Cohorts are a WooCommerce product type for enrollment management.
 | 2026-02-11 | VB defaults via module.json `default` | `module-default-render-attributes.json` only for frontend PHP; VB reads attribute `"default"` in module.json |
 | 2026-02-11 | group-items items need `attrName` | Each item in group-items needs `"attrName": "content.innerContent"` to bind to correct attr path |
 | 2026-02-11 | CSS variable reset in SCSS | Parent `.et_flex_module` sets `--flex-direction: column` etc; child SCSS must reset explicitly |
+| 2026-02-11 | Number badge uses Blurb imageIcon pattern | Child attribute with `styleProps` + `decoration` (background, border, spacing, boxShadow) in Design tab group |
 
 ---
 

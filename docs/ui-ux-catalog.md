@@ -220,7 +220,7 @@ Ordered list of activities with links. This is the main navigation into the AI s
 | Item excerpt | `.leaderspath-lesson-activities__excerpt` | Brief description |
 | Empty state | `.leaderspath-lesson-activities__empty` | "No activities assigned" |
 
-**Design panel needs:** Font (heading, title, excerpt), spacing, layout (list vs card grid), background, border, link color, hover states.
+**Design panel needs:** Font (heading, title, number, duration, excerpt), spacing, layout (list direction/gap), number badge (background color, border/radius, spacing, box shadow), background, border, link color, hover states.
 
 ### Facilitator Guide & Learner Overview
 
