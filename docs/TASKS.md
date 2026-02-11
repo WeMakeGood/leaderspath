@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
 **Last Updated:** 2026-02-10
-**Current Phase:** Frontend Rebuild (research pending)
+**Current Phase:** Phase 7 complete; Frontend Rebuild (research pending)
 
 ---
 
@@ -67,13 +67,17 @@ All Divi 5 module code (PHP modules, TypeScript components, build output, fronte
 
 ## Phase 7: WooCommerce Cohort Product
 
-Cohorts will become a WooCommerce product type for enrollment management.
+Cohorts are a WooCommerce product type for enrollment management.
 
-- [ ] Create WooCommerce Cohort product type
-- [ ] Cohort product linked to Course CPT
-- [ ] Enrollment management via WooCommerce orders
-- [ ] Cohort-specific settings (start/end dates, max participants)
-- [ ] Access control: learner enrollment gates Lesson/Activity access
+- [x] Create WooCommerce Cohort product type (`WC_Product_Cohort` extending `WC_Product_Simple`)
+- [x] Cohort product linked to Course CPT (ACF relationship field, multiple courses per cohort)
+- [x] Enrollment management via WooCommerce orders (enroll on completed, unenroll on refund/cancel)
+- [x] Cohort-specific settings (start/end dates, max participants, facilitator via ACF)
+- [x] Access control: enrollment gates Lesson/Activity access via REST API permission checks
+- [x] Admin dashboard: cohort count and quick action button
+- [x] Admin columns: courses, phase, enrollees, dates on product list
+- [x] Test data script: creates sample cohort products
+- [x] Documentation updated (data-contracts, cpt-schema, plugin-design, TASKS)
 
 ---
 
@@ -103,6 +107,12 @@ Cohorts will become a WooCommerce product type for enrollment management.
 | 2026-02-03 | Privacy-first Q&A bot | No logging, no access restrictions |
 | 2026-02-09 | Nomenclature: Course→Lesson, Cohort→Course | Lesson = atomic teaching unit, Course = curriculum |
 | 2026-02-10 | Remove all Divi 5 module code | Incomplete research led to antipatterns; clean rebuild needed |
+| 2026-02-10 | Cohort as product checkbox | Checkbox next to Virtual/Downloadable (like wc-donation-platform), not custom product type |
+| 2026-02-10 | ACF Pro for Cohort fields | Same UI patterns as all other LeadersPath field groups |
+| 2026-02-10 | User meta for enrollment | Simple serialized array; sufficient for MVP volumes |
+| 2026-02-10 | Cohort phase derived from dates | No manual status field; auto-computed from start/end dates |
+| 2026-02-10 | Multiple courses per cohort | Supports bundled curricula / certificate programs |
+| 2026-02-10 | Graceful WC degradation | Plugin works without WC; enrollment not enforced |
 
 ---
 

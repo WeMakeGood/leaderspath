@@ -71,6 +71,34 @@ When you add, change, or remove an ACF field, check this document to find every 
 | `skill_last_synced` | — | Admin-only metadata |
 | `skill_notes` | — | Admin-only notes |
 
+## Cohort (WooCommerce `product` with `_cohort` meta = `yes`)
+
+| ACF Field | REST Endpoint | Usage |
+|-----------|--------------|-------|
+| `cohort_courses` | `POST /chat` (enrollment check) | Links cohort to courses for access gating |
+| `cohort_start_date` | — | Derives cohort phase (upcoming/active/completed) |
+| `cohort_end_date` | — | Derives cohort phase |
+| `cohort_facilitator` | — | Admin display |
+
+**Max Participants:** Uses WooCommerce stock management (`_stock` meta / Inventory tab) rather than a custom field.
+
+### Enrollment User Meta
+
+| Meta Key | Type | Description |
+|----------|------|-------------|
+| `leaderspath_enrollments` | `array<int>` | Cohort product IDs the user is enrolled in |
+| `leaderspath_enrollment_{cohort_id}_date` | `string` (MySQL datetime) | Enrollment timestamp per cohort |
+
+### Access Chain
+
+The `POST /chat` permission callback checks enrollment when WooCommerce is active:
+
+```
+User enrolled in Cohort → Cohort links to Course(s) → Course contains Lessons → Lesson contains Activities
+```
+
+Admin and Editor roles bypass enrollment checks. If WooCommerce is not active, enrollment is not enforced.
+
 ---
 
 ## Active REST Endpoints
@@ -79,7 +107,7 @@ All endpoints are under the `leaderspath/v1` namespace.
 
 | Route | Method | Auth | Purpose |
 |-------|--------|------|---------|
-| `POST /chat` | POST | Login + `leaderspath_access_chatbot` + nonce | Send message (activity sandbox or lesson Q&A) |
+| `POST /chat` | POST | Login + `leaderspath_access_chatbot` + nonce + enrollment (if WC active) | Send message (activity sandbox or lesson Q&A) |
 | `GET /context/{id}/download` | GET | Login | Download context file content |
 | `GET /skills/{id}/download` | GET | Login | Download skill package metadata |
 

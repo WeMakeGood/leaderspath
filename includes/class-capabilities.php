@@ -55,6 +55,7 @@ class Capabilities {
 
 		// Check for newer capabilities that may have been added in updates.
 		self::maybe_add_facilitator_caps();
+		self::maybe_add_cohort_caps();
 	}
 
 	/**
@@ -90,6 +91,31 @@ class Capabilities {
 				__( 'LeadersPath Facilitator', 'leaderspath' ),
 				self::get_facilitator_caps()
 			);
+		}
+	}
+
+	/**
+	 * Add cohort management capability if missing.
+	 *
+	 * Handles upgrades where the cohort capability was added after initial activation.
+	 *
+	 * @since 0.4.0
+	 */
+	private static function maybe_add_cohort_caps(): void {
+		$admin = get_role( 'administrator' );
+
+		// If admin already has cohort cap, we're up to date.
+		if ( $admin && $admin->has_cap( 'leaderspath_manage_cohorts' ) ) {
+			return;
+		}
+
+		if ( $admin ) {
+			$admin->add_cap( 'leaderspath_manage_cohorts', true );
+		}
+
+		$editor = get_role( 'editor' );
+		if ( $editor ) {
+			$editor->add_cap( 'leaderspath_manage_cohorts', true );
 		}
 	}
 
@@ -154,6 +180,7 @@ class Capabilities {
 		'leaderspath_view_context',
 		'leaderspath_download_context',
 		'leaderspath_view_facilitator_content',
+		'leaderspath_manage_cohorts',
 	];
 
 	/**

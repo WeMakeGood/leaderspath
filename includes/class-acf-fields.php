@@ -42,6 +42,11 @@ class ACF_Fields {
 		$this->register_course_settings();
 		$this->register_context_settings();
 		$this->register_skill_settings();
+
+		// Cohort fields on WooCommerce products (only when WC is active).
+		if ( class_exists( 'WooCommerce' ) ) {
+			$this->register_cohort_settings();
+		}
 	}
 
 	/**
@@ -882,10 +887,82 @@ class ACF_Fields {
 	}
 
 	/**
-	 * Get timezone choices for select field.
+	 * Register Cohort Settings field group.
 	 *
-	 * @since 0.1.0
+	 * Cohorts are WooCommerce products that grant learners access to Courses.
+	 * Fields appear on the WooCommerce product edit screen.
 	 *
-	 * @return array<string, string> Timezone choices.
+	 * @since 0.4.0
 	 */
+	private function register_cohort_settings(): void {
+		acf_add_local_field_group( [
+			'key'      => 'group_cohort_settings',
+			'title'    => __( 'Cohort Settings', 'leaderspath' ),
+			'fields'   => [
+				[
+					'key'           => 'field_cohort_courses',
+					'label'         => __( 'Courses', 'leaderspath' ),
+					'name'          => 'cohort_courses',
+					'type'          => 'relationship',
+					'instructions'  => __( 'Select the courses included in this cohort. Enrolled learners will have access to all lessons and activities within these courses.', 'leaderspath' ),
+					'required'      => 0,
+					'post_type'     => [ 'leaderspath_course' ],
+					'filters'       => [ 'search' ],
+					'elements'      => [ 'featured_image' ],
+					'min'           => 0,
+					'max'           => 20,
+					'return_format' => 'id',
+				],
+				[
+					'key'           => 'field_cohort_start_date',
+					'label'         => __( 'Start Date', 'leaderspath' ),
+					'name'          => 'cohort_start_date',
+					'type'          => 'date_picker',
+					'instructions'  => __( 'When this cohort begins. Used to determine cohort phase (upcoming/active/completed).', 'leaderspath' ),
+					'required'      => 0,
+					'display_format' => 'F j, Y',
+					'return_format' => 'Y-m-d',
+					'first_day'     => 0,
+				],
+				[
+					'key'           => 'field_cohort_end_date',
+					'label'         => __( 'End Date', 'leaderspath' ),
+					'name'          => 'cohort_end_date',
+					'type'          => 'date_picker',
+					'instructions'  => __( 'When this cohort ends. Enrolled learners retain access after completion for review.', 'leaderspath' ),
+					'required'      => 0,
+					'display_format' => 'F j, Y',
+					'return_format' => 'Y-m-d',
+					'first_day'     => 0,
+				],
+				[
+					'key'           => 'field_cohort_facilitator',
+					'label'         => __( 'Facilitator', 'leaderspath' ),
+					'name'          => 'cohort_facilitator',
+					'type'          => 'user',
+					'instructions'  => __( 'The facilitator who will lead this cohort.', 'leaderspath' ),
+					'required'      => 0,
+					'role'          => [ 'leaderspath_facilitator', 'administrator' ],
+					'return_format' => 'id',
+					'multiple'      => 0,
+					'allow_null'    => 1,
+				],
+			],
+			'location' => [
+				[
+					[
+						'param'    => 'post_type',
+						'operator' => '==',
+						'value'    => 'product',
+					],
+				],
+			],
+			'menu_order'            => 50,
+			'position'              => 'normal',
+			'style'                 => 'default',
+			'label_placement'       => 'top',
+			'instruction_placement' => 'label',
+			'active'                => true,
+		] );
+	}
 }

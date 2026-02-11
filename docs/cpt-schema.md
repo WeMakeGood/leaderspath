@@ -183,6 +183,36 @@ A reusable curriculum containing Lessons. Groups learners working through lesson
 
 ---
 
+### Cohort (WooCommerce Product with `_cohort` Flag)
+
+Cohorts are WooCommerce Simple products with the `_cohort` meta flag set to `yes`. The "Cohort" checkbox appears next to "Virtual" and "Downloadable" in the product data panel, following the same pattern as the wc-donation-platform plugin.
+
+**Not a CPT** — Cohorts are standard WooCommerce Simple products (post type `product`) identified by the `_cohort` post meta key. Checking the Cohort checkbox auto-checks Virtual (no shipping).
+
+#### ACF Field Group: Cohort Settings
+
+| Field Name | Field Type | Description |
+|------------|------------|-------------|
+| `cohort_courses` | Relationship | Ordered list of courses (`leaderspath_course` posts) |
+| `cohort_start_date` | Date Picker | Cohort start date (return format: `Y-m-d`) |
+| `cohort_end_date` | Date Picker | Cohort end date (return format: `Y-m-d`) |
+| `cohort_facilitator` | User | Facilitator user (filtered to `leaderspath_facilitator` and `administrator` roles) |
+
+**Max Participants:** Uses WooCommerce stock management (Inventory tab > Stock quantity) instead of a custom ACF field. This gives us built-in "X left in stock" display, oversell prevention, and low-stock notifications for free.
+
+**Phase derivation:** The cohort phase (upcoming/active/completed) is computed from `cohort_start_date` and `cohort_end_date` compared to the current date. No separate status field is stored.
+
+#### Enrollment
+
+When a WooCommerce order containing a cohort product is completed, the customer is enrolled:
+- User meta `leaderspath_enrollments` (array of cohort product IDs)
+- User meta `leaderspath_enrollment_{cohort_id}_date` (enrollment timestamp)
+- `leaderspath_student` role granted if not already present
+
+On order refund or cancellation, enrollment is removed.
+
+---
+
 ### 4. Context File (`leaderspath_context`)
 
 Markdown files used as context for Claude API calls.
@@ -404,9 +434,16 @@ Organizes skills by function.
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  ┌─────────────┐                                                         │
+│  │   Cohort    │ ─── WooCommerce product (enrollment)                  │
+│  │  (WC prod)  │     - Links to Course(s)                              │
+│  │             │     - Start/End dates, Max participants                │
+│  │             │     - Facilitator, Pricing                            │
+│  └──────┬──────┘                                                         │
+│         │ links to (many-to-many)                                        │
+│         ▼                                                                │
+│  ┌─────────────┐                                                         │
 │  │   Course    │ ─── Reusable curriculum                                │
 │  │             │     - Ordered Lessons                                  │
-│  │             │     - Learners + Facilitator + Schedule                │
 │  └──────┬──────┘                                                         │
 │         │ contains (ordered)                                             │
 │         ▼                                                                │
@@ -432,6 +469,10 @@ Organizes skills by function.
 │  │  │ (reference)  │  │ (executable)│ │                                │
 │  │  └──────────────┘  └─────────────┘ │                                │
 │  └─────────────────────────────────────┘                                │
+│                                                                          │
+│  Access Chain:                                                           │
+│  User enrolled in Cohort → Cohort links to Course(s) →                 │
+│  Course contains Lessons → Lesson contains Activities                   │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 

@@ -68,6 +68,22 @@ new LeadersPath\Includes\REST_API();
 new LeadersPath\Includes\Skill_Processor();
 
 /**
+ * WooCommerce integration (deferred to plugins_loaded).
+ *
+ * WordPress loads plugins alphabetically, so LeadersPath loads before
+ * WooCommerce. Deferring to plugins_loaded ensures the WooCommerce class
+ * exists when we check for it.
+ */
+add_action( 'plugins_loaded', function (): void {
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		return;
+	}
+
+	require_once LEADERSPATH_PATH . 'includes/class-woocommerce.php';
+	new LeadersPath\Includes\WooCommerce();
+} );
+
+/**
  * Plugin activation hook.
  *
  * @since 0.1.0

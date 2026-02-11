@@ -196,6 +196,35 @@ class REST_API {
 			);
 		}
 
+		// Enrollment check — only when WooCommerce is active, skip for admins/editors.
+		if ( class_exists( 'LeadersPath\Includes\WooCommerce' )
+			&& ! current_user_can( 'manage_options' )
+			&& ! current_user_can( 'edit_others_posts' )
+		) {
+			$activity_id = $request->get_param( 'activity_id' );
+			$lesson_id   = $request->get_param( 'lesson_id' );
+
+			if ( ! empty( $activity_id )
+				&& ! WooCommerce::can_user_access_activity( get_current_user_id(), (int) $activity_id )
+			) {
+				return new WP_Error(
+					'rest_forbidden',
+					__( 'You are not enrolled in a cohort that includes this content.', 'leaderspath' ),
+					[ 'status' => 403 ]
+				);
+			}
+
+			if ( ! empty( $lesson_id )
+				&& ! WooCommerce::can_user_access_lesson( get_current_user_id(), (int) $lesson_id )
+			) {
+				return new WP_Error(
+					'rest_forbidden',
+					__( 'You are not enrolled in a cohort that includes this content.', 'leaderspath' ),
+					[ 'status' => 403 ]
+				);
+			}
+		}
+
 		return true;
 	}
 

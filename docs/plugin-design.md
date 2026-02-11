@@ -1,12 +1,12 @@
 # LeadersPath Plugin Design Document
 
-**Version:** 0.4.0
+**Version:** 0.5.0
 **Last Updated:** 2026-02-10
-**Status:** Core infrastructure implemented; frontend modules pending rebuild
+**Status:** Core infrastructure + WooCommerce Cohort enrollment implemented; frontend modules pending rebuild
 
 ## Executive Summary
 
-LeadersPath is a WordPress plugin that powers a **facilitated learning experience**. Facilitators present Lessons (atomic teaching units containing Activities) while learners experiment with AI sandboxes (Activities) to experience specific AI behaviors. Courses define reusable curricula containing ordered Lessons. The plugin demonstrates the difference between raw LLM interactions and context-enhanced AI implementations.
+LeadersPath is a WordPress plugin that powers a **facilitated learning experience**. Facilitators present Lessons (atomic teaching units containing Activities) while learners experiment with AI sandboxes (Activities) to experience specific AI behaviors. Courses define reusable curricula containing ordered Lessons. Cohorts (WooCommerce products) handle enrollment and access gating. The plugin demonstrates the difference between raw LLM interactions and context-enhanced AI implementations.
 
 ## Core Architecture
 
@@ -18,6 +18,7 @@ LeadersPath is a WordPress plugin that powers a **facilitated learning experienc
 4. **Divi Integration** - Visual Builder modules for flexible page design (pending rebuild)
 5. **Stateless Conversations** - No persistence; page reload clears history for experimentation
 6. **Context vs Skills** - Clear separation between reference material (context) and capabilities (skills)
+7. **WooCommerce Integration** - Cohort products gate access via enrollment; graceful degradation without WC
 
 ### High-Level Architecture
 
@@ -35,28 +36,32 @@ LeadersPath is a WordPress plugin that powers a **facilitated learning experienc
 │  └─────────────────────────────────────────────────────────────────┘│
 │                                                                      │
 │  ┌──────────────────────┐  ┌────────────────────────────────────┐  │
-│  │    Claude API        │  │      Divi 5 Modules (pending)     │  │
-│  │  ┌────────────────┐  │  │                                    │  │
-│  │  │ Messages API   │  │  │  Removed for clean rebuild.        │  │
-│  │  │ + Container    │  │  │  Will be rebuilt after proper       │  │
-│  │  │ + Code Exec    │  │  │  Divi 5 research phase.            │  │
-│  │  └────────────────┘  │  │                                    │  │
-│  │  ┌────────────────┐  │  └────────────────────────────────────┘  │
-│  │  │  Skills API    │  │                                          │
-│  │  │  (Upload/Sync) │  │                                          │
-│  │  └────────────────┘  │                                          │
+│  │    Claude API        │  │    WooCommerce Integration         │  │
+│  │  ┌────────────────┐  │  │  ┌────────────────────────────┐   │  │
+│  │  │ Messages API   │  │  │  │ Cohort Checkbox             │   │  │
+│  │  │ + Container    │  │  │  │ (_cohort meta flag)        │   │  │
+│  │  │ + Code Exec    │  │  │  └────────────────────────────┘   │  │
+│  │  └────────────────┘  │  │  ┌────────────────────────────┐   │  │
+│  │  ┌────────────────┐  │  │  │ Enrollment & Access Chain  │   │  │
+│  │  │  Skills API    │  │  │  │ (User meta + order hooks)  │   │  │
+│  │  │  (Upload/Sync) │  │  │  └────────────────────────────┘   │  │
+│  │  └────────────────┘  │  └────────────────────────────────────┘  │
 │  └──────────────────────┘                                          │
 │                                                                      │
 │  ┌──────────────────────┐  ┌────────────────────────────────────┐  │
 │  │   REST API           │  │         Admin Interface            │  │
-│  │  /leaderspath/v1/    │  │  Settings, Columns, Quick Edit     │  │
+│  │  /leaderspath/v1/    │  │  Settings, Columns, Dashboard      │  │
 │  └──────────────────────┘  └────────────────────────────────────┘  │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │      Divi 5 Modules (pending rebuild)                        │  │
+│  └──────────────────────────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Required Dependencies                                               │
-│  ┌───────────────────┐  ┌───────────────────┐                       │
-│  │  ACF Pro          │  │  Divi 5           │                       │
-│  │  (Field Groups)   │  │  (Module System)  │                       │
-│  └───────────────────┘  └───────────────────┘                       │
+│  Dependencies                                                        │
+│  ┌───────────────────┐  ┌───────────────┐  ┌───────────────────┐   │
+│  │  ACF Pro          │  │  Divi 5       │  │  WooCommerce      │   │
+│  │  (Field Groups)   │  │  (Modules)    │  │  (Optional)       │   │
+│  └───────────────────┘  └───────────────┘  └───────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -68,6 +73,7 @@ LeadersPath is a **facilitated learning experience**, not a self-paced platform:
 
 | Term | Definition |
 |------|------------|
+| **Cohort** | A WooCommerce product that enrolls learners into one or more Courses |
 | **Course** | A reusable curriculum containing an ordered sequence of Lessons |
 | **Lesson** | The atomic teaching unit, taught as a cohesive whole by a facilitator |
 | **Activity** | An AI sandbox experiment within a Lesson (what learners DO, not what they LEARN) |
@@ -178,7 +184,27 @@ A reusable curriculum containing an ordered sequence of Lessons:
 **Metadata (ACF):**
 - `course_lessons` - Ordered list of lessons (relationship to `leaderspath_lesson`)
 
-**Note:** Cohort-specific fields (start/end dates, instructor, enrollment) belong on the WooCommerce product type (Phase 7), not the Course CPT.
+### Cohort (WooCommerce Product)
+
+A virtual WooCommerce product that manages enrollment and access gating:
+
+**Product Flag:** Simple products with `_cohort` meta set to `yes` (checkbox next to Virtual/Downloadable)
+
+**Metadata (ACF, on `product` post type):**
+- `cohort_courses` - Relationship to `leaderspath_course` posts (multi-select)
+- `cohort_start_date` - Date picker (Y-m-d)
+- `cohort_end_date` - Date picker (Y-m-d)
+- `cohort_facilitator` - User selector (filtered to facilitator/admin roles)
+
+**Max Participants:** Uses WooCommerce stock management (Inventory tab) instead of a custom field. Provides built-in "X left in stock" display, oversell prevention, and low-stock notifications.
+
+**Phase:** Derived from dates — `upcoming` (before start), `active` (between start/end), `completed` (after end)
+
+**Enrollment:** Managed via WooCommerce order lifecycle:
+- Order completed → user enrolled (user meta `leaderspath_enrollments`)
+- Order refunded/cancelled → user unenrolled
+
+**Access Chain:** User enrolled in Cohort → Cohort links to Course(s) → Course contains Lessons → Lesson contains Activities. Admin/Editor roles bypass enrollment checks. If WooCommerce is not active, enrollment is not enforced.
 
 ## Context vs Skills: The Critical Distinction
 
@@ -308,6 +334,7 @@ All endpoints require authentication (logged in + appropriate capability).
 | `edit_leaderspath_activities` | Edit activities (editors) |
 | `edit_leaderspath_contexts` | Edit context files (editors) |
 | `edit_leaderspath_skills` | Edit skills (editors) |
+| `leaderspath_manage_cohorts` | Manage cohort products (admins/editors) |
 
 ### Roles
 
@@ -321,8 +348,9 @@ All endpoints require authentication (logged in + appropriate capability).
 1. **API Key:** Encrypted at rest using WordPress salt
 2. **Nonces:** All REST/AJAX requests verified
 3. **Capability Checks:** Every endpoint validates permissions
-4. **Input Sanitization:** All user input sanitized before processing
-5. **Output Escaping:** All output escaped appropriately
+4. **Enrollment Gating:** Chat endpoint verifies user is enrolled in a cohort linked to the requested content (when WooCommerce is active; admin/editor bypass)
+5. **Input Sanitization:** All user input sanitized before processing
+6. **Output Escaping:** All output escaped appropriately
 
 ## File Structure
 
@@ -339,7 +367,8 @@ leaderspath/
 │   ├── class-acf-fields.php     # ACF field group registration
 │   ├── class-claude-api.php     # Claude API wrapper
 │   ├── class-rest-api.php       # REST endpoints
-│   └── class-skill-processor.php # Skill validation and sync
+│   ├── class-skill-processor.php # Skill validation and sync
+│   └── class-woocommerce.php    # WC integration: cohort checkbox, enrollment, access chain (loaded if WC active)
 │
 ├── admin/
 │   ├── class-admin-menu.php     # Admin menu registration
@@ -381,6 +410,12 @@ leaderspath/
 | Streaming optional | Nice UX but adds complexity; implement if time permits |
 | Context files in system prompt | Simple, reliable; no additional API calls |
 | Skills uploaded to Anthropic | Required for code execution; progressive loading |
+| Cohort as product checkbox | Checkbox next to Virtual/Downloadable (like wc-donation-platform); simpler than custom product type |
+| ACF Pro for Cohort fields | Same UI patterns as all other LeadersPath field groups |
+| User meta for enrollment | Simple serialized array; sufficient for MVP volumes |
+| Cohort phase derived from dates | No manual status field; auto-computed from start/end dates |
+| Multiple courses per cohort | Supports bundled curricula and certificate programs |
+| Graceful WC degradation | Plugin works without WC; enrollment not enforced |
 
 ## Future Considerations
 

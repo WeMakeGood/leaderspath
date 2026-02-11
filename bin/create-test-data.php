@@ -43,6 +43,29 @@ function leaderspath_cleanup_test_data(): void {
 		}
 	}
 
+	// Clean up cohort products (WooCommerce).
+	if ( class_exists( 'WooCommerce' ) ) {
+		$cohort_query = new WP_Query( [
+			'post_type'      => 'product',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'meta_query'     => [
+				[
+					'key'   => '_cohort',
+					'value' => 'yes',
+				],
+			],
+		] );
+		$count = count( $cohort_query->posts );
+		foreach ( $cohort_query->posts as $product_id ) {
+			wp_delete_post( $product_id, true );
+		}
+		if ( $count > 0 ) {
+			echo "  - Deleted {$count} cohort product(s)\n";
+		}
+	}
+
 	echo "Cleanup complete.\n\n";
 }
 
@@ -68,7 +91,12 @@ function leaderspath_create_test_data(): void {
 	$lesson_ids = leaderspath_create_test_lessons( $activity_ids, $context_ids );
 
 	// Create a Course (references lessons).
-	leaderspath_create_test_course( $lesson_ids );
+	$course_id = leaderspath_create_test_course( $lesson_ids );
+
+	// Create Cohort products (WooCommerce).
+	if ( $course_id ) {
+		leaderspath_create_test_cohorts( [ $course_id ] );
+	}
 
 	echo "\nTest data creation complete!\n";
 }
@@ -465,13 +493,14 @@ function leaderspath_create_test_lessons( array $activity_ids, array $context_id
  * Create a test course.
  *
  * @param array<int> $lesson_ids Lesson IDs to include in the course.
+ * @return int|null The course post ID, or null on failure.
  */
-function leaderspath_create_test_course( array $lesson_ids ): void {
+function leaderspath_create_test_course( array $lesson_ids ): ?int {
 	echo "\nCreating Course...\n";
 
 	if ( empty( $lesson_ids ) ) {
 		echo "  - Skipping course (no lessons available)\n";
-		return;
+		return null;
 	}
 
 	$title = 'Spring 2026 AI Leadership';
@@ -479,7 +508,7 @@ function leaderspath_create_test_course( array $lesson_ids ): void {
 	$existing = get_page_by_title( $title, OBJECT, 'leaderspath_course' );
 	if ( $existing ) {
 		echo "  - Skipping '{$title}' (already exists)\n";
-		return;
+		return $existing->ID;
 	}
 
 	$post_id = wp_insert_post( [
@@ -490,7 +519,7 @@ function leaderspath_create_test_course( array $lesson_ids ): void {
 
 	if ( is_wp_error( $post_id ) ) {
 		echo "  - Error creating '{$title}': {$post_id->get_error_message()}\n";
-		return;
+		return null;
 	}
 
 	// Set ACF fields.
@@ -499,6 +528,73 @@ function leaderspath_create_test_course( array $lesson_ids ): void {
 	}
 
 	echo "  - Created '{$title}' (ID: {$post_id})\n";
+
+	return $post_id;
+}
+
+/**
+ * Create test cohort products.
+ *
+ * @param array<int> $course_ids Course IDs to link to cohorts.
+ */
+function leaderspath_create_test_cohorts( array $course_ids ): void {
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		echo "\nSkipping cohort test data (WooCommerce not active).\n";
+		return;
+	}
+
+	echo "\nCreating Cohort Products...\n";
+
+	$cohorts = [
+		[
+			'title'            => 'Spring 2026 AI Leadership Cohort',
+			'description'      => 'A facilitated cohort experience exploring AI leadership fundamentals. Includes hands-on activities, guided discussions, and AI sandbox experiments.',
+			'price'            => '299',
+			'start_date'       => '2026-03-01',
+			'end_date'         => '2026-06-30',
+			'max_participants' => 25,
+		],
+		[
+			'title'            => 'Summer 2026 AI Leadership Cohort',
+			'description'      => 'Summer edition of the AI Leadership cohort. Same curriculum, new cohort of learners and facilitator-led sessions.',
+			'price'            => '349',
+			'start_date'       => '2026-07-01',
+			'end_date'         => '2026-09-30',
+			'max_participants' => 30,
+		],
+	];
+
+	foreach ( $cohorts as $data ) {
+		$product = new \WC_Product_Simple();
+		$product->set_name( $data['title'] );
+		$product->set_description( $data['description'] );
+		$product->set_short_description( $data['description'] );
+		$product->set_regular_price( $data['price'] );
+		$product->set_virtual( true );
+		$product->set_manage_stock( true );
+		$product->set_stock_quantity( $data['max_participants'] );
+		$product->set_status( 'publish' );
+		$product->set_catalog_visibility( 'visible' );
+
+		$product_id = $product->save();
+
+		if ( ! $product_id ) {
+			echo "  - Error creating '{$data['title']}'\n";
+			continue;
+		}
+
+		// Flag as cohort product.
+		update_post_meta( $product_id, '_cohort', 'yes' );
+
+		// Set ACF fields.
+		if ( function_exists( 'update_field' ) ) {
+			update_field( 'cohort_courses', $course_ids, $product_id );
+			update_field( 'cohort_start_date', $data['start_date'], $product_id );
+			update_field( 'cohort_end_date', $data['end_date'], $product_id );
+		}
+
+		echo "  - Created '{$data['title']}' (ID: {$product_id}, \${$data['price']})\n";
+	}
 }
 
 // Run the function.
