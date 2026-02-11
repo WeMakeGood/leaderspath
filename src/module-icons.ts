@@ -5,6 +5,7 @@ import * as lessonObjectivesIcon from './icons/lesson-objectives';
 import * as lessonActivitiesIcon from './icons/lesson-activities';
 import * as activityMetaIcon from './icons/activity-meta';
 import * as courseLessonsIcon from './icons/course-lessons';
+import * as contextLibraryIcon from './icons/context-library';
 
 addFilter('divi.iconLibrary.icon.map', 'leaderspath', (icons) => ({
     ...icons,
@@ -13,4 +14,5 @@ addFilter('divi.iconLibrary.icon.map', 'leaderspath', (icons) => ({
     [lessonActivitiesIcon.name]: lessonActivitiesIcon,
     [activityMetaIcon.name]: activityMetaIcon,
     [courseLessonsIcon.name]: courseLessonsIcon,
+    [contextLibraryIcon.name]: contextLibraryIcon,
 }));

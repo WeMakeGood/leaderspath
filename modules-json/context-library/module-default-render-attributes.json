@@ -1,0 +1,57 @@
+{
+  "module": {
+    "meta": {
+      "adminLabel": {
+        "desktop": {
+          "value": "Context Library"
+        }
+      }
+    }
+  },
+  "content": {
+    "innerContent": {
+      "desktop": {
+        "value": {
+          "showHeading": "on",
+          "headingText": "Context Library",
+          "showIcon": "on",
+          "showDescription": "on",
+          "showMeta": "on",
+          "showView": "on",
+          "showDownload": "on"
+        }
+      }
+    }
+  },
+  "card": {
+    "decoration": {
+      "background": {
+        "desktop": {
+          "value": {
+            "color": "#f8f9fa"
+          }
+        }
+      },
+      "border": {
+        "desktop": {
+          "value": {
+            "radius": {
+              "sync": "on",
+              "topLeft": "8px",
+              "topRight": "8px",
+              "bottomRight": "8px",
+              "bottomLeft": "8px"
+            },
+            "styles": {
+              "all": {
+                "width": "1px",
+                "color": "#e0e0e0",
+                "style": "solid"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

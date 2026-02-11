@@ -1,0 +1,9 @@
+// Context Library — Visual Builder only styles.
+//
+// Compiles into styles/vb-bundle.css (loaded in VB only).
+
+.leaderspath_context_library {
+	&__grid {
+		min-height: 2em;
+	}
+}
