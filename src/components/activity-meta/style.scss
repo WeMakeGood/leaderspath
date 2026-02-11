@@ -1,0 +1,9 @@
+// Activity Meta — Visual Builder only styles.
+//
+// Compiles into styles/vb-bundle.css (loaded in VB only).
+
+.leaderspath_activity_meta {
+	&__list {
+		min-height: 2em;
+	}
+}

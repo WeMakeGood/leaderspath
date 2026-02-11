@@ -94,10 +94,19 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 - [x] Number badge styling — Design > Number Badge group with background color, border/radius, spacing, box shadow (pattern from Divi Blurb imageIcon)
 - [x] Default appearance — gray (#e0e0e0) circle (50% border-radius) via `module-default-render-attributes.json`
 
+### Completed: Activity Meta Module (2026-02-11)
+
+- [x] Layer 1: Core PHP renderer (`ActivityMetaRenderer`) — ACF fields + semantic HTML (`<dl>`/`<dt>`/`<dd>`)
+- [x] Layer 2: SCSS — structural resets, CSS variable cascade reset
+- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder content
+- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Content tab toggles + label text, Custom CSS fields
+- [x] Data: duration, model name (with human-readable labels), model switching indicator
+- [x] Content tab: show/hide toggles + custom label text for all three data points
+
 ### Pending Tasks
 
 - [ ] Rebuild remaining modules from validated patterns (see `docs/divi5-module-architecture.md` section 9 for build order)
-- [ ] Test Theme Builder template with multiple lesson pages
+- [ ] Test Theme Builder template with multiple lesson/activity pages
 
 ---
 
