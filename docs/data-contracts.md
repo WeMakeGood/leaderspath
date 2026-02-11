@@ -1,8 +1,8 @@
 # Data Contracts: ACF Fields → REST API
 
-> **Last Updated:** 2026-02-10
+> **Last Updated:** 2026-02-11
 
-When you add, change, or remove an ACF field, check this document to find every REST endpoint that needs updating. Divi module consumers will be added during the frontend rebuild.
+When you add, change, or remove an ACF field, check this document to find every REST endpoint that needs updating. See `docs/ui-ux-catalog.md` for which Divi modules consume each field.
 
 ---
 

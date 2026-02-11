@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
 **Last Updated:** 2026-02-11
-**Current Phase:** Phase 8 complete; Frontend Rebuild (research pending)
+**Current Phase:** Phase 8 complete; Frontend Rebuild (research complete, implementation pending)
 
 ---
 
@@ -31,7 +31,7 @@ All Divi 5 module code (PHP modules, TypeScript components, build output, fronte
 ### What Was Retained
 - All `includes/` classes (CPTs, taxonomies, capabilities, ACF fields, Claude API, REST API, skill processor)
 - All `admin/` classes (settings, admin columns, admin menu)
-- `modules/Shared/` PHP traits (PostIdHelper, CustomCssTrait, ModuleClassnamesTrait) — may need re-evaluation
+- `modules/Shared/` PHP traits (PostIdHelper, CustomCssTrait, ModuleClassnamesTrait) — reviewed and validated
 - Chat REST endpoint and context/skill download endpoints
 - Build tooling (webpack config, package.json, composer.json)
 
@@ -44,11 +44,19 @@ All Divi 5 module code (PHP modules, TypeScript components, build output, fronte
 - `assets/css/chatbot.css`, `assets/css/context-modal.css`
 - All VB preview REST endpoints from `class-rest-api.php`
 
+### Research (Completed 2026-02-11)
+
+- [x] WordPress block rendering pipeline research → `docs/wordpress-rendering-pipeline.md`
+- [x] Divi 5 module architecture research → `docs/divi5-module-architecture.md`
+- [x] Official extension example repo analysis (`d5-extension-example-modules`)
+- [x] `@divi/types` package analysis (field library, style library, module library)
+- [x] Shared PHP traits re-evaluated against validated patterns
+- [x] Updated `docs/divi-modules.md` with research status and key findings
+
 ### Pending Tasks
 
-- [ ] Comprehensive Divi 5 module research (clean-room, not based on prior attempts)
-- [ ] Design module architecture based on research findings
-- [ ] Rebuild modules from validated patterns
+- [ ] Validate patterns by building a simple test module first
+- [ ] Rebuild modules from validated patterns (see `docs/divi5-module-architecture.md` section 12 for build order)
 - [ ] Test in Divi 5 Visual Builder
 - [ ] Test frontend rendering
 
@@ -126,6 +134,13 @@ Cohorts are a WooCommerce product type for enrollment management.
 | 2026-02-11 | Prerequisites at Course level, not Activity | Courses are the right abstraction for sequencing; activities are experiments within lessons |
 | 2026-02-11 | All ACF relationship fields return IDs | Consistent `return_format => 'id'` across all relationship fields |
 | 2026-02-11 | Cohort prereq aggregation via helper method | `get_cohort_prerequisites()` collects from linked courses, de-duplicates, excludes self |
+| 2026-02-11 | Divi 5 frontend is 100% PHP | No React/hydration on frontend; VB is 100% React; use vanilla JS for interactive modules |
+| 2026-02-11 | No Interactivity API for Divi modules | Divi bypasses WP block pipeline; use `wp_enqueue_script` for frontend JS instead |
+| 2026-02-11 | Keep shared PHP traits | PostIdHelper, CustomCssTrait, ModuleClassnamesTrait validated against official patterns |
+| 2026-02-11 | Query ACF directly in render_callback | Don't use Divi dynamic content tokens for complex fields (repeaters, relationships) |
+| 2026-02-11 | Shared DOM structure, separate content | PHP is authoritative renderer; VB matches CSS classes for styling parity, uses placeholder/sample content |
+| 2026-02-11 | Single Chatbot module for Activity + Lesson | Module detects CPT and reads appropriate `chatbot_*` or `lesson_chatbot_*` fields |
+| 2026-02-11 | WYSIWYG fields use native Divi Text module | Facilitator Guide + Learner Overview use ACF dynamic content, not custom modules |
 
 ---
 

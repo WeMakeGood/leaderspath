@@ -1,8 +1,8 @@
 # LeadersPath Plugin Design Document
 
-**Version:** 0.5.0
-**Last Updated:** 2026-02-10
-**Status:** Core infrastructure + WooCommerce Cohort enrollment implemented; frontend modules pending rebuild
+**Version:** 0.6.0
+**Last Updated:** 2026-02-11
+**Status:** Core infrastructure + WooCommerce Cohort enrollment implemented; frontend research complete, module implementation pending
 
 ## Executive Summary
 
@@ -15,7 +15,7 @@ LeadersPath is a WordPress plugin that powers a **facilitated learning experienc
 1. **Facilitated Learning** - Lessons are taught by facilitators; activities let learners experiment
 2. **Transparency First** - Learners can always see and download the context and skills powering the AI
 3. **WordPress Native** - Uses CPTs, taxonomies, ACF, and standard WordPress patterns
-4. **Divi Integration** - Visual Builder modules for flexible page design (pending rebuild)
+4. **Divi Integration** - Visual Builder modules for flexible page design (research complete, implementation pending)
 5. **Stateless Conversations** - No persistence; page reload clears history for experimentation
 6. **Context vs Skills** - Clear separation between reference material (context) and capabilities (skills)
 7. **WooCommerce Integration** - Cohort products gate access via enrollment; graceful degradation without WC
@@ -54,7 +54,7 @@ LeadersPath is a WordPress plugin that powers a **facilitated learning experienc
 │  └──────────────────────┘  └────────────────────────────────────┘  │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐  │
-│  │      Divi 5 Modules (pending rebuild)                        │  │
+│  │      Divi 5 Modules (research complete, build pending)       │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────────────┤
 │  Dependencies                                                        │
@@ -318,7 +318,7 @@ Configurable in Settings > LeadersPath:
 
 All endpoints require authentication (logged in + appropriate capability).
 
-**Note:** VB preview endpoints for Divi modules were removed and will be re-added during the frontend rebuild.
+**Note:** VB preview endpoints for Divi modules were removed and will be re-added during the frontend rebuild. See `docs/ui-ux-catalog.md` for module data requirements and `docs/divi5-module-architecture.md` for the rendering strategy.
 
 ## Security Model
 
@@ -375,18 +375,22 @@ leaderspath/
 │   ├── class-settings.php       # Settings page
 │   └── class-admin-columns.php  # Custom admin columns
 │
-├── modules/                     # Divi 5 PHP modules (pending rebuild)
-│   └── Shared/                  # Shared traits (may need re-evaluation)
+├── modules/                     # Divi 5 PHP modules (implementation pending)
+│   └── Shared/                  # Shared traits (validated)
 │       ├── PostIdHelper.php
 │       ├── CustomCssTrait.php
 │       └── ModuleClassnamesTrait.php
 │
-├── src/                         # Divi 5 TypeScript (pending rebuild)
-│   └── components/              # Empty — awaiting research phase
+├── src/                         # Divi 5 TypeScript (implementation pending)
+│   └── components/              # Empty — research complete, ready for build
 │
 ├── docs/
 │   ├── plugin-design.md         # This file
 │   ├── cpt-schema.md            # CPT and ACF field details
+│   ├── divi-modules.md          # Module status and implementation plan
+│   ├── divi5-module-architecture.md # Divi 5 architecture reference
+│   ├── wordpress-rendering-pipeline.md # WP block rendering reference
+│   ├── ui-ux-catalog.md         # UI/UX catalog (modules, elements, CSS classes)
 │   ├── claude-api-integration.md # API integration guide
 │   ├── data-contracts.md        # ACF → REST endpoint mapping
 │   └── content-creation-guide.md # Content authoring guide

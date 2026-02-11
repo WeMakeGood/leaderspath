@@ -53,10 +53,10 @@ leaderspath/
 │   └── class-skill-processor.php
 │
 ├── modules/                 # Divi 5 modules (pending rebuild)
-│   └── Shared/              # Shared PHP traits (may need re-evaluation)
+│   └── Shared/              # Shared PHP traits (validated)
 │
 ├── src/                     # Divi 5 TypeScript (pending rebuild)
-│   └── components/          # Empty — awaiting research phase
+│   └── components/          # Empty — research complete, awaiting implementation
 │
 ├── admin/                   # Admin functionality
 ├── docs/                    # Documentation
@@ -100,7 +100,10 @@ All documentation lives in the `docs/` folder:
 |----------|---------|
 | [plugin-design.md](docs/plugin-design.md) | Architecture overview, design decisions |
 | [cpt-schema.md](docs/cpt-schema.md) | Custom post types, taxonomies, ACF fields |
-| [divi-modules.md](docs/divi-modules.md) | Divi 5 module status (pending research) |
+| [divi-modules.md](docs/divi-modules.md) | Divi 5 module status and implementation plan |
+| [divi5-module-architecture.md](docs/divi5-module-architecture.md) | **Divi 5 module architecture reference (READ for frontend work)** |
+| [ui-ux-catalog.md](docs/ui-ux-catalog.md) | **UI/UX catalog: all modules, elements, CSS classes, behaviors** |
+| [wordpress-rendering-pipeline.md](docs/wordpress-rendering-pipeline.md) | WordPress block rendering pipeline reference |
 | [data-contracts.md](docs/data-contracts.md) | ACF field → REST endpoint mapping |
 | [claude-api-integration.md](docs/claude-api-integration.md) | **Claude API integration (CRITICAL)** |
 | [content-creation-guide.md](docs/content-creation-guide.md) | Content authoring guide |
@@ -455,7 +458,7 @@ apply_filters('leaderspath_activity_context_files', $files, $activity_id);
 
 ## Current Status
 
-Divi 5 module code was removed (`844094c`) due to incomplete research. Frontend rebuild pending comprehensive Divi 5 research phase. See `docs/TASKS.md` for details.
+Divi 5 module code was removed (`844094c`) due to incomplete research. Comprehensive research phase completed (2026-02-11). Frontend rebuild ready to begin. See `docs/divi5-module-architecture.md` for validated patterns and `docs/TASKS.md` for implementation plan.
 
 ## Key Architectural Decisions
 
