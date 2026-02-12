@@ -1,0 +1,9 @@
+// Chatbot — Visual Builder only styles.
+//
+// Compiles into styles/vb-bundle.css (loaded in VB only).
+
+.leaderspath_chatbot {
+	&__container {
+		min-height: 300px;
+	}
+}

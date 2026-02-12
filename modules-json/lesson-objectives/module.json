@@ -3,7 +3,7 @@
   "d4Shortcode": "",
   "title": "LeadersPath Lesson Objectives",
   "titles": "LeadersPath Lesson Objectives",
-  "moduleIcon": "leaderspath/lesson-objectives",
+  "moduleIcon": "divi/module-icon-list",
   "moduleClassName": "leaderspath_lesson_objectives",
   "moduleOrderClassName": "leaderspath_lesson_objectives",
   "category": "module",

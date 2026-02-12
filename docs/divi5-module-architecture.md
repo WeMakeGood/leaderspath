@@ -1,6 +1,6 @@
 # Divi 5 Module Architecture for LeadersPath
 
-**Last Updated:** 2026-02-11
+**Last Updated:** 2026-02-12
 **Source:** Official `d5-extension-example-modules` repo + Divi 5 theme source analysis
 
 ---
@@ -169,9 +169,6 @@ src/components/{module-name}/
   placeholder-content.ts                  -- Default content for new instances
   module.scss                             -- FE+VB styles → bundle.css
   style.scss                              -- VB-only styles → vb-bundle.css
-
-src/icons/{icon-name}/
-  index.tsx                               -- SVG icon (no props)
 ```
 
 ### SCSS Convention
@@ -427,7 +424,7 @@ addAction('divi.moduleLibrary.registerModuleLibraryStore.after', 'leaderspath', 
 | `d4Shortcode` | Empty string for new modules |
 | `title` | Display name (prefix "LeadersPath") |
 | `titles` | Plural — a **string**, NOT an array |
-| `moduleIcon` | References registered icon name |
+| `moduleIcon` | Built-in Divi icon name (e.g., `"divi/module-comments"`) |
 | `moduleClassName` | CSS base with underscores (e.g., `leaderspath_lesson_meta`) |
 | `moduleOrderClassName` | Same as `moduleClassName` |
 | `category` | One of: `module`, `child-module`, `fullwidth-module`, `structure`, `unsupported` |
@@ -513,7 +510,7 @@ Adds text option classnames. Uses `TextClassnames` only (NOT `ElementClassnames`
 10. `settings` must be object `{ "content": "auto" }`, NOT bare string `"auto"`
 11. `titles` is a string, NOT an array
 12. `tagName` not `tag` for element HTML tag
-13. Icon component takes **no props**: `(): ReactElement`
+13. **Module icons:** Use Divi's built-in icon library names (e.g., `"divi/module-comments"`) — no custom icon registration needed
 14. Registration timing: `divi.moduleLibrary.registerModuleLibraryStore.after` — too early silently fails
 15. Webpack `splitChunks` required for CSS separation between FE and VB bundles
 16. `ElementComponents` must be in both VB and PHP children (renders decoration layers)

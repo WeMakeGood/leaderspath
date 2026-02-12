@@ -3,7 +3,7 @@
   "d4Shortcode": "",
   "title": "LeadersPath Activity Meta",
   "titles": "LeadersPath Activity Meta",
-  "moduleIcon": "leaderspath/activity-meta",
+  "moduleIcon": "divi/module-countdown-timer",
   "moduleClassName": "leaderspath_activity_meta",
   "moduleOrderClassName": "leaderspath_activity_meta",
   "category": "module",

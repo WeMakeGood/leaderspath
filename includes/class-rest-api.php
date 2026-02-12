@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace LeadersPath\Includes;
 
+use League\CommonMark\GithubFlavoredMarkdownConverter;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
@@ -490,6 +491,10 @@ class REST_API {
 			return $response;
 		}
 
+		// Convert markdown to HTML; keep raw text for conversation history.
+		$response['content_raw'] = $response['content'];
+		$response['content']     = self::markdown_to_html( $response['content'] );
+
 		return new WP_REST_Response( $response, 200 );
 	}
 
@@ -529,6 +534,10 @@ class REST_API {
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
+
+		// Convert markdown to HTML; keep raw text for conversation history.
+		$response['content_raw'] = $response['content'];
+		$response['content']     = self::markdown_to_html( $response['content'] );
 
 		return new WP_REST_Response( $response, 200 );
 	}
@@ -604,6 +613,30 @@ class REST_API {
 		];
 
 		return new WP_REST_Response( $data, 200 );
+	}
+
+	/**
+	 * Convert markdown text to sanitized HTML.
+	 *
+	 * Uses league/commonmark with GFM extensions for fenced code blocks,
+	 * tables, strikethrough, task lists, and autolinks.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $markdown Raw markdown text.
+	 * @return string Sanitized HTML.
+	 */
+	private static function markdown_to_html( string $markdown ): string {
+		static $converter = null;
+
+		if ( null === $converter ) {
+			$converter = new GithubFlavoredMarkdownConverter( [
+				'html_input'         => 'strip',
+				'allow_unsafe_links' => false,
+			] );
+		}
+
+		return wp_kses_post( $converter->convert( $markdown )->getContent() );
 	}
 
 }

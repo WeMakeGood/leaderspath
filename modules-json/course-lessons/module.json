@@ -3,7 +3,7 @@
   "d4Shortcode": "",
   "title": "LeadersPath Course Lessons",
   "titles": "LeadersPath Course Lessons",
-  "moduleIcon": "leaderspath/course-lessons",
+  "moduleIcon": "divi/module-accordion",
   "moduleClassName": "leaderspath_course_lessons",
   "moduleOrderClassName": "leaderspath_course_lessons",
   "category": "module",

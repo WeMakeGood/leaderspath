@@ -3,7 +3,7 @@
   "d4Shortcode": "",
   "title": "LeadersPath Skills List",
   "titles": "LeadersPath Skills List",
-  "moduleIcon": "leaderspath/skills-list",
+  "moduleIcon": "divi/module-blurb",
   "moduleClassName": "leaderspath_skills_list",
   "moduleOrderClassName": "leaderspath_skills_list",
   "category": "module",

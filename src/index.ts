@@ -13,8 +13,6 @@ import { addAction } from '@wordpress/hooks';
 import { registerModule } from '@divi/module-library';
 import { omit } from 'lodash';
 
-import './module-icons';
-
 import { lessonMeta } from './components/lesson-meta';
 import { lessonObjectives } from './components/lesson-objectives';
 import { lessonActivities } from './components/lesson-activities';
@@ -22,6 +20,7 @@ import { activityMeta } from './components/activity-meta';
 import { courseLessons } from './components/course-lessons';
 import { contextLibrary } from './components/context-library';
 import { skillsList } from './components/skills-list';
+import { chatbot } from './components/chatbot';
 
 /**
  * Register all LeadersPath modules after Divi's module library store is ready.
@@ -34,4 +33,5 @@ addAction('divi.moduleLibrary.registerModuleLibraryStore.after', 'leaderspath', 
     registerModule(courseLessons.metadata, omit(courseLessons, 'metadata'));
     registerModule(contextLibrary.metadata, omit(contextLibrary, 'metadata'));
     registerModule(skillsList.metadata, omit(skillsList, 'metadata'));
+    registerModule(chatbot.metadata, omit(chatbot, 'metadata'));
 });

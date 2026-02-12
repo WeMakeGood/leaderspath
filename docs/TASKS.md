@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-02-11
-**Current Phase:** Phase 8 complete; Frontend Rebuild (research complete, implementation pending)
+**Last Updated:** 2026-02-12
+**Current Phase:** Phase 8 complete; Frontend Rebuild complete (all 8 modules implemented)
 
 ---
 
@@ -140,9 +140,30 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 - [x] Icon controls — color picker + size range slider (gear/cog SVG, scales via `font-size` / `1em`)
 - [x] Grid layout — `gridColumnCount` with gap via CSS custom properties
 
+### Completed: Lesson Objectives Module (2026-02-11)
+
+- [x] Layer 1: Core PHP renderer (`LessonObjectivesRenderer`) — ACF repeater + semantic HTML (`<ol>`/`<li>`)
+- [x] Layer 2: SCSS — structural resets, ordered list styling
+- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder objectives
+- [x] Layer 4: module.json attrs — font controls per element, Content tab toggles, Custom CSS fields
+
+### Completed: Chatbot Module (2026-02-12)
+
+- [x] Install `league/commonmark` v2.8.0 for server-side markdown→HTML conversion
+- [x] Update REST API (`class-rest-api.php`) — add `content_raw` field + `markdown_to_html()` with GFM + `wp_kses_post()`
+- [x] Layer 1: Core PHP renderer (`ChatbotRenderer`) — dual-mode (Activity sandbox / Lesson Q&A), ACF field detection, chat container HTML
+- [x] Layer 2: SCSS — chat bubbles, message area, input bar, typing indicator, code block styling, `prefers-reduced-motion`
+- [x] Layer 2: Frontend JS (`chatbot.js`) — vanilla JS IIFE, message send/receive, history tracking (raw markdown for API, HTML for display), container ID session continuity, model switching, auto-grow textarea, Enter/Shift+Enter, typing indicator, inline error display
+- [x] Layer 3: Divi integration — `Chatbot.php` + 5 trait files (RenderCallback with `wp_enqueue_script` + `wp_localize_script`, ModuleClassnames, ModuleStyles, ModuleScriptData, CustomCss)
+- [x] Layer 4: module.json — Content tab (showHeading, headingText, emptyText), Design tab (Heading font, Container decoration, User/Assistant Message fonts, Input Field font, Send Button decoration), 9 Custom CSS fields
+- [x] TS files — types, edit (static 3-message mockup), styles, module-classnames, module-script-data, custom-css, placeholder-content, index
+- [x] Module icon: uses Divi's built-in `divi/module-comments`
+- [x] Registration in Modules.php, index.ts
+- [x] JSON files copied to modules-json/chatbot/
+- [x] Build verified — zero errors
+
 ### Pending Tasks
 
-- [ ] Chatbot module (Priority 8 — Claude API interactive chat UI)
 - [ ] Test Theme Builder template with multiple lesson/activity/course pages
 
 ---
@@ -239,6 +260,11 @@ Cohorts are a WooCommerce product type for enrollment management.
 | 2026-02-11 | group-items items need `attrName` | Each item in group-items needs `"attrName": "content.innerContent"` to bind to correct attr path |
 | 2026-02-11 | CSS variable reset in SCSS | Parent `.et_flex_module` sets `--flex-direction: column` etc; child SCSS must reset explicitly |
 | 2026-02-11 | Number badge uses Blurb imageIcon pattern | Child attribute with `styleProps` + `decoration` (background, border, spacing, boxShadow) in Design tab group |
+| 2026-02-12 | Server-side markdown rendering | `league/commonmark` GFM converter in PHP; frontend JS stays lean — just displays pre-rendered HTML |
+| 2026-02-12 | `content_raw` field in chat response | REST API returns both HTML (`content`) and raw markdown (`content_raw`) so JS can send raw text back in conversation history |
+| 2026-02-12 | No streaming for chatbot MVP | Standard request/response with typing indicator; streaming (SSE) deferred to enhancement phase |
+| 2026-02-12 | Chatbot frontend as vanilla JS IIFE | Same pattern as `context-modal.js`; config via `wp_localize_script()`, no React/framework dependency |
+| 2026-02-12 | Use Divi built-in icon library | Custom icons had sizing issues in module picker; Divi's built-in `divi/module-*` icons render correctly at all sizes |
 
 ---
 

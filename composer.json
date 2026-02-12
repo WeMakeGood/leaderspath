@@ -11,6 +11,7 @@
     ],
     "require": {
         "php": ">=8.2",
+        "league/commonmark": "^2.7",
         "symfony/yaml": "^7.4"
     },
     "require-dev": {

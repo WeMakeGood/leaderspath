@@ -3,7 +3,7 @@
   "d4Shortcode": "",
   "title": "LeadersPath Lesson Meta",
   "titles": "LeadersPath Lesson Meta",
-  "moduleIcon": "leaderspath/lesson-meta",
+  "moduleIcon": "divi/module-wc-meta",
   "moduleClassName": "leaderspath_lesson_meta",
   "moduleOrderClassName": "leaderspath_lesson_meta",
   "category": "module",
