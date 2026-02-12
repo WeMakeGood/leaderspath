@@ -128,9 +128,21 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 - [x] Icon controls — color picker + size range slider (SVGs scale via `font-size` / `1em`)
 - [x] Grid layout — `gridColumnCount` with gap via CSS custom properties (`--horizontal-gap`/`--vertical-gap`)
 
+### Completed: Skills List Module (2026-02-11)
+
+- [x] Layer 1: Core PHP renderer (`SkillsListRenderer`) — ACF relationship + card grid HTML (`<ul>`/`<li>`/`<article>`)
+- [x] Layer 2: SCSS — card grid layout, card styling, compatibility badges, version labels
+- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder skills
+- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Card decoration group, Icon group, Content tab toggles, Custom CSS fields
+- [x] Data: title, description, compatibility info, version
+- [x] Content tab: 5 toggles (heading, icon, description, meta) + heading text
+- [x] Card decoration — background, border, spacing, box shadow (same pattern as Context Library)
+- [x] Icon controls — color picker + size range slider (gear/cog SVG, scales via `font-size` / `1em`)
+- [x] Grid layout — `gridColumnCount` with gap via CSS custom properties
+
 ### Pending Tasks
 
-- [ ] Rebuild remaining modules from validated patterns (see `docs/divi5-module-architecture.md` section 9 for build order)
+- [ ] Chatbot module (Priority 8 — Claude API interactive chat UI)
 - [ ] Test Theme Builder template with multiple lesson/activity/course pages
 
 ---

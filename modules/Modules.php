@@ -22,6 +22,7 @@ use LeadersPath\Modules\LessonActivities\LessonActivities;
 use LeadersPath\Modules\ActivityMeta\ActivityMeta;
 use LeadersPath\Modules\CourseLessons\CourseLessons;
 use LeadersPath\Modules\ContextLibrary\ContextLibrary;
+use LeadersPath\Modules\SkillsList\SkillsList;
 
 /**
  * Register modules with Divi's dependency tree.
@@ -35,6 +36,7 @@ add_action(
 		$dependency_tree->add_dependency( new ActivityMeta() );
 		$dependency_tree->add_dependency( new CourseLessons() );
 		$dependency_tree->add_dependency( new ContextLibrary() );
+		$dependency_tree->add_dependency( new SkillsList() );
 	}
 );
 
