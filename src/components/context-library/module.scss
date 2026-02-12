@@ -7,12 +7,16 @@
 
 .leaderspath_context_library {
 
-	// Reset inherited Divi CSS variables on grid.
+	// Reset inherited Divi CSS variables on grid and bind to actual gap properties.
+	// Divi's Layout panel writes --horizontal-gap / --vertical-gap CSS variables
+	// but does NOT output column-gap / row-gap — we must wire them here.
 	.leaderspath_context_library__grid {
 		--flex-direction: row;
 		--flex-wrap: wrap;
 		--horizontal-gap: 1.5em;
 		--vertical-gap: 1.5em;
+		column-gap: var(--horizontal-gap);
+		row-gap: var(--vertical-gap);
 		margin: 0;
 		padding: 0;
 		list-style: none;
@@ -38,10 +42,11 @@
 		height: 100%;
 	}
 
-	// Card icon.
+	// Card icon — font-size drives SVG size via width="1em" height="1em".
+	// Color and size are controllable via the Design > Icon panel.
 	.leaderspath_context_library__card_icon {
 		margin-bottom: 0.75em;
-		opacity: 0.6;
+		font-size: 24px;
 
 		svg {
 			display: block;

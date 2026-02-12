@@ -33,7 +33,16 @@ const ContextLibraryEdit = ({
     const showView        = (contentValues.showView ?? 'on') === 'on';
     const showDownload    = (contentValues.showDownload ?? 'on') === 'on';
 
-    const gridDisplay = attrs?.grid?.decoration?.layout?.desktop?.value?.display ?? 'grid';
+    const gridLayout  = attrs?.grid?.decoration?.layout?.desktop?.value ?? {};
+    const gridDisplay = gridLayout?.display ?? 'grid';
+    const gridColumns = gridLayout?.gridColumnCount ?? '3';
+
+    const iconColor = attrs?.cardIcon?.advanced?.color?.desktop?.value ?? '';
+    const iconSize  = attrs?.cardIcon?.advanced?.size?.desktop?.value ?? '';
+    const iconStyle: React.CSSProperties = {
+        ...(iconColor ? { color: iconColor } : {}),
+        ...(iconSize ? { fontSize: iconSize } : {}),
+    };
 
     const placeholderContextFiles = [
         {
@@ -85,13 +94,16 @@ const ContextLibraryEdit = ({
                     {headingText}
                 </h3>
             )}
-            <ul className="leaderspath_context_library__grid" style={{ display: gridDisplay }}>
+            <ul className="leaderspath_context_library__grid" style={{
+                display: gridDisplay,
+                ...(gridDisplay === 'grid' ? { gridTemplateColumns: `repeat(${gridColumns}, 1fr)` } : {}),
+            }}>
                 {placeholderContextFiles.map((file, index) => (
                     <li key={index} className="leaderspath_context_library__item">
                         <article className="leaderspath_context_library__card">
                             {showIcon && (
-                                <div className="leaderspath_context_library__card_icon" data-type={file.type}>
-                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                                <div className="leaderspath_context_library__card_icon" data-type={file.type} style={iconStyle}>
+                                    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor">
                                         <path d={typeIcons[file.type] || typeIcons.instructions} />
                                     </svg>
                                 </div>

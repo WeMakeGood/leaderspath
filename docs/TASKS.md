@@ -119,11 +119,14 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 - [x] Layer 1: Core PHP renderer (`ContextLibraryRenderer`) — ACF relationship + card grid HTML (`<ul>`/`<li>`/`<article>`)
 - [x] Layer 2: SCSS — card grid layout, card styling, type badges, buttons, full modal overlay styles
 - [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder context files
-- [x] Layer 4: module.json attrs — font controls per element, Grid Layout panel, Card decoration group, Content tab toggles, Custom CSS fields
+- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Card decoration group, Icon group, Content tab toggles, Custom CSS fields
 - [x] Data: title, description, file type icon + badge, version label
 - [x] Frontend JS: vanilla JS modal with REST API content fetch + download-as-markdown
 - [x] Content tab: 7 toggles (heading, icon, description, meta, view button, download button) + heading text
 - [x] Card decoration — background, border, spacing, box shadow (same pattern as number badge)
+- [x] Button styling — `elementType: "button"` with full Divi button decoration controls
+- [x] Icon controls — color picker + size range slider (SVGs scale via `font-size` / `1em`)
+- [x] Grid layout — `gridColumnCount` with gap via CSS custom properties (`--horizontal-gap`/`--vertical-gap`)
 
 ### Pending Tasks
 

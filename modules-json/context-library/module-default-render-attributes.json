@@ -23,6 +23,29 @@
       }
     }
   },
+  "cardIcon": {
+    "advanced": {
+      "size": {
+        "desktop": {
+          "value": "24px"
+        }
+      }
+    }
+  },
+  "grid": {
+    "decoration": {
+      "layout": {
+        "desktop": {
+          "value": {
+            "display": "grid",
+            "gridColumnCount": "3",
+            "columnGap": "1.5em",
+            "rowGap": "1.5em"
+          }
+        }
+      }
+    }
+  },
   "card": {
     "decoration": {
       "background": {

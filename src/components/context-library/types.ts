@@ -69,6 +69,12 @@ export interface ContextLibraryAttrs extends InternalAttrs {
             'background' | 'border' | 'spacing' | 'boxShadow'
         >;
     };
+    cardIcon?: {
+        advanced?: {
+            color?: FormatBreakpointStateAttr<string>;
+            size?: FormatBreakpointStateAttr<string>;
+        };
+    };
     cardTitle?: {
         decoration?: Element.Decoration.PickedAttributes<'font'>;
     };
@@ -79,10 +85,10 @@ export interface ContextLibraryAttrs extends InternalAttrs {
         decoration?: Element.Decoration.PickedAttributes<'font'>;
     };
     viewButton?: {
-        decoration?: Element.Decoration.PickedAttributes<'font'>;
+        decoration?: Element.Decoration.PickedAttributes<'button'>;
     };
     downloadButton?: {
-        decoration?: Element.Decoration.PickedAttributes<'font'>;
+        decoration?: Element.Decoration.PickedAttributes<'button'>;
     };
 }
 

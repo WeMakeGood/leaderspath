@@ -169,10 +169,15 @@
                     "desktop": {
                       "value": {
                         "display": "grid",
-                        "gridTemplateColumns": "repeat(3, 1fr)",
+                        "gridColumnCount": "3",
                         "columnGap": "1.5em",
                         "rowGap": "1.5em"
                       }
+                    }
+                  },
+                  "fields": {
+                    "gridColumnCount": {
+                      "baseFieldDefault": "3"
                     }
                   }
                 }
@@ -209,6 +214,37 @@
       "selector": "{{selector}} .leaderspath_context_library__card",
       "tagName": "article",
       "elementType": "element",
+      "default": {
+        "decoration": {
+          "background": {
+            "desktop": {
+              "value": {
+                "color": "#f8f9fa"
+              }
+            }
+          },
+          "border": {
+            "desktop": {
+              "value": {
+                "radius": {
+                  "sync": "on",
+                  "topLeft": "8px",
+                  "topRight": "8px",
+                  "bottomRight": "8px",
+                  "bottomLeft": "8px"
+                },
+                "styles": {
+                  "all": {
+                    "width": "1px",
+                    "color": "#e0e0e0",
+                    "style": "solid"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "styleProps": {
         "spacing": {
           "selector": "{{selector}} .leaderspath_context_library__card",
@@ -304,6 +340,64 @@
         }
       }
     },
+    "cardIcon": {
+      "type": "object",
+      "selector": "{{selector}} .leaderspath_context_library__card_icon",
+      "tagName": "div",
+      "elementType": "element",
+      "default": {
+        "advanced": {
+          "color": {
+            "desktop": {
+              "value": ""
+            }
+          },
+          "size": {
+            "desktop": {
+              "value": "24px"
+            }
+          }
+        }
+      },
+      "settings": {
+        "advanced": {
+          "color": {
+            "groupType": "group-item",
+            "item": {
+              "groupSlug": "designIcon",
+              "attrName": "cardIcon.advanced.color",
+              "label": "Icon Color",
+              "render": true,
+              "priority": 10,
+              "component": {
+                "type": "field",
+                "name": "divi/color-picker"
+              }
+            }
+          },
+          "size": {
+            "groupType": "group-item",
+            "item": {
+              "groupSlug": "designIcon",
+              "attrName": "cardIcon.advanced.size",
+              "label": "Icon Size",
+              "render": true,
+              "priority": 20,
+              "component": {
+                "type": "field",
+                "name": "divi/range",
+                "props": {
+                  "cssProperty": "font-size",
+                  "min": 12,
+                  "max": 96,
+                  "step": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "cardTitle": {
       "type": "object",
       "selector": "{{selector}} .leaderspath_context_library__card_title",
@@ -374,17 +468,31 @@
       "type": "object",
       "selector": "{{selector}} .leaderspath_context_library__view",
       "tagName": "button",
-      "elementType": "heading",
+      "elementType": "button",
+      "elementProps": {
+        "type": "button"
+      },
       "settings": {
         "decoration": {
-          "font": {
+          "button": {
             "priority": 25,
             "component": {
               "props": {
                 "groupLabel": "View Button",
-                "fieldLabel": "View Button",
                 "fields": {
-                  "headingLevel": { "render": false }
+                  "alignment": { "render": false },
+                  "boxShadowGroup": { "render": false },
+                  "buttonIconGroup": { "render": false },
+                  "spacingGroup": { "render": false },
+                  "fontGroup": {
+                    "component": {
+                      "props": {
+                        "fields": {
+                          "textAlign": { "render": false }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -396,17 +504,31 @@
       "type": "object",
       "selector": "{{selector}} .leaderspath_context_library__download",
       "tagName": "button",
-      "elementType": "heading",
+      "elementType": "button",
+      "elementProps": {
+        "type": "button"
+      },
       "settings": {
         "decoration": {
-          "font": {
+          "button": {
             "priority": 30,
             "component": {
               "props": {
                 "groupLabel": "Download Button",
-                "fieldLabel": "Download Button",
                 "fields": {
-                  "headingLevel": { "render": false }
+                  "alignment": { "render": false },
+                  "boxShadowGroup": { "render": false },
+                  "buttonIconGroup": { "render": false },
+                  "spacingGroup": { "render": false },
+                  "fontGroup": {
+                    "component": {
+                      "props": {
+                        "fields": {
+                          "textAlign": { "render": false }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -481,9 +603,22 @@
         "component": {
           "name": "divi/composite",
           "props": {
-            "groupLabel": "Grid Layout",
+            "groupLabel": "Layout",
             "clipboardCategory": "style",
             "presetGroup": "divi/layout"
+          }
+        }
+      },
+      "designIcon": {
+        "panel": "design",
+        "priority": 12,
+        "groupName": "icon",
+        "multiElements": true,
+        "component": {
+          "name": "divi/composite",
+          "props": {
+            "groupLabel": "Icon",
+            "clipboardCategory": "style"
           }
         }
       },
