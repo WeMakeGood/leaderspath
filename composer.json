@@ -18,8 +18,11 @@
         "wp-cli/i18n-command": "^2"
     },
     "autoload": {
+        "classmap": [
+            "includes/",
+            "admin/"
+        ],
         "psr-4": {
-            "LeadersPath\\": "includes/",
             "LeadersPath\\Modules\\": "modules/"
         }
     },
