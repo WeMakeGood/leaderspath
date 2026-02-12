@@ -468,7 +468,7 @@ Divi 5 module code was removed (`844094c`) due to incomplete research. Comprehen
 | **Skills** | Uploaded to Anthropic Skills API for code execution, referenced by skill_id |
 | **Claude API** | Container API with code execution enabled (not simple Messages API) |
 | **Conversation Persistence** | None - page reload clears conversation to enable experimentation |
-| **API Key** | Single plugin-wide key stored in WordPress options |
+| **API Key** | Single plugin-wide key; `LEADERSPATH_API_KEY` constant in wp-config.php (preferred) or encrypted in database |
 | **Rate Limiting** | None initially - paid service, add later if abuse occurs |
 | **Chat UI** | Standard bubble layout (user right, assistant left), configurable colors |
 | **Error Display** | Inline in chat conversation |

@@ -345,7 +345,7 @@ All endpoints require authentication (logged in + appropriate capability).
 
 ### Security Measures
 
-1. **API Key:** Encrypted at rest using WordPress salt
+1. **API Key:** `LEADERSPATH_API_KEY` constant in wp-config.php (preferred) or encrypted at rest in database using WordPress salt
 2. **Nonces:** All REST/AJAX requests verified
 3. **Capability Checks:** Every endpoint validates permissions
 4. **Enrollment Gating:** Chat endpoint verifies user is enrolled in a cohort linked to the requested content (when WooCommerce is active; admin/editor bypass)
@@ -409,7 +409,7 @@ leaderspath/
 |----------|-----------|
 | CPTs for Context/Skills | WordPress admin UI, revision history, ACF integration |
 | No conversation persistence | Fresh start enables experimentation without baggage |
-| Single plugin-wide API key | Simpler management; billing at org level |
+| Single plugin-wide API key | Simpler management; billing at org level. Supports `LEADERSPATH_API_KEY` constant in wp-config.php or encrypted database storage |
 | No rate limiting (initially) | Paid service, trust users; add later if needed |
 | Streaming optional | Nice UX but adds complexity; implement if time permits |
 | Context files in system prompt | Simple, reliable; no additional API calls |

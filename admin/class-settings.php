@@ -279,38 +279,67 @@ class Settings {
 	 * @since 0.1.0
 	 */
 	public function render_api_key_field(): void {
-		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$has_key = ! empty( $options['api_key'] );
+		$options        = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$has_db_key     = ! empty( $options['api_key'] );
+		$has_constant   = self::is_api_key_constant();
+		$has_key        = $has_constant || $has_db_key;
 
 		?>
-		<input
-			type="password"
-			id="leaderspath_api_key"
-			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[api_key]"
-			value="<?php echo $has_key ? '••••••••••••••••' : ''; ?>"
-			class="regular-text"
-			autocomplete="off"
-		/>
-		<?php if ( $has_key ) : ?>
+		<?php if ( $has_constant ) : ?>
+			<input
+				type="password"
+				id="leaderspath_api_key"
+				value="••••••••••••••••"
+				class="regular-text"
+				disabled="disabled"
+			/>
 			<button type="button" id="leaderspath-test-connection" class="button button-secondary">
 				<?php esc_html_e( 'Test Connection', 'leaderspath' ); ?>
 			</button>
 			<span id="leaderspath-connection-status"></span>
-		<?php endif; ?>
-		<p class="description">
-			<?php
-			printf(
-				/* translators: %s: Anthropic console URL */
-				esc_html__( 'Enter your Anthropic API key. Get one from %s.', 'leaderspath' ),
-				'<a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>'
-			);
-			?>
-		</p>
-		<?php if ( $has_key ) : ?>
 			<p class="description" style="color: #46b450;">
-				<span class="dashicons dashicons-yes-alt"></span>
-				<?php esc_html_e( 'API key is configured and encrypted.', 'leaderspath' ); ?>
+				<span class="dashicons dashicons-lock"></span>
+				<?php esc_html_e( 'API key is defined in wp-config.php via the LEADERSPATH_API_KEY constant.', 'leaderspath' ); ?>
 			</p>
+		<?php else : ?>
+			<input
+				type="password"
+				id="leaderspath_api_key"
+				name="<?php echo esc_attr( self::OPTION_NAME ); ?>[api_key]"
+				value="<?php echo $has_db_key ? '••••••••••••••••' : ''; ?>"
+				class="regular-text"
+				autocomplete="off"
+			/>
+			<?php if ( $has_db_key ) : ?>
+				<button type="button" id="leaderspath-test-connection" class="button button-secondary">
+					<?php esc_html_e( 'Test Connection', 'leaderspath' ); ?>
+				</button>
+				<span id="leaderspath-connection-status"></span>
+			<?php endif; ?>
+			<p class="description">
+				<?php
+				printf(
+					/* translators: %s: Anthropic console URL */
+					esc_html__( 'Enter your Anthropic API key. Get one from %s.', 'leaderspath' ),
+					'<a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>'
+				);
+				?>
+			</p>
+			<p class="description">
+				<?php
+				printf(
+					/* translators: %s: constant name */
+					esc_html__( 'Alternatively, define %s in wp-config.php for server-level configuration.', 'leaderspath' ),
+					'<code>LEADERSPATH_API_KEY</code>'
+				);
+				?>
+			</p>
+			<?php if ( $has_db_key ) : ?>
+				<p class="description" style="color: #46b450;">
+					<span class="dashicons dashicons-yes-alt"></span>
+					<?php esc_html_e( 'API key is configured and encrypted.', 'leaderspath' ); ?>
+				</p>
+			<?php endif; ?>
 		<?php endif; ?>
 
 		<?php if ( $has_key ) : ?>
@@ -552,6 +581,11 @@ class Settings {
 			return;
 		}
 
+		// No notice needed if the API key is defined in wp-config.php.
+		if ( self::is_api_key_constant() ) {
+			return;
+		}
+
 		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
 
 		if ( empty( $options['api_key'] ) ) {
@@ -560,9 +594,10 @@ class Settings {
 				<p>
 					<?php
 					printf(
-						/* translators: %s: Settings page URL */
-						esc_html__( 'LeadersPath: Claude API key is not configured. Chatbot features will not work until you %s.', 'leaderspath' ),
-						'<a href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '">' . esc_html__( 'add your API key', 'leaderspath' ) . '</a>'
+						/* translators: %1$s: Settings page URL, %2$s: constant name */
+						esc_html__( 'LeadersPath: Claude API key is not configured. Chatbot features will not work until you %1$s or define %2$s in wp-config.php.', 'leaderspath' ),
+						'<a href="' . esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ) . '">' . esc_html__( 'add your API key', 'leaderspath' ) . '</a>',
+						'<code>LEADERSPATH_API_KEY</code>'
 					);
 					?>
 				</p>
@@ -638,13 +673,32 @@ class Settings {
 	}
 
 	/**
+	 * Check if the API key is defined as a constant in wp-config.php.
+	 *
+	 * @since 0.4.0
+	 *
+	 * @return bool True if LEADERSPATH_API_KEY constant is defined and non-empty.
+	 */
+	public static function is_api_key_constant(): bool {
+		return defined( 'LEADERSPATH_API_KEY' ) && ! empty( LEADERSPATH_API_KEY );
+	}
+
+	/**
 	 * Get the decrypted API key.
+	 *
+	 * Checks for a LEADERSPATH_API_KEY constant in wp-config.php first,
+	 * then falls back to the encrypted value stored in the database.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @return string The decrypted API key, or empty string if not set.
+	 * @return string The API key, or empty string if not set.
 	 */
 	public static function get_api_key(): string {
+		// Prefer wp-config.php constant if defined.
+		if ( self::is_api_key_constant() ) {
+			return LEADERSPATH_API_KEY;
+		}
+
 		$options = get_option( self::OPTION_NAME, [] );
 
 		if ( empty( $options['api_key'] ) ) {
