@@ -33,24 +33,8 @@
 	// Reset Divi theme dd/dt margins. Doubled parent class for specificity.
 	dt.leaderspath_lesson_meta__label,
 	dd.leaderspath_lesson_meta__duration,
-	dd.leaderspath_lesson_meta__difficulty,
 	dd.leaderspath_lesson_meta__activities {
 		margin: 0;
 		padding: 0;
-	}
-
-	// Difficulty level color coding via data attribute.
-	dd.leaderspath_lesson_meta__difficulty {
-		&[data-level="beginner"] {
-			color: var(--leaderspath-difficulty-beginner, #2e7d32);
-		}
-
-		&[data-level="intermediate"] {
-			color: var(--leaderspath-difficulty-intermediate, #f57f17);
-		}
-
-		&[data-level="advanced"] {
-			color: var(--leaderspath-difficulty-advanced, #c62828);
-		}
 	}
 }

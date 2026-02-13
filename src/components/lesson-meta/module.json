@@ -53,8 +53,6 @@
             "value": {
               "showDuration": "on",
               "durationLabel": "Duration",
-              "showDifficulty": "on",
-              "difficultyLabel": "Difficulty",
               "showActivities": "on",
               "activitiesLabel": "Activities"
             }
@@ -101,42 +99,6 @@
                 "type": "field"
               }
             },
-            "showDifficulty": {
-              "groupSlug": "contentElements",
-              "attrName": "content.innerContent",
-              "subName": "showDifficulty",
-              "label": "Show Difficulty",
-              "category": "basic_option",
-              "features": {
-                "hover": false,
-                "sticky": false,
-                "responsive": false
-              },
-              "render": true,
-              "priority": 20,
-              "component": {
-                "type": "field",
-                "name": "divi/toggle"
-              }
-            },
-            "difficultyLabel": {
-              "groupSlug": "contentElements",
-              "attrName": "content.innerContent",
-              "subName": "difficultyLabel",
-              "label": "Difficulty Label",
-              "category": "basic_option",
-              "features": {
-                "hover": false,
-                "sticky": false,
-                "responsive": false
-              },
-              "render": true,
-              "priority": 25,
-              "component": {
-                "name": "divi/text",
-                "type": "field"
-              }
-            },
             "showActivities": {
               "groupSlug": "contentElements",
               "attrName": "content.innerContent",
@@ -149,7 +111,7 @@
                 "responsive": false
               },
               "render": true,
-              "priority": 30,
+              "priority": 20,
               "component": {
                 "type": "field",
                 "name": "divi/toggle"
@@ -167,7 +129,7 @@
                 "responsive": false
               },
               "render": true,
-              "priority": 35,
+              "priority": 25,
               "component": {
                 "name": "divi/text",
                 "type": "field"
@@ -257,28 +219,6 @@
         }
       }
     },
-    "difficulty": {
-      "type": "object",
-      "selector": "{{selector}} .leaderspath_lesson_meta__difficulty",
-      "tagName": "dd",
-      "elementType": "heading",
-      "settings": {
-        "decoration": {
-          "font": {
-            "priority": 20,
-            "component": {
-              "props": {
-                "groupLabel": "Difficulty Text",
-                "fieldLabel": "Difficulty",
-                "fields": {
-                  "headingLevel": { "render": false }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "activities": {
       "type": "object",
       "selector": "{{selector}} .leaderspath_lesson_meta__activities",
@@ -287,7 +227,7 @@
       "settings": {
         "decoration": {
           "font": {
-            "priority": 30,
+            "priority": 20,
             "component": {
               "props": {
                 "groupLabel": "Activities Text",
@@ -314,10 +254,6 @@
     "duration": {
       "subName": "duration",
       "selectorSuffix": " .leaderspath_lesson_meta__duration"
-    },
-    "difficulty": {
-      "subName": "difficulty",
-      "selectorSuffix": " .leaderspath_lesson_meta__difficulty"
     },
     "activities": {
       "subName": "activities",

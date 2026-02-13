@@ -114,21 +114,18 @@ function leaderspath_create_test_context_files(): array {
 			'title'       => 'AI Ethics Guidelines',
 			'content'     => "# AI Ethics Guidelines\n\nThese guidelines help ensure responsible AI usage:\n\n## Core Principles\n\n1. **Transparency**: Be clear about AI limitations and capabilities\n2. **Fairness**: Avoid bias in AI applications\n3. **Privacy**: Protect user data and consent\n4. **Accountability**: Maintain human oversight\n5. **Safety**: Prevent harmful outputs\n\n## Best Practices\n\n- Always disclose when content is AI-generated\n- Review AI outputs before publishing\n- Consider diverse perspectives in training data\n- Implement feedback mechanisms",
 			'description' => 'Core ethical principles for working with AI systems.',
-			'file_type'   => 'knowledge_base',
 			'version'     => '1.0.0',
 		],
 		[
 			'title'       => 'Prompt Engineering Basics',
 			'content'     => "# Prompt Engineering Basics\n\n## What is Prompt Engineering?\n\nPrompt engineering is the practice of designing effective inputs for AI language models to get desired outputs.\n\n## Key Techniques\n\n### 1. Be Specific\nInstead of: \"Write about dogs\"\nBetter: \"Write a 200-word article about the health benefits of owning a dog for seniors\"\n\n### 2. Provide Context\nGive the AI background information it needs to respond appropriately.\n\n### 3. Use Examples\nShow the AI what format or style you want through examples.\n\n### 4. Set Constraints\nDefine length, tone, format, and other parameters.\n\n### 5. Iterate\nRefine your prompts based on the outputs you receive.",
 			'description' => 'Introduction to writing effective prompts for AI models.',
-			'file_type'   => 'instructions',
 			'version'     => '1.2.0',
 		],
 		[
 			'title'       => 'Sample Conversation Flows',
 			'content'     => "# Sample Conversation Flows\n\n## Example 1: Technical Explanation\n\n**User**: What is machine learning?\n\n**Assistant**: Machine learning is a subset of artificial intelligence where computers learn patterns from data without being explicitly programmed. Think of it like teaching a child to recognize cats - instead of listing every feature of a cat, you show them many pictures until they can identify cats on their own.\n\n## Example 2: Creative Task\n\n**User**: Help me brainstorm names for a coffee shop.\n\n**Assistant**: Here are some coffee shop name ideas:\n- The Daily Grind\n- Bean There, Done That\n- Espresso Yourself\n- The Perky Cup\n- Grounds for Celebration",
 			'description' => 'Example conversations demonstrating good AI interaction patterns.',
-			'file_type'   => 'examples',
 			'version'     => '1.0.0',
 		],
 	];
@@ -158,7 +155,6 @@ function leaderspath_create_test_context_files(): array {
 		// Set ACF fields.
 		if ( function_exists( 'update_field' ) ) {
 			update_field( 'context_description', $data['description'], $post_id );
-			update_field( 'context_file_type', $data['file_type'], $post_id );
 			update_field( 'context_version', $data['version'], $post_id );
 		}
 
@@ -366,7 +362,7 @@ function leaderspath_create_test_lessons( array $activity_ids, array $context_id
 			'content'    => "<h2>Course Overview</h2>\n\n<p>This course introduces you to working with AI assistants. You'll learn the basics, practice prompt writing, and explore ethical considerations.</p>\n\n<p>By the end, you'll be confident in your ability to use AI tools effectively and responsibly.</p>",
 			'excerpt'    => 'A comprehensive introduction to AI assistants for beginners.',
 			'activities' => [ 0, 1, 2 ], // Indices into $activity_ids.
-			'difficulty' => 'beginner',
+
 			'total_duration' => '90 minutes',
 			'objectives' => [
 				'Understand what AI assistants are and how they differ from traditional software',
@@ -386,7 +382,7 @@ function leaderspath_create_test_lessons( array $activity_ids, array $context_id
 			'content'    => "<h2>Hands-On AI Experience</h2>\n\n<p>Move beyond theory and experience the practical differences between raw and context-enhanced AI. This short course provides direct comparison opportunities.</p>",
 			'excerpt'    => 'Experience the difference context makes in AI interactions.',
 			'activities' => [ 3 ], // Raw vs Enhanced activity.
-			'difficulty' => 'intermediate',
+
 			'total_duration' => '45 minutes',
 			'objectives' => [
 				'Experience the difference between raw and context-enhanced AI',
@@ -439,7 +435,6 @@ function leaderspath_create_test_lessons( array $activity_ids, array $context_id
 			}
 
 			// Lesson Settings.
-			update_field( 'lesson_difficulty', $data['difficulty'], $post_id );
 			update_field( 'lesson_total_duration', $data['total_duration'], $post_id );
 
 			// Learning Objectives (repeater).

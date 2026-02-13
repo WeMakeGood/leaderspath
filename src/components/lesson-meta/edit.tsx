@@ -26,11 +26,9 @@ const LessonMetaEdit = ({
     const contentValues = attrs?.content?.innerContent?.desktop?.value ?? {};
 
     const showDuration   = (contentValues.showDuration ?? 'on') === 'on';
-    const showDifficulty = (contentValues.showDifficulty ?? 'on') === 'on';
     const showActivities = (contentValues.showActivities ?? 'on') === 'on';
 
     const durationLabel   = contentValues.durationLabel ?? __('Duration', 'leaderspath');
-    const difficultyLabel = contentValues.difficultyLabel ?? __('Difficulty', 'leaderspath');
     const activitiesLabel = contentValues.activitiesLabel ?? __('Activities', 'leaderspath');
 
     // Read layout display mode from list attribute (Layout panel).
@@ -61,16 +59,6 @@ const LessonMetaEdit = ({
                         </dt>
                         <dd className="leaderspath_lesson_meta__duration">
                             {__('90 minutes', 'leaderspath')}
-                        </dd>
-                    </>
-                )}
-                {showDifficulty && (
-                    <>
-                        <dt className="leaderspath_lesson_meta__label">
-                            {difficultyLabel}
-                        </dt>
-                        <dd className="leaderspath_lesson_meta__difficulty" data-level="beginner">
-                            {__('Beginner', 'leaderspath')}
                         </dd>
                     </>
                 )}

@@ -24,6 +24,25 @@ The facilitator presents concepts, learners experiment in AI sandboxes (Activiti
 
 ---
 
+## Admin Menu Structure
+
+All CPTs and taxonomies appear under a single **LeadersPath** top-level menu (`Admin_Menu::MENU_SLUG`). CPTs use `'show_in_menu' => Admin_Menu::MENU_SLUG` to nest automatically. Taxonomy admin pages are registered manually via `add_submenu_page()` in `Admin_Menu::register_menu()` since WordPress only auto-adds taxonomy submenus for CPTs with `show_in_menu => true`.
+
+Submenu order is controlled by `Admin_Menu::SUBMENU_ORDER` (sorted at priority 999):
+
+1. Dashboard
+2. Courses
+3. Lessons
+4. Activities
+5. Topics (taxonomy)
+6. Context Files
+7. Context Categories (taxonomy)
+8. Skills
+9. Skill Categories (taxonomy)
+10. Settings
+
+---
+
 ## Custom Post Types
 
 ### 1. Activity (`leaderspath_activity`)
@@ -39,11 +58,9 @@ AI sandbox experiments within a facilitated Lesson.
     'public'              => true,
     'publicly_queryable'  => true,
     'show_ui'             => true,
-    'show_in_menu'        => true,
+    'show_in_menu'        => Admin_Menu::MENU_SLUG, // Under LeadersPath menu
     'show_in_rest'        => true,
     'rest_base'           => 'activities',
-    'menu_position'       => 25,
-    'menu_icon'           => 'dashicons-welcome-learn-more',
     'supports'            => ['title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields'],
     'has_archive'         => true,
     'rewrite'             => ['slug' => 'activity', 'with_front' => false],
@@ -95,11 +112,9 @@ The atomic teaching unit, taught as a cohesive whole by a facilitator.
     'public'              => true,
     'publicly_queryable'  => true,
     'show_ui'             => true,
-    'show_in_menu'        => true,
+    'show_in_menu'        => Admin_Menu::MENU_SLUG, // Under LeadersPath menu
     'show_in_rest'        => true,
     'rest_base'           => 'lessons',
-    'menu_position'       => 26,
-    'menu_icon'           => 'dashicons-book-alt',
     'supports'            => ['title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields'],
     'has_archive'         => true,
     'rewrite'             => ['slug' => 'lesson', 'with_front' => false],
@@ -113,7 +128,6 @@ The atomic teaching unit, taught as a cohesive whole by a facilitator.
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
 | `lesson_activities` | Relationship | Ordered list of activities |
-| `lesson_difficulty` | Select | Beginner, Intermediate, Advanced |
 | `lesson_total_duration` | Text | Total facilitation time (e.g., "90 minutes") |
 | `lesson_objectives` | Repeater | Learning objectives for the lesson |
 | `lesson_objectives.objective` | Text | Single objective |
@@ -159,14 +173,12 @@ A reusable curriculum containing Lessons. Groups learners working through lesson
     'public'              => true,
     'publicly_queryable'  => true,
     'show_ui'             => true,
-    'show_in_menu'        => true,
+    'show_in_menu'        => Admin_Menu::MENU_SLUG, // Under LeadersPath menu
     'show_in_rest'        => true,
     'rest_base'           => 'courses',
     'rest_namespace'      => 'wp/v2',
     'query_var'           => true,
     'rewrite'             => ['slug' => 'course', 'with_front' => false],
-    'menu_position'       => 27,
-    'menu_icon'           => 'dashicons-groups',
     'supports'            => ['title', 'editor', 'thumbnail', 'excerpt', 'revisions', 'custom-fields'],
     'has_archive'         => true,
     'capability_type'     => 'leaderspath_course',
@@ -226,10 +238,9 @@ Markdown files used as context for Claude API calls.
     'public'              => false,
     'publicly_queryable'  => true, // For REST access
     'show_ui'             => true,
-    'show_in_menu'        => 'edit.php?post_type=leaderspath_activity', // Submenu under Activities
+    'show_in_menu'        => Admin_Menu::MENU_SLUG, // Under LeadersPath menu
     'show_in_rest'        => true,
     'rest_base'           => 'context-files',
-    'menu_icon'           => 'dashicons-media-text',
     'supports'            => ['title', 'editor', 'revisions', 'custom-fields'],
     'has_archive'         => false,
     'rewrite'             => false,
@@ -248,10 +259,9 @@ Markdown files used as context for Claude API calls.
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
 | `context_description` | Textarea | Purpose and usage notes |
-| `context_file_type` | Select | Type: System Prompt, Knowledge Base, Instructions, Examples, Other |
 | `context_version` | Text | Semantic version (e.g., 1.0.0) |
 
-**Note:** Context Files also use the `leaderspath_context_cat` taxonomy for organization (separate from ACF fields).
+**Note:** Context Files use the `leaderspath_context_cat` taxonomy for categorization (e.g., Knowledge Base, Instructions, Examples).
 
 ---
 
@@ -268,10 +278,9 @@ Agentic skill definitions for Claude API.
     'public'              => false,
     'publicly_queryable'  => true, // For REST access
     'show_ui'             => true,
-    'show_in_menu'        => 'edit.php?post_type=leaderspath_activity', // Submenu under Activities
+    'show_in_menu'        => Admin_Menu::MENU_SLUG, // Under LeadersPath menu
     'show_in_rest'        => true,
     'rest_base'           => 'skills',
-    'menu_icon'           => 'dashicons-admin-tools',
     'supports'            => ['title', 'revisions', 'custom-fields'],
     'has_archive'         => false,
     'rewrite'             => false,
@@ -327,7 +336,7 @@ compatibility: Requires Python 3.9+ (optional)
 
 ### 1. Topic (`leaderspath_topic`)
 
-Cross-cutting topics for activities and lessons.
+Cross-cutting topics for activities and lessons. Terms are created by the site admin via the Topics admin page under the LeadersPath menu.
 
 #### Registration Arguments
 
@@ -356,7 +365,7 @@ Cross-cutting topics for activities and lessons.
 
 ### 2. Context Category (`leaderspath_context_cat`)
 
-Organizes context files by type/purpose.
+Categorizes context files by type/purpose (e.g., Knowledge Base, Instructions, Examples). Terms are created by the site admin via the Context Categories admin page under the LeadersPath menu.
 
 #### Registration Arguments
 
@@ -380,19 +389,11 @@ Organizes context files by type/purpose.
 
 - `leaderspath_context`
 
-#### Default Terms
-
-- Organization Profile
-- Brand Guidelines
-- Process Documentation
-- Technical Specifications
-- Example Content
-
 ---
 
 ### 3. Skill Category (`leaderspath_skill_cat`)
 
-Organizes skills by function.
+Categorizes skills by function. Terms are created by the site admin via the Skill Categories admin page under the LeadersPath menu.
 
 #### Registration Arguments
 
@@ -415,14 +416,6 @@ Organizes skills by function.
 #### Associated Post Types
 
 - `leaderspath_skill`
-
-#### Default Terms
-
-- Content Generation
-- Data Analysis
-- Research
-- Code Generation
-- Communication
 
 ---
 
@@ -562,9 +555,8 @@ When activating the plugin:
 
 1. Register all CPTs and taxonomies
 2. Flush rewrite rules
-3. Create default taxonomy terms
-4. Add capabilities to Administrator role
-5. Create LeadersPath Student role if not exists
+3. Add capabilities to Administrator role
+4. Create LeadersPath Student role if not exists
 
 When deactivating:
 

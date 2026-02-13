@@ -28,7 +28,6 @@ const CourseLessonsEdit = ({
     const headingText      = contentValues.headingText ?? __('Lessons', 'leaderspath');
     const showNumber       = (contentValues.showNumber ?? 'on') === 'on';
     const showDuration     = (contentValues.showDuration ?? 'on') === 'on';
-    const showDifficulty   = (contentValues.showDifficulty ?? 'on') === 'on';
     const showActivityCount = (contentValues.showActivityCount ?? 'on') === 'on';
     const showExcerpt      = (contentValues.showExcerpt ?? 'on') === 'on';
     const showPrerequisites = (contentValues.showPrerequisites ?? 'off') === 'on';
@@ -38,27 +37,21 @@ const CourseLessonsEdit = ({
     const placeholderLessons = [
         {
             title: __('Introduction to AI Leadership', 'leaderspath'),
-            difficulty: __('Beginner', 'leaderspath'),
             duration: __('45 minutes', 'leaderspath'),
             activityCount: __('3 activities', 'leaderspath'),
             excerpt: __('Explore the fundamentals of AI-assisted leadership and decision-making.', 'leaderspath'),
-            difficultySlug: 'beginner',
         },
         {
             title: __('Context-Aware AI Interactions', 'leaderspath'),
-            difficulty: __('Intermediate', 'leaderspath'),
             duration: __('60 minutes', 'leaderspath'),
             activityCount: __('4 activities', 'leaderspath'),
             excerpt: __('Learn how context shapes AI responses and improves collaboration.', 'leaderspath'),
-            difficultySlug: 'intermediate',
         },
         {
             title: __('Advanced Prompt Engineering', 'leaderspath'),
-            difficulty: __('Advanced', 'leaderspath'),
             duration: __('90 minutes', 'leaderspath'),
             activityCount: __('5 activities', 'leaderspath'),
             excerpt: __('Master advanced techniques for crafting effective AI prompts.', 'leaderspath'),
-            difficultySlug: 'advanced',
         },
     ];
 
@@ -100,16 +93,8 @@ const CourseLessonsEdit = ({
                                     {lesson.title}
                                 </a>
                             </h4>
-                            {(showDifficulty || showDuration || showActivityCount) && (
+                            {(showDuration || showActivityCount) && (
                                 <div className="leaderspath_course_lessons__meta">
-                                    {showDifficulty && (
-                                        <span
-                                            className="leaderspath_course_lessons__difficulty"
-                                            data-difficulty={lesson.difficultySlug}
-                                        >
-                                            {lesson.difficulty}
-                                        </span>
-                                    )}
                                     {showDuration && (
                                         <span className="leaderspath_course_lessons__duration">
                                             {lesson.duration}

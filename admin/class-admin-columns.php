@@ -128,8 +128,7 @@ class Admin_Columns {
 
 			// Insert custom columns after title.
 			if ( 'title' === $key ) {
-				$new_columns['leaderspath_activity_count'] = __( 'Activities', 'leaderspath' );
-				$new_columns['leaderspath_difficulty']   = __( 'Difficulty', 'leaderspath' );
+				$new_columns['leaderspath_activity_count']  = __( 'Activities', 'leaderspath' );
 				$new_columns['leaderspath_total_duration'] = __( 'Total Duration', 'leaderspath' );
 			}
 		}
@@ -149,10 +148,6 @@ class Admin_Columns {
 		switch ( $column ) {
 			case 'leaderspath_activity_count':
 				$this->render_lesson_activity_count( $post_id );
-				break;
-
-			case 'leaderspath_difficulty':
-				$this->render_lesson_difficulty( $post_id );
 				break;
 
 			case 'leaderspath_total_duration':
@@ -325,47 +320,6 @@ class Admin_Columns {
 	}
 
 	/**
-	 * Render the difficulty level for a lesson.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param int $post_id Lesson post ID.
-	 */
-	private function render_lesson_difficulty( int $post_id ): void {
-		$difficulty = get_field( 'lesson_difficulty', $post_id );
-
-		// Hidden value for quick edit.
-		echo '<span class="leaderspath-difficulty-value hidden">' . esc_html( (string) $difficulty ) . '</span>';
-
-		if ( empty( $difficulty ) ) {
-			echo '<span class="dashicons dashicons-minus" aria-hidden="true"></span>';
-			echo '<span class="screen-reader-text">' . esc_html__( 'Not set', 'leaderspath' ) . '</span>';
-			return;
-		}
-
-		$labels = [
-			'beginner'     => __( 'Beginner', 'leaderspath' ),
-			'intermediate' => __( 'Intermediate', 'leaderspath' ),
-			'advanced'     => __( 'Advanced', 'leaderspath' ),
-		];
-
-		$colors = [
-			'beginner'     => '#46b450',
-			'intermediate' => '#ffb900',
-			'advanced'     => '#dc3232',
-		];
-
-		$label = $labels[ $difficulty ] ?? $difficulty;
-		$color = $colors[ $difficulty ] ?? '#666';
-
-		printf(
-			'<span style="color: %s; font-weight: 500;">%s</span>',
-			esc_attr( $color ),
-			esc_html( $label )
-		);
-	}
-
-	/**
 	 * Render the total duration for a lesson.
 	 *
 	 * @since 0.1.0
@@ -461,23 +415,6 @@ class Admin_Columns {
 			}
 		}
 
-		// Lesson quick edit fields.
-		if ( 'leaderspath_lesson' === $post_type && 'leaderspath_difficulty' === $column_name ) {
-			?>
-			<fieldset class="inline-edit-col-right">
-				<div class="inline-edit-col">
-					<label>
-						<span class="title"><?php esc_html_e( 'Difficulty', 'leaderspath' ); ?></span>
-						<select name="leaderspath_lesson_difficulty" class="leaderspath-lesson-difficulty">
-							<option value="beginner"><?php esc_html_e( 'Beginner', 'leaderspath' ); ?></option>
-							<option value="intermediate"><?php esc_html_e( 'Intermediate', 'leaderspath' ); ?></option>
-							<option value="advanced"><?php esc_html_e( 'Advanced', 'leaderspath' ); ?></option>
-						</select>
-					</label>
-				</div>
-			</fieldset>
-			<?php
-		}
 	}
 
 	/**
@@ -526,16 +463,6 @@ class Admin_Columns {
 			update_field( 'chatbot_enabled', $chatbot_enabled, $post_id );
 		}
 
-		// Save lesson fields.
-		if ( 'leaderspath_lesson' === $post->post_type ) {
-			if ( isset( $_POST['leaderspath_lesson_difficulty'] ) ) {
-				$valid = [ 'beginner', 'intermediate', 'advanced' ];
-				$difficulty = sanitize_text_field( wp_unslash( $_POST['leaderspath_lesson_difficulty'] ) );
-				if ( in_array( $difficulty, $valid, true ) ) {
-					update_field( 'lesson_difficulty', $difficulty, $post_id );
-				}
-			}
-		}
 	}
 
 	/**
@@ -551,7 +478,7 @@ class Admin_Columns {
 		}
 
 		$screen = get_current_screen();
-		if ( ! $screen || ! in_array( $screen->post_type, [ 'leaderspath_activity', 'leaderspath_lesson' ], true ) ) {
+		if ( ! $screen || 'leaderspath_activity' !== $screen->post_type ) {
 			return;
 		}
 
@@ -582,12 +509,7 @@ class Admin_Columns {
 			var chatbotEnabled = $row.find('.leaderspath-chatbot-value').text();
 			$editRow.find('input.leaderspath-chatbot-enabled').prop('checked', chatbotEnabled === '1');
 
-			// Lesson difficulty.
-			var difficulty = $row.find('.leaderspath-difficulty-value').text();
-			if (difficulty) {
-				$editRow.find('select.leaderspath-lesson-difficulty').val(difficulty);
-			}
-		}
+}
 	};
 })(jQuery);
 JS;

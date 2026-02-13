@@ -27,15 +27,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class ContextLibraryRenderer {
 
 	/**
-	 * Human-readable labels for context file types.
+	 * Generic document SVG icon for context file cards.
 	 */
-	private const TYPE_LABELS = [
-		'system_prompt'  => 'System Prompt',
-		'knowledge_base' => 'Knowledge Base',
-		'instructions'   => 'Instructions',
-		'examples'       => 'Examples',
-		'other'          => 'Other',
-	];
+	private const DOCUMENT_ICON = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z"/></svg>';
 
 	/**
 	 * Render the context library HTML.
@@ -100,16 +94,21 @@ class ContextLibraryRenderer {
 			}
 
 			$description = (string) get_field( 'context_description', $context_id );
-			$file_type   = (string) get_field( 'context_file_type', $context_id );
 			$version     = (string) get_field( 'context_version', $context_id );
 
+			// Get category from taxonomy (replaces old hardcoded context_file_type ACF field).
+			$category_label = '';
+			$terms          = get_the_terms( $context_id, 'leaderspath_context_cat' );
+			if ( is_array( $terms ) && ! empty( $terms ) ) {
+				$category_label = $terms[0]->name;
+			}
+
 			$files[] = [
-				'id'          => $context_id,
-				'title'       => get_the_title( $context_id ),
-				'description' => $description,
-				'file_type'   => $file_type ?: 'other',
-				'type_label'  => self::TYPE_LABELS[ $file_type ] ?? self::TYPE_LABELS['other'],
-				'version'     => $version,
+				'id'             => $context_id,
+				'title'          => get_the_title( $context_id ),
+				'description'    => $description,
+				'category_label' => $category_label,
+				'version'        => $version,
 			];
 		}
 
@@ -147,9 +146,8 @@ class ContextLibraryRenderer {
 			$icon = '';
 			if ( $options['show_icon'] ) {
 				$icon = sprintf(
-					'<div class="leaderspath_context_library__card_icon" data-type="%s">%s</div>',
-					esc_attr( $file['file_type'] ),
-					self::get_type_icon( $file['file_type'] )
+					'<div class="leaderspath_context_library__card_icon">%s</div>',
+					self::DOCUMENT_ICON
 				);
 			}
 
@@ -169,21 +167,25 @@ class ContextLibraryRenderer {
 
 			$meta = '';
 			if ( $options['show_meta'] ) {
-				$meta_parts = sprintf(
-					'<span class="leaderspath_context_library__badge" data-type="%s">%s</span>',
-					esc_attr( $file['file_type'] ),
-					esc_html( $file['type_label'] )
-				);
+				$meta_parts = '';
+				if ( '' !== $file['category_label'] ) {
+					$meta_parts .= sprintf(
+						'<span class="leaderspath_context_library__badge">%s</span>',
+						esc_html( $file['category_label'] )
+					);
+				}
 				if ( '' !== $file['version'] ) {
 					$meta_parts .= sprintf(
 						'<span class="leaderspath_context_library__version">v%s</span>',
 						esc_html( $file['version'] )
 					);
 				}
-				$meta = sprintf(
-					'<div class="leaderspath_context_library__card_meta">%s</div>',
-					$meta_parts
-				);
+				if ( '' !== $meta_parts ) {
+					$meta = sprintf(
+						'<div class="leaderspath_context_library__card_meta">%s</div>',
+						$meta_parts
+					);
+				}
 			}
 
 			$actions = '';
@@ -259,23 +261,4 @@ class ContextLibraryRenderer {
 		);
 	}
 
-	/**
-	 * Get SVG icon markup for a context file type.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param string $type Context file type.
-	 * @return string SVG markup.
-	 */
-	private static function get_type_icon( string $type ): string {
-		$icons = [
-			'system_prompt'  => '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M17 7h-4v2h4c1.65 0 3 1.35 3 3s-1.35 3-3 3h-4v2h4c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-6 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-2zm-3-4h8v2H8v-2z"/></svg>',
-			'knowledge_base' => '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg>',
-			'instructions'   => '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>',
-			'examples'       => '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>',
-			'other'          => '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z"/></svg>',
-		];
-
-		return $icons[ $type ] ?? $icons['other'];
-	}
 }

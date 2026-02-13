@@ -38,7 +38,6 @@ class CourseLessonsRenderer {
 	 *     @type string $heading_text       Heading text. Default 'Lessons'.
 	 *     @type bool   $show_number        Whether to show order numbers. Default true.
 	 *     @type bool   $show_duration      Whether to show duration per lesson. Default true.
-	 *     @type bool   $show_difficulty    Whether to show difficulty badge. Default true.
 	 *     @type bool   $show_activity_count Whether to show activity count. Default true.
 	 *     @type bool   $show_excerpt       Whether to show excerpt per lesson. Default true.
 	 *     @type bool   $show_prerequisites Whether to show prerequisites section. Default false.
@@ -51,7 +50,6 @@ class CourseLessonsRenderer {
 			'heading_text'        => __( 'Lessons', 'leaderspath' ),
 			'show_number'         => true,
 			'show_duration'       => true,
-			'show_difficulty'     => true,
 			'show_activity_count' => true,
 			'show_excerpt'        => true,
 			'show_prerequisites'  => false,
@@ -94,7 +92,6 @@ class CourseLessonsRenderer {
 			}
 
 			$duration       = (int) get_field( 'lesson_total_duration', $lesson_id );
-			$difficulty     = (string) get_field( 'lesson_difficulty', $lesson_id );
 			$activities     = get_field( 'lesson_activities', $lesson_id );
 			$activity_count = is_array( $activities ) ? count( $activities ) : 0;
 
@@ -103,7 +100,6 @@ class CourseLessonsRenderer {
 				'title'          => get_the_title( $lesson_id ),
 				'permalink'      => get_permalink( $lesson_id ),
 				'duration'       => $duration,
-				'difficulty'     => $difficulty,
 				'activity_count' => $activity_count,
 				'excerpt'        => get_the_excerpt( $post ),
 			];
@@ -187,14 +183,6 @@ class CourseLessonsRenderer {
 			);
 
 			$meta_parts = [];
-
-			if ( $options['show_difficulty'] && '' !== $lesson['difficulty'] ) {
-				$meta_parts[] = sprintf(
-					'<span class="leaderspath_course_lessons__difficulty" data-difficulty="%s">%s</span>',
-					esc_attr( strtolower( $lesson['difficulty'] ) ),
-					esc_html( $lesson['difficulty'] )
-				);
-			}
 
 			if ( $options['show_duration'] && $lesson['duration'] > 0 ) {
 				$meta_parts[] = sprintf(

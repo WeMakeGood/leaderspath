@@ -116,10 +116,9 @@ Reference documents embedded in Claude's system prompt:
 **Metadata (ACF):**
 - Description (purpose and usage notes)
 - Version (semantic version string)
-- File Type (System Prompt, Knowledge Base, Instructions, Guidelines, Examples, Other)
 
 **Taxonomy:**
-- Context Category (`leaderspath_context_cat`)
+- Context Category (`leaderspath_context_cat`) - for categorization (e.g., Knowledge Base, Instructions, Examples)
 
 **Key Point:** Context files are NOT uploaded to Anthropic. Their full content is embedded directly in the system prompt for every chat request.
 
@@ -160,7 +159,6 @@ The lesson is the atomic teaching unit, taught as a cohesive whole by a facilita
 
 **Lesson Settings (ACF):**
 - `lesson_activities` - Ordered activities (relationship, sortable)
-- `lesson_difficulty` - Beginner/Intermediate/Advanced
 - `lesson_total_duration` - Total facilitation time (e.g., "90 minutes")
 - `lesson_objectives` - Learning objectives for the lesson
 - `lesson_access_roles` - User roles that can access
@@ -371,7 +369,7 @@ leaderspath/
 │   └── class-woocommerce.php    # WC integration: cohort checkbox, enrollment, access chain (loaded if WC active)
 │
 ├── admin/
-│   ├── class-admin-menu.php     # Admin menu registration
+│   ├── class-admin-menu.php     # Admin menu registration + submenu ordering
 │   ├── class-settings.php       # Settings page
 │   └── class-admin-columns.php  # Custom admin columns
 │

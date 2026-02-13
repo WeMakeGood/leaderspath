@@ -199,42 +199,4 @@ class Taxonomies {
 		);
 	}
 
-	/**
-	 * Create default taxonomy terms.
-	 *
-	 * Called on plugin activation.
-	 *
-	 * @since 0.1.0
-	 */
-	public static function create_default_terms(): void {
-		// Context Categories.
-		$context_categories = [
-			'Organization Profile',
-			'Brand Guidelines',
-			'Process Documentation',
-			'Technical Specifications',
-			'Example Content',
-		];
-
-		foreach ( $context_categories as $term ) {
-			if ( ! term_exists( $term, 'leaderspath_context_cat' ) ) {
-				wp_insert_term( $term, 'leaderspath_context_cat' );
-			}
-		}
-
-		// Skill Categories.
-		$skill_categories = [
-			'Content Generation',
-			'Data Analysis',
-			'Research',
-			'Code Generation',
-			'Communication',
-		];
-
-		foreach ( $skill_categories as $term ) {
-			if ( ! term_exists( $term, 'leaderspath_skill_cat' ) ) {
-				wp_insert_term( $term, 'leaderspath_skill_cat' );
-			}
-		}
-	}
 }

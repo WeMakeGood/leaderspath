@@ -82,9 +82,8 @@ A context file is simply markdown content stored in WordPress. The content goes 
 
 **Optional Fields:**
 - **Description**: Brief notes about purpose and usage
-- **File Type**: Categorization (System Prompt, Knowledge Base, Instructions, Examples, Other)
 - **Version**: Semantic version (e.g., "1.0.0")
-- **Category**: Taxonomy term for organization
+- **Category**: Context Category taxonomy term for organization (e.g., Knowledge Base, Instructions, Examples)
 
 ### Writing Effective Context Files
 
@@ -441,7 +440,6 @@ Lessons are the **atomic teaching unit** in LeadersPath - taught as a cohesive w
 | Field | Type | Description |
 |-------|------|-------------|
 | `lesson_activities` | Relationship | Ordered list of activities |
-| `lesson_difficulty` | Select | Beginner, Intermediate, Advanced |
 | `lesson_total_duration` | Text | Total facilitation time (e.g., "90 minutes") |
 | `lesson_objectives` | Repeater | Learning objectives for the lesson |
 | `lesson_access_roles` | Checkbox | User roles that can access |
@@ -558,7 +556,7 @@ Understanding AI Alignment (90 minutes)
 | Context Files | Descriptive title | "Brand Voice Guidelines v2" |
 | Skills | Lowercase, hyphens | "data-analyzer", "content-formatter" |
 | Activities | Experience-focused | "Experience Sycophantic AI", "Compare Raw vs Context" |
-| Lessons | Topic + Level | "Understanding AI Alignment (Beginner)" |
+| Lessons | Topic-focused | "Understanding AI Alignment" |
 
 ### Activity vs Lesson Chatbots
 
@@ -676,6 +674,5 @@ When the user makes a factually incorrect statement, validate their thinking rat
 - [ ] Facilitator Guide complete with timing
 - [ ] Learner Overview provides context
 - [ ] Total duration accurate
-- [ ] Difficulty level appropriate
 - [ ] Access roles configured
 - [ ] Tested end-to-end facilitation flow

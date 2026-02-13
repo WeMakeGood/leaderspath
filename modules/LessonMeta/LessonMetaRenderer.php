@@ -35,10 +35,8 @@ class LessonMetaRenderer {
 	 *     Optional. Rendering options for show/hide and label overrides.
 	 *
 	 *     @type bool   $show_duration       Whether to show duration. Default true.
-	 *     @type bool   $show_difficulty      Whether to show difficulty. Default true.
 	 *     @type bool   $show_activity_count  Whether to show activity count. Default true.
 	 *     @type string $duration_label       Label text for duration. Default 'Duration'.
-	 *     @type string $difficulty_label     Label text for difficulty. Default 'Difficulty'.
 	 *     @type string $activities_label     Label text for activities. Default 'Activities'.
 	 * }
 	 * @return string HTML output, or empty string if no lesson found.
@@ -46,10 +44,8 @@ class LessonMetaRenderer {
 	public static function render( array $options = [] ): string {
 		$options = wp_parse_args( $options, [
 			'show_duration'       => true,
-			'show_difficulty'     => true,
 			'show_activity_count' => true,
 			'duration_label'      => __( 'Duration', 'leaderspath' ),
-			'difficulty_label'    => __( 'Difficulty', 'leaderspath' ),
 			'activities_label'    => __( 'Activities', 'leaderspath' ),
 		] );
 
@@ -72,18 +68,15 @@ class LessonMetaRenderer {
 	 * @param int $post_id Lesson post ID.
 	 * @return array {
 	 *     @type string $duration       Total facilitation time (e.g., "90 minutes").
-	 *     @type string $difficulty      Difficulty level (beginner|intermediate|advanced).
 	 *     @type int    $activity_count  Number of linked activities.
 	 * }
 	 */
 	public static function get_data( int $post_id ): array {
 		$duration   = (string) get_field( 'lesson_total_duration', $post_id );
-		$difficulty = (string) get_field( 'lesson_difficulty', $post_id );
 		$activities = get_field( 'lesson_activities', $post_id );
 
 		return [
 			'duration'       => $duration,
-			'difficulty'     => $difficulty,
 			'activity_count' => is_array( $activities ) ? count( $activities ) : 0,
 		];
 	}
@@ -105,16 +98,6 @@ class LessonMetaRenderer {
 				'<dt class="leaderspath_lesson_meta__label">%s</dt><dd class="leaderspath_lesson_meta__duration">%s</dd>',
 				esc_html( $options['duration_label'] ),
 				esc_html( $data['duration'] )
-			);
-		}
-
-		if ( $options['show_difficulty'] && '' !== $data['difficulty'] ) {
-			$level_label = self::difficulty_label( $data['difficulty'] );
-			$items .= sprintf(
-				'<dt class="leaderspath_lesson_meta__label">%s</dt><dd class="leaderspath_lesson_meta__difficulty" data-level="%s">%s</dd>',
-				esc_html( $options['difficulty_label'] ),
-				esc_attr( $data['difficulty'] ),
-				esc_html( $level_label )
 			);
 		}
 
@@ -140,23 +123,5 @@ class LessonMetaRenderer {
 			'<dl class="leaderspath_lesson_meta__list">%s</dl>',
 			$items
 		);
-	}
-
-	/**
-	 * Get the human-readable label for a difficulty level.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param string $value Raw difficulty value.
-	 * @return string Translated label.
-	 */
-	private static function difficulty_label( string $value ): string {
-		$labels = [
-			'beginner'     => __( 'Beginner', 'leaderspath' ),
-			'intermediate' => __( 'Intermediate', 'leaderspath' ),
-			'advanced'     => __( 'Advanced', 'leaderspath' ),
-		];
-
-		return $labels[ $value ] ?? $value;
 	}
 }

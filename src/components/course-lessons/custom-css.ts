@@ -26,11 +26,6 @@ export const cssFields = {
         selectorSuffix: ' .leaderspath_course_lessons__number',
         label: __('Number Badge', 'leaderspath'),
     },
-    difficulty: {
-        subName: 'difficulty',
-        selectorSuffix: ' .leaderspath_course_lessons__difficulty',
-        label: __('Difficulty', 'leaderspath'),
-    },
     duration: {
         subName: 'duration',
         selectorSuffix: ' .leaderspath_course_lessons__duration',

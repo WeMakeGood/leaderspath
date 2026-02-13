@@ -9,15 +9,12 @@ interface LessonMetaCssAttr {
     list?: string;
     label?: string;
     duration?: string;
-    difficulty?: string;
     activities?: string;
 }
 
 interface LessonMetaContentValues {
     showDuration?: string;
     durationLabel?: string;
-    showDifficulty?: string;
-    difficultyLabel?: string;
     showActivities?: string;
     activitiesLabel?: string;
 }
@@ -59,9 +56,6 @@ export interface LessonMetaAttrs extends InternalAttrs {
         decoration?: Element.Decoration.PickedAttributes<'font'>;
     };
     duration?: {
-        decoration?: Element.Decoration.PickedAttributes<'font'>;
-    };
-    difficulty?: {
         decoration?: Element.Decoration.PickedAttributes<'font'>;
     };
     activities?: {

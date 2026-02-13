@@ -338,20 +338,6 @@ class ACF_Fields {
 					'return_format' => 'id',
 				],
 				[
-					'key'           => 'field_lesson_difficulty',
-					'label'         => __( 'Difficulty Level', 'leaderspath' ),
-					'name'          => 'lesson_difficulty',
-					'type'          => 'select',
-					'instructions'  => __( 'Target skill level for this lesson.', 'leaderspath' ),
-					'choices'       => [
-						'beginner'     => __( 'Beginner', 'leaderspath' ),
-						'intermediate' => __( 'Intermediate', 'leaderspath' ),
-						'advanced'     => __( 'Advanced', 'leaderspath' ),
-					],
-					'default_value' => 'beginner',
-					'return_format' => 'value',
-				],
-				[
 					'key'          => 'field_lesson_total_duration',
 					'label'        => __( 'Total Duration', 'leaderspath' ),
 					'name'         => 'lesson_total_duration',
@@ -693,22 +679,6 @@ class ACF_Fields {
 					'type'         => 'textarea',
 					'instructions' => __( 'Purpose and usage notes for this context file.', 'leaderspath' ),
 					'rows'         => 3,
-				],
-				[
-					'key'           => 'field_context_file_type',
-					'label'         => __( 'File Type', 'leaderspath' ),
-					'name'          => 'context_file_type',
-					'type'          => 'select',
-					'instructions'  => __( 'What type of content this file contains.', 'leaderspath' ),
-					'choices'       => [
-						'system_prompt'   => __( 'System Prompt', 'leaderspath' ),
-						'knowledge_base'  => __( 'Knowledge Base', 'leaderspath' ),
-						'instructions'    => __( 'Instructions', 'leaderspath' ),
-						'examples'        => __( 'Examples', 'leaderspath' ),
-						'other'           => __( 'Other', 'leaderspath' ),
-					],
-					'default_value' => 'knowledge_base',
-					'return_format' => 'value',
 				],
 				[
 					'key'          => 'field_context_version',

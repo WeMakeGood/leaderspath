@@ -568,7 +568,6 @@ class REST_API {
 			'content'  => $post->post_content,
 			'metadata' => [
 				'description' => get_field( 'context_description', $post->ID ) ?: '',
-				'file_type'   => get_field( 'context_file_type', $post->ID ) ?: 'other',
 				'version'     => get_field( 'context_version', $post->ID ) ?: '',
 			],
 		];

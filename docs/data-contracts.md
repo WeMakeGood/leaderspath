@@ -26,7 +26,6 @@ When you add, change, or remove an ACF field, check this document to find every 
 | ACF Field | REST Endpoint | Usage |
 |-----------|--------------|-------|
 | `lesson_total_duration` | — | Total facilitation time |
-| `lesson_difficulty` | — | Beginner/Intermediate/Advanced |
 | `lesson_activities` | — | Ordered activity list |
 | `lesson_objectives` | — | Learning objectives repeater |
 | `lesson_facilitator_guide` | — | Teaching script (WYSIWYG) |
@@ -51,7 +50,6 @@ When you add, change, or remove an ACF field, check this document to find every 
 | ACF Field | REST Endpoint | Usage |
 |-----------|--------------|-------|
 | `context_description` | `GET /context/{id}/download` | Description metadata |
-| `context_file_type` | `GET /context/{id}/download` | File type metadata |
 | `context_version` | `GET /context/{id}/download` | Version metadata |
 | _(post_content)_ | `GET /context/{id}/download` | Full content |
 

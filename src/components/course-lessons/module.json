@@ -55,7 +55,6 @@
               "headingText": "Lessons",
               "showNumber": "on",
               "showDuration": "on",
-              "showDifficulty": "on",
               "showActivityCount": "on",
               "showExcerpt": "on",
               "showPrerequisites": "off"
@@ -100,17 +99,6 @@
               "priority": 20,
               "component": { "type": "field", "name": "divi/toggle" }
             },
-            "showDifficulty": {
-              "groupSlug": "contentElements",
-              "attrName": "content.innerContent",
-              "subName": "showDifficulty",
-              "label": "Show Difficulty",
-              "category": "basic_option",
-              "features": { "hover": false, "sticky": false, "responsive": false },
-              "render": true,
-              "priority": 25,
-              "component": { "type": "field", "name": "divi/toggle" }
-            },
             "showDuration": {
               "groupSlug": "contentElements",
               "attrName": "content.innerContent",
@@ -119,7 +107,7 @@
               "category": "basic_option",
               "features": { "hover": false, "sticky": false, "responsive": false },
               "render": true,
-              "priority": 30,
+              "priority": 25,
               "component": { "type": "field", "name": "divi/toggle" }
             },
             "showActivityCount": {
@@ -130,7 +118,7 @@
               "category": "basic_option",
               "features": { "hover": false, "sticky": false, "responsive": false },
               "render": true,
-              "priority": 35,
+              "priority": 30,
               "component": { "type": "field", "name": "divi/toggle" }
             },
             "showExcerpt": {
@@ -141,7 +129,7 @@
               "category": "basic_option",
               "features": { "hover": false, "sticky": false, "responsive": false },
               "render": true,
-              "priority": 40,
+              "priority": 35,
               "component": { "type": "field", "name": "divi/toggle" }
             },
             "showPrerequisites": {
@@ -152,7 +140,7 @@
               "category": "basic_option",
               "features": { "hover": false, "sticky": false, "responsive": false },
               "render": true,
-              "priority": 45,
+              "priority": 40,
               "component": { "type": "field", "name": "divi/toggle" }
             }
           }
@@ -350,28 +338,6 @@
         }
       }
     },
-    "difficulty": {
-      "type": "object",
-      "selector": "{{selector}} .leaderspath_course_lessons__difficulty",
-      "tagName": "span",
-      "elementType": "heading",
-      "settings": {
-        "decoration": {
-          "font": {
-            "priority": 20,
-            "component": {
-              "props": {
-                "groupLabel": "Difficulty Text",
-                "fieldLabel": "Difficulty",
-                "fields": {
-                  "headingLevel": { "render": false }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "duration": {
       "type": "object",
       "selector": "{{selector}} .leaderspath_course_lessons__duration",
@@ -380,7 +346,7 @@
       "settings": {
         "decoration": {
           "font": {
-            "priority": 25,
+            "priority": 20,
             "component": {
               "props": {
                 "groupLabel": "Duration Text",
@@ -402,7 +368,7 @@
       "settings": {
         "decoration": {
           "font": {
-            "priority": 30,
+            "priority": 25,
             "component": {
               "props": {
                 "groupLabel": "Activity Count Text",
@@ -424,7 +390,7 @@
       "settings": {
         "decoration": {
           "font": {
-            "priority": 35,
+            "priority": 30,
             "component": {
               "props": {
                 "groupLabel": "Excerpt Text",
@@ -459,10 +425,6 @@
     "number": {
       "subName": "number",
       "selectorSuffix": " .leaderspath_course_lessons__number"
-    },
-    "difficulty": {
-      "subName": "difficulty",
-      "selectorSuffix": " .leaderspath_course_lessons__difficulty"
     },
     "duration": {
       "subName": "duration",

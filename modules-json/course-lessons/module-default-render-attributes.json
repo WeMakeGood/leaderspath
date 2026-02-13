@@ -16,7 +16,6 @@
           "headingText": "Lessons",
           "showNumber": "on",
           "showDuration": "on",
-          "showDifficulty": "on",
           "showActivityCount": "on",
           "showExcerpt": "on",
           "showPrerequisites": "off"

@@ -16,11 +16,6 @@ export const cssFields = {
         selectorSuffix: ' .leaderspath_lesson_meta__duration',
         label: __('Duration', 'leaderspath'),
     },
-    difficulty: {
-        subName: 'difficulty',
-        selectorSuffix: ' .leaderspath_lesson_meta__difficulty',
-        label: __('Difficulty', 'leaderspath'),
-    },
     activities: {
         subName: 'activities',
         selectorSuffix: ' .leaderspath_lesson_meta__activities',

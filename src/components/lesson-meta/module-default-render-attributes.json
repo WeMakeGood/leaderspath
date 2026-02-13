@@ -14,8 +14,6 @@
         "value": {
           "showDuration": "on",
           "durationLabel": "Duration",
-          "showDifficulty": "on",
-          "difficultyLabel": "Difficulty",
           "showActivities": "on",
           "activitiesLabel": "Activities"
         }

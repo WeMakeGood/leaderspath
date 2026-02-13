@@ -11,7 +11,6 @@ interface CourseLessonsCssAttr {
     item?: string;
     title?: string;
     number?: string;
-    difficulty?: string;
     duration?: string;
     activityCount?: string;
     excerpt?: string;
@@ -24,7 +23,6 @@ interface CourseLessonsContentValues {
     headingText?: string;
     showNumber?: string;
     showDuration?: string;
-    showDifficulty?: string;
     showActivityCount?: string;
     showExcerpt?: string;
     showPrerequisites?: string;
@@ -73,9 +71,6 @@ export interface CourseLessonsAttrs extends InternalAttrs {
         decoration?: Element.Decoration.PickedAttributes<
             'font' | 'background' | 'border' | 'spacing' | 'boxShadow'
         >;
-    };
-    difficulty?: {
-        decoration?: Element.Decoration.PickedAttributes<'font'>;
     };
     duration?: {
         decoration?: Element.Decoration.PickedAttributes<'font'>;

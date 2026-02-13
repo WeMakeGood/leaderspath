@@ -27,12 +27,34 @@ class Admin_Menu {
 	public const MENU_SLUG = 'leaderspath';
 
 	/**
+	 * Desired submenu order, keyed by slug.
+	 *
+	 * Entries not listed here are appended at the end.
+	 *
+	 * @var array<string, int>
+	 */
+	private const SUBMENU_ORDER = [
+		'leaderspath'                                                                 => 0,  // Dashboard.
+		'edit.php?post_type=leaderspath_course'                                       => 1,  // Courses.
+		'edit.php?post_type=leaderspath_lesson'                                       => 2,  // Lessons.
+		'edit.php?post_type=leaderspath_activity'                                     => 3,  // Activities.
+		'edit-tags.php?taxonomy=leaderspath_topic&post_type=leaderspath_activity'      => 4,  // Topics.
+		'edit.php?post_type=leaderspath_context'                                      => 5,  // Context Files.
+		'edit-tags.php?taxonomy=leaderspath_context_cat&post_type=leaderspath_context' => 6,  // Context Categories.
+		'edit.php?post_type=leaderspath_skill'                                        => 7,  // Skills.
+		'edit-tags.php?taxonomy=leaderspath_skill_cat&post_type=leaderspath_skill'     => 8,  // Skill Categories.
+		'leaderspath-settings'                                                        => 99, // Settings (always last).
+	];
+
+	/**
 	 * Initialize the class.
 	 *
 	 * @since 0.2.0
 	 */
 	public function __construct() {
 		add_action( 'admin_menu', [ $this, 'register_menu' ], 5 );
+		add_action( 'admin_menu', [ $this, 'reorder_submenu' ], 999 );
+		add_filter( 'parent_file', [ $this, 'highlight_taxonomy_parent' ] );
 	}
 
 	/**
@@ -62,6 +84,34 @@ class Admin_Menu {
 			'edit_leaderspath_lessons',
 			self::MENU_SLUG, // Same slug as parent = replaces default submenu item.
 			[ $this, 'render_dashboard' ]
+		);
+
+		// Taxonomy management pages.
+		// WordPress only auto-adds taxonomy submenus when the CPT uses
+		// show_in_menu => true. Our CPTs use a custom menu slug, so we
+		// must register taxonomy pages manually.
+		add_submenu_page(
+			self::MENU_SLUG,
+			__( 'Topics', 'leaderspath' ),
+			__( 'Topics', 'leaderspath' ),
+			'manage_categories',
+			'edit-tags.php?taxonomy=leaderspath_topic&post_type=leaderspath_activity'
+		);
+
+		add_submenu_page(
+			self::MENU_SLUG,
+			__( 'Context Categories', 'leaderspath' ),
+			__( 'Context Categories', 'leaderspath' ),
+			'manage_categories',
+			'edit-tags.php?taxonomy=leaderspath_context_cat&post_type=leaderspath_context'
+		);
+
+		add_submenu_page(
+			self::MENU_SLUG,
+			__( 'Skill Categories', 'leaderspath' ),
+			__( 'Skill Categories', 'leaderspath' ),
+			'manage_categories',
+			'edit-tags.php?taxonomy=leaderspath_skill_cat&post_type=leaderspath_skill'
 		);
 	}
 
@@ -201,6 +251,64 @@ class Admin_Menu {
 		}
 
 		return $counts;
+	}
+
+	/**
+	 * Ensure the LeadersPath menu is highlighted when editing taxonomy terms.
+	 *
+	 * WordPress highlights the parent menu based on the CPT's show_in_menu
+	 * value. Since our CPTs use a custom slug, taxonomy pages would not
+	 * highlight the correct parent without this filter.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $parent_file The current parent file.
+	 * @return string Modified parent file.
+	 */
+	public function highlight_taxonomy_parent( string $parent_file ): string {
+		$screen = get_current_screen();
+
+		if ( ! $screen ) {
+			return $parent_file;
+		}
+
+		$leaderspath_taxonomies = [
+			'leaderspath_topic',
+			'leaderspath_context_cat',
+			'leaderspath_skill_cat',
+		];
+
+		if ( in_array( $screen->taxonomy, $leaderspath_taxonomies, true ) ) {
+			return self::MENU_SLUG;
+		}
+
+		return $parent_file;
+	}
+
+	/**
+	 * Sort LeadersPath submenu items into a logical order.
+	 *
+	 * Runs at priority 999 so all CPT and settings submenus have been registered.
+	 *
+	 * @since 0.6.0
+	 */
+	public function reorder_submenu(): void {
+		global $submenu;
+
+		if ( empty( $submenu[ self::MENU_SLUG ] ) ) {
+			return;
+		}
+
+		usort(
+			$submenu[ self::MENU_SLUG ],
+			function ( array $a, array $b ): int {
+				// Submenu item slug is at index 2.
+				$order_a = self::SUBMENU_ORDER[ $a[2] ] ?? 50;
+				$order_b = self::SUBMENU_ORDER[ $b[2] ] ?? 50;
+
+				return $order_a <=> $order_b;
+			}
+		);
 	}
 
 	/**

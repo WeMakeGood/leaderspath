@@ -91,7 +91,7 @@ Card grid showing context files attached to the activity. Transparency feature â
 
 **Data sources:**
 - `chatbot_context_files` (relationship â†’ `leaderspath_context` post IDs)
-- For each context: `post_title`, `context_description`, `context_file_type`, `context_version`
+- For each context: `post_title`, `context_description`, `context_version`, `leaderspath_context_cat` taxonomy terms
 - `GET /leaderspath/v1/context/{id}/download` endpoint
 
 **UI elements:**
@@ -100,10 +100,10 @@ Card grid showing context files attached to the activity. Transparency feature â
 |---------|-----------|-------------|
 | Container | `.leaderspath-context-library` | Grid wrapper |
 | Card | `.leaderspath-context-library__card` | Individual context card |
-| Card icon | `.leaderspath-context-library__card-icon` | File type icon |
+| Card icon | `.leaderspath-context-library__card-icon` | Generic document icon |
 | Card title | `.leaderspath-context-library__card-title` | Context file name |
 | Card description | `.leaderspath-context-library__card-desc` | Truncated description |
-| Card meta | `.leaderspath-context-library__card-meta` | Type badge + version |
+| Card meta | `.leaderspath-context-library__card-meta` | Category badge (taxonomy term) + version |
 | View button | `.leaderspath-context-library__view` | Opens content in modal |
 | Download button | `.leaderspath-context-library__download` | Downloads content |
 | Empty state | `.leaderspath-context-library__empty` | "No context files" message |
@@ -165,7 +165,6 @@ Displays lesson metadata.
 
 **Data sources:**
 - `lesson_total_duration`
-- `lesson_difficulty`
 - `lesson_activities` (count only, for "X activities")
 
 **UI elements:**
@@ -174,7 +173,6 @@ Displays lesson metadata.
 |---------|-----------|-------------|
 | Container | `.leaderspath-lesson-meta` | Wrapper (inline or stacked layout) |
 | Duration | `.leaderspath-lesson-meta__duration` | "90 minutes" with clock icon |
-| Difficulty | `.leaderspath-lesson-meta__difficulty` | Badge: Beginner/Intermediate/Advanced |
 | Activity count | `.leaderspath-lesson-meta__count` | "3 activities" with icon |
 
 **Design panel needs:** Font, spacing, layout (flex direction), background, border, icon color.
@@ -248,7 +246,7 @@ Ordered list of lessons in the curriculum.
 **Data sources:**
 - `course_lessons` (relationship â†’ `leaderspath_lesson` post IDs)
 - `course_prerequisites` (relationship â†’ `leaderspath_course` post IDs)
-- For each lesson: `post_title`, `permalink`, `lesson_difficulty`, `lesson_total_duration`, `lesson_activities` (count)
+- For each lesson: `post_title`, `permalink`, `lesson_total_duration`, `lesson_activities` (count)
 
 **UI elements:**
 
@@ -259,7 +257,7 @@ Ordered list of lessons in the curriculum.
 | Item | `.leaderspath-course-lessons__item` | Lesson row/card (linked) |
 | Item number | `.leaderspath-course-lessons__number` | Lesson order (1, 2, 3...) |
 | Item title | `.leaderspath-course-lessons__title` | Lesson name (linked) |
-| Item meta | `.leaderspath-course-lessons__meta` | Duration + difficulty + activity count |
+| Item meta | `.leaderspath-course-lessons__meta` | Duration + activity count |
 | Item excerpt | `.leaderspath-course-lessons__excerpt` | Lesson excerpt |
 | Prerequisites section | `.leaderspath-course-lessons__prereqs` | "Prerequisites" list |
 | Prereq item | `.leaderspath-course-lessons__prereq` | Linked course name |
@@ -275,13 +273,12 @@ These are not standalone Divi modules but reusable elements used across multiple
 
 ### Badge/Pill
 
-Used for difficulty levels, model names, file types, versions.
+Used for model names, category labels, versions.
 
 | Element | CSS Class | Description |
 |---------|-----------|-------------|
 | Badge | `.leaderspath-badge` | Inline pill/tag |
-| Variant: difficulty | `.leaderspath-badge--beginner` / `--intermediate` / `--advanced` | Color-coded difficulty |
-| Variant: type | `.leaderspath-badge--type` | File type label |
+| Variant: category | `.leaderspath-badge--category` | Taxonomy term label |
 | Variant: model | `.leaderspath-badge--model` | Claude model name |
 
 ### Icon + Text

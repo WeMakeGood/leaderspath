@@ -98,9 +98,6 @@ function leaderspath_activate(): void {
 	$taxonomies = new LeadersPath\Includes\Taxonomies();
 	$taxonomies->register_taxonomies();
 
-	// Create default taxonomy terms.
-	LeadersPath\Includes\Taxonomies::create_default_terms();
-
 	// Add capabilities to roles.
 	LeadersPath\Includes\Capabilities::add_caps();
 
