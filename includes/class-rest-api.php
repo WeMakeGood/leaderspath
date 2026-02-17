@@ -45,13 +45,25 @@ class REST_API {
 	 * @since 0.1.0
 	 */
 	public function register_routes(): void {
-		// Chat endpoint.
+		// Chat endpoint (synchronous).
 		register_rest_route(
 			self::NAMESPACE,
 			'/chat',
 			[
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => [ $this, 'handle_chat' ],
+				'permission_callback' => [ $this, 'check_chat_permission' ],
+				'args'                => $this->get_chat_args(),
+			]
+		);
+
+		// Chat streaming endpoint (SSE).
+		register_rest_route(
+			self::NAMESPACE,
+			'/chat/stream',
+			[
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'handle_stream_chat' ],
 				'permission_callback' => [ $this, 'check_chat_permission' ],
 				'args'                => $this->get_chat_args(),
 			]
@@ -156,6 +168,12 @@ class REST_API {
 				'type'              => 'string',
 				'required'          => false,
 				'enum'              => [ 'sonnet', 'haiku', 'opus-4.5' ],
+			],
+			'container_id' => [
+				'description'       => __( 'Container ID for session continuity.', 'leaderspath' ),
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'sanitize_text_field',
 			],
 		];
 	}
@@ -540,6 +558,146 @@ class REST_API {
 		$response['content']     = self::markdown_to_html( $response['content'] );
 
 		return new WP_REST_Response( $response, 200 );
+	}
+
+	/**
+	 * Handle streaming chat request.
+	 *
+	 * Outputs SSE events directly, bypassing WP_REST_Response.
+	 * Calls exit() when complete.
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Only returns on pre-stream errors.
+	 */
+	public function handle_stream_chat( WP_REST_Request $request ) {
+		$activity_id = $request->get_param( 'activity_id' );
+		$lesson_id   = $request->get_param( 'lesson_id' );
+		$message     = $request->get_param( 'message' );
+		$history     = $request->get_param( 'history' ) ?? [];
+		$model       = $request->get_param( 'model' );
+
+		// Must have either activity_id or lesson_id.
+		if ( empty( $activity_id ) && empty( $lesson_id ) ) {
+			return new WP_Error(
+				'missing_context',
+				__( 'Either activity_id or lesson_id is required.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		// Validate and determine mode.
+		if ( ! empty( $lesson_id ) ) {
+			$error = $this->validate_stream_lesson( (int) $lesson_id, $model );
+			if ( is_wp_error( $error ) ) {
+				return $error;
+			}
+			$model = $error; // Returns resolved model string.
+
+			$this->start_sse_output();
+
+			$claude  = new Claude_API();
+			$result  = $claude->stream_lesson_message( (int) $lesson_id, $message, $history, $model );
+		} else {
+			$error = $this->validate_stream_activity( (int) $activity_id, $model );
+			if ( is_wp_error( $error ) ) {
+				return $error;
+			}
+			$model        = $error['model'];
+			$container_id = $request->get_param( 'container_id' );
+
+			$this->start_sse_output();
+
+			$claude = new Claude_API();
+			$result = $claude->stream_message( (int) $activity_id, $message, $history, $model, $container_id );
+		}
+
+		// If stream_message returned a WP_Error, it means streaming never started.
+		// Send an SSE error event so the client can handle it.
+		if ( is_wp_error( $result ) ) {
+			echo 'event: error' . "\n";
+			echo 'data: ' . wp_json_encode( [ 'message' => $result->get_error_message() ] ) . "\n\n";
+			flush();
+		}
+
+		exit;
+	}
+
+	/**
+	 * Validate activity for streaming and resolve model.
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param int         $activity_id Activity ID.
+	 * @param string|null $model       Model override.
+	 * @return array|WP_Error Array with 'model' key or WP_Error.
+	 */
+	private function validate_stream_activity( int $activity_id, ?string $model ) {
+		$chatbot_enabled = get_field( 'chatbot_enabled', $activity_id );
+		if ( ! $chatbot_enabled ) {
+			return new WP_Error(
+				'chatbot_disabled',
+				__( 'AI sandbox is not enabled for this activity.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		if ( empty( $model ) ) {
+			$model = get_field( 'chatbot_model', $activity_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
+		} else {
+			$allow_switch = get_field( 'chatbot_allow_model_switch', $activity_id );
+			if ( ! $allow_switch ) {
+				$model = get_field( 'chatbot_model', $activity_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
+			}
+		}
+
+		return [ 'model' => $model ];
+	}
+
+	/**
+	 * Validate lesson for streaming and resolve model.
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param int         $lesson_id Lesson ID.
+	 * @param string|null $model     Model override (ignored for lessons).
+	 * @return string|WP_Error Resolved model slug or WP_Error.
+	 */
+	private function validate_stream_lesson( int $lesson_id, ?string $model ) {
+		$chatbot_enabled = get_field( 'lesson_chatbot_enabled', $lesson_id );
+		if ( ! $chatbot_enabled ) {
+			return new WP_Error(
+				'chatbot_disabled',
+				__( 'Q&A chatbot is not enabled for this lesson.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		return get_field( 'lesson_chatbot_model', $lesson_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
+	}
+
+	/**
+	 * Set SSE headers and flush output buffers.
+	 *
+	 * @since 0.9.0
+	 */
+	private function start_sse_output(): void {
+		// Prevent PHP from timing out during long streams.
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		@set_time_limit( 300 );
+
+		header( 'Content-Type: text/event-stream' );
+		header( 'Cache-Control: no-cache' );
+		header( 'X-Accel-Buffering: no' );
+		header( 'Connection: keep-alive' );
+
+		// Flush all WordPress/plugin output buffers.
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		while ( @ob_get_level() ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			@ob_end_flush();
+		}
 	}
 
 	/**

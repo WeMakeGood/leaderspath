@@ -373,6 +373,489 @@ class Claude_API {
 	}
 
 	/**
+	 * Stream a message to Claude for activity sandbox.
+	 *
+	 * Outputs SSE events directly to the browser. Must be called after
+	 * SSE headers have been sent and output buffers flushed.
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param int         $activity_id  Activity ID for context.
+	 * @param string      $message      User message.
+	 * @param array       $history      Previous conversation messages.
+	 * @param string      $model        Model slug (sonnet, haiku, opus-4.5).
+	 * @param string|null $container_id Container ID for session continuity.
+	 * @return WP_Error|null Null on success, WP_Error on pre-stream failure.
+	 */
+	public function stream_message( int $activity_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null ): ?WP_Error {
+		// Get API key.
+		$api_key = \LeadersPath\Admin\Settings::get_api_key();
+
+		if ( empty( $api_key ) ) {
+			return new WP_Error(
+				'api_key_missing',
+				__( 'Claude API key is not configured.', 'leaderspath' ),
+				[ 'status' => 500 ]
+			);
+		}
+
+		// Resolve model ID.
+		$model_id = $this->resolve_model_id( $model );
+		if ( is_wp_error( $model_id ) ) {
+			return $model_id;
+		}
+
+		// Build system prompt with context.
+		$system_prompt = $this->build_system_prompt( $activity_id );
+
+		// Build messages array.
+		$messages = $this->build_messages( $message, $history );
+
+		// Get model settings.
+		$max_tokens  = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: 4096 );
+		$temperature = (float) ( get_field( 'chatbot_temperature', $activity_id ) ?? 0.7 );
+
+		// Get skills for this activity.
+		$skills_for_api = $this->get_skills_for_api( $activity_id );
+
+		// Build request body.
+		$body = [
+			'model'      => $model_id,
+			'max_tokens' => $max_tokens,
+			'system'     => $system_prompt,
+			'messages'   => $messages,
+			'stream'     => true,
+		];
+
+		// Add container with skills if any skills are configured.
+		if ( ! empty( $skills_for_api ) ) {
+			$container = [ 'skills' => $skills_for_api ];
+
+			if ( $container_id ) {
+				$container['id'] = $container_id;
+			}
+
+			$body['container'] = $container;
+
+			$tool_type     = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
+			$body['tools'] = [
+				[
+					'type' => $tool_type,
+					'name' => 'code_execution',
+				],
+			];
+		}
+
+		// Only include temperature if not using extended thinking (opus).
+		if ( strpos( $model_id, 'opus' ) === false ) {
+			$body['temperature'] = $temperature;
+		}
+
+		$this->maybe_log( 'Stream Request', $body );
+
+		// Build headers with beta features if skills are used.
+		$headers = [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => $api_key,
+			'anthropic-version' => self::API_VERSION,
+		];
+
+		if ( ! empty( $skills_for_api ) ) {
+			$headers['anthropic-beta'] = \LeadersPath\Admin\Settings::get_beta_headers( [ 'code_execution', 'skills' ] );
+		}
+
+		$error = $this->execute_stream( $body, $headers, $messages, $model );
+
+		if ( is_wp_error( $error ) ) {
+			return $error;
+		}
+
+		do_action( 'leaderspath_chat_message_sent', $message, [], get_current_user_id(), $activity_id );
+
+		return null;
+	}
+
+	/**
+	 * Stream a message to Claude for lesson Q&A chatbot.
+	 *
+	 * Outputs SSE events directly to the browser. Must be called after
+	 * SSE headers have been sent and output buffers flushed.
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param int    $lesson_id Lesson ID for context.
+	 * @param string $message   User message.
+	 * @param array  $history   Previous conversation messages.
+	 * @param string $model     Model slug (sonnet, haiku, opus-4.5).
+	 * @return WP_Error|null Null on success, WP_Error on pre-stream failure.
+	 */
+	public function stream_lesson_message( int $lesson_id, string $message, array $history = [], string $model = 'sonnet' ): ?WP_Error {
+		// Get API key.
+		$api_key = \LeadersPath\Admin\Settings::get_api_key();
+
+		if ( empty( $api_key ) ) {
+			return new WP_Error(
+				'api_key_missing',
+				__( 'Claude API key is not configured.', 'leaderspath' ),
+				[ 'status' => 500 ]
+			);
+		}
+
+		// Resolve model ID.
+		$model_id = $this->resolve_model_id( $model );
+		if ( is_wp_error( $model_id ) ) {
+			return $model_id;
+		}
+
+		// Build system prompt with lesson context.
+		$system_prompt = $this->build_lesson_system_prompt( $lesson_id );
+
+		// Build messages array.
+		$messages = $this->build_messages( $message, $history );
+
+		// Get model settings from lesson.
+		$max_tokens  = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: 4096 );
+		$temperature = (float) ( get_field( 'lesson_chatbot_temperature', $lesson_id ) ?? 0.7 );
+
+		// Build request body.
+		$body = [
+			'model'      => $model_id,
+			'max_tokens' => $max_tokens,
+			'system'     => $system_prompt,
+			'messages'   => $messages,
+			'stream'     => true,
+		];
+
+		// Only include temperature if not using extended thinking (opus).
+		if ( strpos( $model_id, 'opus' ) === false ) {
+			$body['temperature'] = $temperature;
+		}
+
+		$this->maybe_log( 'Stream Lesson Request', $body );
+
+		// Build headers.
+		$headers = [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => $api_key,
+			'anthropic-version' => self::API_VERSION,
+		];
+
+		$error = $this->execute_stream( $body, $headers, $messages, $model );
+
+		if ( is_wp_error( $error ) ) {
+			return $error;
+		}
+
+		do_action( 'leaderspath_lesson_chat_message_sent', $message, [], get_current_user_id(), $lesson_id );
+
+		return null;
+	}
+
+	/**
+	 * Execute a streaming request to the Anthropic API.
+	 *
+	 * Forwards SSE events from Anthropic directly to the browser output.
+	 * Parses events to extract metadata and accumulate content for the
+	 * final [DONE] event.
+	 *
+	 * Handles pause_turn by initiating continuation requests (max 5).
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param array  $body     Request body (must include 'stream' => true).
+	 * @param array  $headers  Request headers.
+	 * @param array  $messages Conversation messages (for pause_turn continuation).
+	 * @param string $model    Model slug (for pause_turn continuation).
+	 * @return WP_Error|null Null on success, WP_Error on failure.
+	 */
+	private function execute_stream( array $body, array $headers, array $messages, string $model ): ?WP_Error {
+		// State tracking across chunks.
+		$state = [
+			'container_id' => null,
+			'model'        => null,
+			'usage'        => [ 'input_tokens' => 0, 'output_tokens' => 0 ],
+			'content_raw'  => '',
+			'stop_reason'  => null,
+			'buffer'       => '',
+			'content'      => [], // Accumulated content blocks for pause_turn.
+		];
+
+		// Flush all WordPress output buffers.
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		while ( @ob_get_level() ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			@ob_end_flush();
+		}
+
+		$max_continuations = 5;
+		$continuation      = 0;
+
+		do {
+			$ch = curl_init();
+
+			if ( false === $ch ) {
+				return new WP_Error(
+					'curl_init_failed',
+					__( 'Failed to initialize streaming connection.', 'leaderspath' ),
+					[ 'status' => 500 ]
+				);
+			}
+
+			// Reset per-request state.
+			$state['buffer']      = '';
+			$state['stop_reason'] = null;
+
+			// Build curl headers array.
+			$curl_headers = [];
+			foreach ( $headers as $key => $value ) {
+				$curl_headers[] = $key . ': ' . $value;
+			}
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt_array
+			curl_setopt_array( $ch, [
+				CURLOPT_URL            => self::API_URL . '/messages',
+				CURLOPT_POST           => true,
+				CURLOPT_POSTFIELDS     => wp_json_encode( $body ),
+				CURLOPT_HTTPHEADER     => $curl_headers,
+				CURLOPT_RETURNTRANSFER => false,
+				CURLOPT_TIMEOUT        => 300,
+				CURLOPT_CONNECTTIMEOUT => 30,
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt
+				CURLOPT_WRITEFUNCTION  => function ( $ch, $chunk ) use ( &$state ) {
+					return $this->handle_stream_chunk( $chunk, $state );
+				},
+				CURLOPT_HEADERFUNCTION => function ( $ch, $header_line ) use ( &$state ) {
+					// Check for HTTP error status codes before streaming starts.
+					if ( preg_match( '/^HTTP\/\S+\s+(\d{3})/', $header_line, $matches ) ) {
+						$status = (int) $matches[1];
+						if ( $status >= 400 ) {
+							$state['http_error'] = $status;
+						}
+					}
+					return strlen( $header_line );
+				},
+			] );
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_exec
+			$result = curl_exec( $ch );
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_errno
+			$curl_errno = curl_errno( $ch );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_error
+			$curl_error = curl_error( $ch );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_getinfo
+			$http_code  = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_close
+			curl_close( $ch );
+
+			if ( 0 !== $curl_errno ) {
+				$this->maybe_log( 'Stream Error', [ 'curl_errno' => $curl_errno, 'curl_error' => $curl_error ] );
+				$this->send_sse_error( __( 'Connection to AI service failed.', 'leaderspath' ) );
+				break;
+			}
+
+			if ( $http_code >= 400 ) {
+				// Try to extract a meaningful error message from the response body.
+				$error_message = __( 'The AI service returned an error. Please try again.', 'leaderspath' );
+				if ( ! empty( $state['error_body'] ) ) {
+					$error_data = json_decode( $state['error_body'], true );
+					if ( is_array( $error_data ) && ! empty( $error_data['error']['message'] ) ) {
+						$error_message = $error_data['error']['message'];
+					}
+				}
+				$this->maybe_log( 'Stream HTTP Error', [ 'status' => $http_code, 'body' => $state['error_body'] ?? '' ] );
+				$this->send_sse_error( $error_message );
+				break;
+			}
+
+			// Check for pause_turn — need continuation.
+			if ( 'pause_turn' === $state['stop_reason'] && $continuation < $max_continuations ) {
+				$continuation++;
+
+				$this->send_sse_event( 'pause', wp_json_encode( [ 'continuation' => $continuation ] ) );
+
+				// Add assistant's partial response to messages for continuation.
+				$messages[]       = [
+					'role'    => 'assistant',
+					'content' => array_values( $state['content'] ),
+				];
+				$state['content'] = [];
+
+				// Build continuation body.
+				$body = [
+					'model'      => $body['model'],
+					'max_tokens' => $body['max_tokens'],
+					'messages'   => $messages,
+					'stream'     => true,
+				];
+
+				if ( $state['container_id'] ) {
+					$body['container'] = [ 'id' => $state['container_id'] ];
+				}
+
+				$this->maybe_log( 'Stream Continuation', [ 'attempt' => $continuation ] );
+				continue;
+			}
+
+			break;
+		} while ( true );
+
+		// Send final [DONE] event with metadata.
+		$done_data = [
+			'container_id' => $state['container_id'],
+			'model'        => $state['model'],
+			'usage'        => $state['usage'],
+			'content_raw'  => $state['content_raw'],
+			'stop_reason'  => $state['stop_reason'],
+		];
+
+		$this->send_sse_event( 'done', wp_json_encode( $done_data ) );
+
+		return null;
+	}
+
+	/**
+	 * Handle a chunk of SSE data from the Anthropic API.
+	 *
+	 * Forwards the raw chunk to the browser and parses events to
+	 * extract metadata.
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param string $chunk Raw SSE data chunk.
+	 * @param array  $state Reference to shared state array.
+	 * @return int Number of bytes handled (must match chunk length for curl).
+	 */
+	private function handle_stream_chunk( string $chunk, array &$state ): int {
+		$length = strlen( $chunk );
+
+		// If Anthropic returned an HTTP error, the body is raw JSON (not SSE).
+		// Accumulate it for error reporting — do NOT forward to browser.
+		if ( ! empty( $state['http_error'] ) ) {
+			$state['error_body'] = ( $state['error_body'] ?? '' ) . $chunk;
+			return $length;
+		}
+
+		// Forward raw SSE data to browser.
+		echo $chunk;
+		flush();
+
+		// Parse SSE events from the chunk.
+		$state['buffer'] .= $chunk;
+
+		while ( ( $pos = strpos( $state['buffer'], "\n\n" ) ) !== false ) {
+			$raw_event       = substr( $state['buffer'], 0, $pos );
+			$state['buffer'] = substr( $state['buffer'], $pos + 2 );
+
+			$this->parse_sse_event( $raw_event, $state );
+		}
+
+		return $length;
+	}
+
+	/**
+	 * Parse a single SSE event and update state.
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param string $raw_event Raw SSE event text.
+	 * @param array  $state     Reference to shared state array.
+	 */
+	private function parse_sse_event( string $raw_event, array &$state ): void {
+		$event_type = '';
+		$data       = '';
+
+		foreach ( explode( "\n", $raw_event ) as $line ) {
+			if ( strpos( $line, 'event: ' ) === 0 ) {
+				$event_type = substr( $line, 7 );
+			} elseif ( strpos( $line, 'data: ' ) === 0 ) {
+				$data = substr( $line, 6 );
+			}
+		}
+
+		if ( '' === $data ) {
+			return;
+		}
+
+		$parsed = json_decode( $data, true );
+		if ( ! is_array( $parsed ) ) {
+			return;
+		}
+
+		switch ( $event_type ) {
+			case 'message_start':
+				$msg = $parsed['message'] ?? [];
+				$state['container_id'] = $msg['container']['id'] ?? $state['container_id'];
+				$state['model']        = $msg['model'] ?? $state['model'];
+				if ( isset( $msg['usage']['input_tokens'] ) ) {
+					$state['usage']['input_tokens'] = $msg['usage']['input_tokens'];
+				}
+				break;
+
+			case 'content_block_start':
+				// Track content block for pause_turn continuation.
+				$block = $parsed['content_block'] ?? [];
+				$index = $parsed['index'] ?? count( $state['content'] );
+				if ( 'text' === ( $block['type'] ?? '' ) ) {
+					$state['content'][ $index ] = [ 'type' => 'text', 'text' => '' ];
+				} else {
+					$state['content'][ $index ] = $block;
+				}
+				break;
+
+			case 'content_block_delta':
+				$delta = $parsed['delta'] ?? [];
+				$index = $parsed['index'] ?? null;
+				if ( 'text_delta' === ( $delta['type'] ?? '' ) && isset( $delta['text'] ) ) {
+					$state['content_raw'] .= $delta['text'];
+					// Accumulate into content block for pause_turn replay.
+					if ( null !== $index && isset( $state['content'][ $index ] ) ) {
+						$state['content'][ $index ]['text'] = ( $state['content'][ $index ]['text'] ?? '' ) . $delta['text'];
+					}
+				}
+				break;
+
+			case 'content_block_stop':
+				// Content block finalized — no action needed.
+				break;
+
+			case 'message_delta':
+				$delta = $parsed['delta'] ?? [];
+				$state['stop_reason'] = $delta['stop_reason'] ?? $state['stop_reason'];
+				if ( isset( $parsed['usage']['output_tokens'] ) ) {
+					$state['usage']['output_tokens'] = $parsed['usage']['output_tokens'];
+				}
+				break;
+		}
+	}
+
+	/**
+	 * Send a custom SSE event to the browser.
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param string $event Event name.
+	 * @param string $data  JSON data.
+	 */
+	private function send_sse_event( string $event, string $data ): void {
+		echo 'event: ' . $event . "\n";
+		echo 'data: ' . $data . "\n\n";
+		flush();
+	}
+
+	/**
+	 * Send an SSE error event to the browser.
+	 *
+	 * @since 0.9.0
+	 *
+	 * @param string $message Error message.
+	 */
+	private function send_sse_error( string $message ): void {
+		$this->send_sse_event( 'error', wp_json_encode( [ 'message' => $message ] ) );
+	}
+
+	/**
 	 * Resolve a model slug to an actual model ID.
 	 *
 	 * @since 0.1.0

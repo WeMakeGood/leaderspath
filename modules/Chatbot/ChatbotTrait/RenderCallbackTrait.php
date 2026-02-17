@@ -100,10 +100,19 @@ trait RenderCallbackTrait {
 			return;
 		}
 
+		// Enqueue marked.js for client-side markdown rendering (streaming).
+		wp_enqueue_script(
+			'marked',
+			LEADERSPATH_URL . 'assets/js/vendor/marked.umd.js',
+			[],
+			'17.0.2',
+			true
+		);
+
 		wp_enqueue_script(
 			'leaderspath-chatbot',
 			LEADERSPATH_URL . 'assets/js/chatbot.js',
-			[],
+			[ 'marked' ],
 			LEADERSPATH_VERSION,
 			true
 		);
@@ -112,8 +121,9 @@ trait RenderCallbackTrait {
 			'leaderspath-chatbot',
 			'LeadersPathChatbot',
 			[
-				'restUrl' => rest_url( 'leaderspath/v1/chat' ),
-				'nonce'   => wp_create_nonce( 'wp_rest' ),
+				'restUrl'       => rest_url( 'leaderspath/v1/chat' ),
+				'restStreamUrl' => rest_url( 'leaderspath/v1/chat/stream' ),
+				'nonce'         => wp_create_nonce( 'wp_rest' ),
 			]
 		);
 	}

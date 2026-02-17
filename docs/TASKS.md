@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-02-16
-**Current Phase:** Phase 10 planned — SSE streaming for chatbot
+**Last Updated:** 2026-02-17
+**Current Phase:** Phase 10 complete — SSE streaming for chatbot
 
 ---
 
@@ -289,58 +289,57 @@ data: {"type":"message_stop"}
 
 New parallel code paths — non-breaking; existing synchronous flow remains as fallback.
 
-- [ ] **`Claude_API::stream_message()`** — new method parallel to `send_message()`
+- [x] **`Claude_API::stream_message()`** — new method parallel to `send_message()`
   - Uses `curl_exec()` with `CURLOPT_WRITEFUNCTION` for chunked reading
   - Adds `"stream": true` to Anthropic request body
   - Callback writes each chunk to PHP output buffer with `echo` + `flush()`
   - Forwards SSE events from Anthropic directly to browser (passthrough proxy)
   - Extracts `container_id` from `message_start` event
   - Detects `stop_reason: "pause_turn"` in `message_delta` for continuation
-- [ ] **`Claude_API::stream_lesson_message()`** — same for lesson Q&A mode
-- [ ] **`REST_API::register_routes()`** — register `/chat/stream` POST endpoint
-- [ ] **`REST_API::handle_stream_chat()`** — streaming endpoint handler
+- [x] **`Claude_API::stream_lesson_message()`** — same for lesson Q&A mode
+- [x] **`Claude_API::execute_stream()`** — shared curl streaming helper with SSE parsing
+- [x] **`REST_API::register_routes()`** — register `/chat/stream` POST endpoint
+- [x] **`REST_API::handle_stream_chat()`** — streaming endpoint handler
   - Same permission/validation as `handle_chat()`
   - Sets SSE headers manually (`Content-Type: text/event-stream`, `Cache-Control: no-cache`, `X-Accel-Buffering: no`)
   - Calls `Claude_API::stream_message()` which writes directly to output
-  - Sends final `data: [DONE]` event with metadata (model, usage, container_id, content_raw)
+  - Sends final `done` SSE event with metadata (model, usage, container_id, content_raw)
   - Calls `exit()` after stream completes (bypass WP REST response handling)
 - [ ] **Nginx/PHP config** — verify `X-Accel-Buffering: no` disables proxy buffering
-- [ ] **Pause turn handling** — detect in `message_delta`, send continuation marker event, resume stream
+- [x] **Pause turn handling** — detect in `message_delta`, send continuation marker event, resume stream (max 5)
 
 ### Phase 10b: Frontend Streaming
 
-- [ ] **`chatbot.js` streaming branch** — detect `restStreamUrl` in config
+- [x] **`chatbot.js` streaming branch** — detect `restStreamUrl` in config
   - `fetch()` POST to streaming endpoint
   - `response.body.getReader()` + `TextDecoder` for chunked reading
   - SSE event parser: split on `\n\n`, extract `event:` and `data:` lines
   - Handle `content_block_delta` → append text to message element incrementally
   - Handle `message_start` → extract container_id
-  - Handle `message_delta` → extract stop_reason, usage
-  - Handle `[DONE]` → finalize message, convert accumulated markdown → HTML
+  - Handle `done` → finalize message, convert accumulated markdown → HTML
   - Handle `error` events → display inline error
-- [ ] **Markdown rendering** — use `marked.js` (already in plugin for MD drop feature)
+- [x] **Real-time markdown rendering** — `marked.js` enqueued on frontend
   - Accumulate raw text during stream
-  - On stream complete: convert full markdown → HTML, replace message content
-  - During stream: display raw text with basic formatting (or periodic re-render)
-- [ ] **"Stop generating" button** — abort controller to cancel fetch + close connection
-- [ ] **Typing indicator update** — replace dots with "Generating..." text during stream
-- [ ] **Fallback** — if streaming fetch fails, retry with non-streaming endpoint
-- [ ] **`RenderCallbackTrait`** — add `restStreamUrl` to `wp_localize_script()` config
+  - `requestAnimationFrame`-throttled `markdownToHtml()` renders formatted output in real-time
+  - Headings, bold, lists, code blocks render progressively as they stream in
+  - Final `renderNow()` flush on completion with complete text from server `content_raw`
+  - User messages also rendered through markdown for pasted MD support
+- [x] **"Stop generating" button** — AbortController to cancel fetch + close connection
+- [x] **Fallback** — if streaming fetch fails before data, retry with non-streaming endpoint
+- [x] **Browser compatibility** — `ReadableStream` feature detection, fallback to sync
+- [x] **`RenderCallbackTrait`** — add `restStreamUrl` + `marked` dependency to `wp_localize_script()`
 
 ### Phase 10c: Error Handling & Edge Cases
 
-- [ ] **Mid-stream errors** — Anthropic error event or network drop during stream
-  - Display partial response + error message
-  - Offer "Retry" button that sends same message
-- [ ] **Browser compatibility** — `ReadableStream` requires Chrome 43+, Firefox 65+, Safari 11.1+
-  - Feature detection: `typeof ReadableStream !== 'undefined'`
-  - Fallback to non-streaming for unsupported browsers
-- [ ] **Connection timeout** — implement client-side heartbeat detection
+- [x] **Mid-stream errors** — network drop during stream shows partial response + error
+- [x] **AbortError handling** — user cancellation keeps partial response with markdown conversion
+- [x] **Container ID management** — extracted from `message_start` and `done` SSE events
+- [x] **Conversation history** — accumulate `content_raw` during stream for history array
+- [x] **Anthropic HTTP error handling** — non-SSE error responses (raw JSON) intercepted in PHP `handle_stream_chunk()`, accumulated as `error_body`, sent as proper SSE error event with extracted message
+- [x] **Empty response cleanup** — empty assistant bubble removed on error; `done` with empty `content_raw` skips history push and render
+- [x] **Resilient error detection in JS** — matches both `evt.event === 'error'` and `data.type === 'error'` payloads
+- [ ] **Connection timeout** — client-side heartbeat detection (deferred)
   - If no event received in 30s, show "Connection interrupted" + retry option
-- [ ] **Container ID management** — extracted from `message_start` SSE event
-  - Store in JS state for subsequent turns (same as current flow)
-- [ ] **Conversation history** — accumulate `content_raw` during stream for history array
-  - Raw markdown text (NOT HTML) stored in history for API replay
 
 ### Phase 10d: Documentation & Testing
 
@@ -355,7 +354,7 @@ New parallel code paths — non-breaking; existing synchronous flow remains as f
 | Decision | Options | Notes |
 |----------|---------|-------|
 | Streaming endpoint | New route `/chat/stream` vs parameter `?stream=1` | New route is cleaner — different response format |
-| During-stream rendering | Raw text vs periodic markdown re-render | Raw text simpler; re-render on complete |
+| During-stream rendering | Raw text vs periodic markdown re-render | `requestAnimationFrame`-throttled `markdownToHtml()` — renders formatted output in real-time without flicker |
 | Pause turn in stream | Server-side continuation vs client-side retry | Server-side keeps connection open; client-side simpler |
 | marked.js sharing | Reuse existing admin bundle vs enqueue separately on frontend | Separate enqueue — admin bundle not loaded on frontend |
 | Non-streaming fallback | Keep forever vs deprecate after streaming stable | Keep as fallback for compatibility |
@@ -365,7 +364,7 @@ New parallel code paths — non-breaking; existing synchronous flow remains as f
 1. **`wp_remote_post()` cannot stream** — buffers entire response. Must use `curl` directly.
 2. **WordPress REST API assumes buffered responses** — streaming endpoint must bypass `WP_REST_Response`, output headers manually, and call `exit()`.
 3. **`ob_end_flush()`** — WordPress/plugins may have output buffers active. Must flush all before streaming.
-4. **Markdown during stream** — chunks arrive mid-word/mid-syntax. Full markdown conversion only works on complete text. Show raw text during stream, convert on completion.
+4. **Markdown during stream** — `requestAnimationFrame` throttling renders formatted markdown in real-time. Incomplete syntax (unclosed `**bold`) renders as-is until closing tokens arrive. Much better UX than raw text + jarring final reformat.
 5. **Pause turn** — `stop_reason` appears only in final `message_delta` event. Must accumulate all content blocks and detect pause_turn to continue.
 6. **Code execution blocks** — `server_tool_use` and `bash_code_execution_tool_result` events appear mid-stream. Must handle alongside text deltas.
 
@@ -440,6 +439,9 @@ New parallel code paths — non-breaking; existing synchronous flow remains as f
 | 2026-02-16 | Parallel streaming endpoint `/chat/stream` | New route, not parameter toggle — different response format (SSE vs JSON) warrants separate endpoint |
 | 2026-02-16 | Client-side markdown for streaming | During stream: raw text; on complete: `marked.js` converts to HTML. Server-side `league/commonmark` stays for non-streaming fallback |
 | 2026-02-16 | Keep non-streaming fallback | Synchronous endpoint remains for browser compat + simplicity; streaming is opt-in via feature detection |
+| 2026-02-17 | Real-time markdown rendering | `requestAnimationFrame`-throttled `markdownToHtml()` during streaming eliminates jarring raw→formatted reformat. Incomplete markdown syntax is acceptable mid-stream |
+| 2026-02-17 | Intercept non-SSE error responses in PHP | Anthropic HTTP errors return raw JSON (not SSE). PHP `handle_stream_chunk()` detects `http_error` state and accumulates error body instead of forwarding raw JSON to browser |
+| 2026-02-17 | User messages rendered as markdown | User input passed through `markdownToHtml()` for display, supporting pasted markdown content |
 
 ---
 
@@ -472,6 +474,7 @@ wp eval-file wp-content/plugins/leaderspath/bin/create-test-data.php
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/leaderspath/v1/chat` | POST | Send message (activity_id or lesson_id + message + history) |
+| `/leaderspath/v1/chat` | POST | Send message — synchronous JSON response |
+| `/leaderspath/v1/chat/stream` | POST | Send message — SSE streaming response |
 | `/leaderspath/v1/context/{id}/download` | GET | Download context file content |
 | `/leaderspath/v1/skills/{id}/download` | GET | Download skill package metadata |
