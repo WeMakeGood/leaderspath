@@ -107,6 +107,7 @@ All documentation lives in the `docs/` folder:
 | [data-contracts.md](docs/data-contracts.md) | ACF field → REST endpoint mapping |
 | [claude-api-integration.md](docs/claude-api-integration.md) | **Claude API integration (CRITICAL)** |
 | [content-creation-guide.md](docs/content-creation-guide.md) | Content authoring guide |
+| [server-requirements.md](docs/server-requirements.md) | **Server config for SSE streaming (Nginx, PHP-FPM)** |
 
 ## External Dependencies
 
