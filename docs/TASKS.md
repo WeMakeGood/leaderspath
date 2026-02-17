@@ -183,6 +183,12 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 - [x] Scripts only load on LeadersPath CPT editor screens
 - [x] ACF WYSIWYG fields handled via `acf.addAction('wysiwyg_tinymce_init')`
 
+### Completed: Visual Builder Fatal Error Fix (2026-02-16)
+
+- [x] Fix `get_current_screen()` fatal error in `admin/class-context-uploader.php` that prevented Divi VB from loading in Theme Builder
+- [x] Add `function_exists()` guard for frontend contexts where `get_current_screen()` is unavailable
+- [x] Add global namespace prefix (`\get_current_screen()`) for namespaced file
+
 ### Pending Tasks
 
 - [ ] Test Theme Builder template with multiple lesson/activity/course pages

@@ -45,7 +45,11 @@ class Context_Uploader {
 	 * @return bool
 	 */
 	public function disable_visual_editor( bool $can ): bool {
-		$screen = get_current_screen();
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			return $can;
+		}
+
+		$screen = \get_current_screen();
 
 		if ( $screen && 'leaderspath_context' === $screen->post_type ) {
 			return false;
@@ -144,7 +148,7 @@ class Context_Uploader {
 			return;
 		}
 
-		$screen = get_current_screen();
+		$screen = \get_current_screen();
 		if ( ! $screen || 'leaderspath_context' !== $screen->post_type ) {
 			return;
 		}
