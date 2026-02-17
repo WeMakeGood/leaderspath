@@ -194,11 +194,18 @@
 					}
 
 					if ( ! response.ok ) {
-						return response.json().then( function ( errData ) {
-							throw new Error(
-								errData.message || 'HTTP ' + response.status
-							);
-						} );
+						return response.json()
+							.then( function ( errData ) {
+								throw new Error(
+									errData.message || 'HTTP ' + response.status
+								);
+							} )
+							.catch( function ( parseErr ) {
+								if ( parseErr.message && parseErr.message.indexOf( 'HTTP ' ) === 0 ) {
+									throw parseErr;
+								}
+								throw new Error( 'Server error (HTTP ' + response.status + '). Please try again.' );
+							} );
 					}
 					return response.json();
 				} )

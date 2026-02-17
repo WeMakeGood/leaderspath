@@ -183,6 +183,16 @@ class Claude_API {
 		// Log response if debug mode is enabled.
 		$this->maybe_log( 'Response', [ 'status' => $status_code, 'body' => $data ] );
 
+		// Handle non-JSON responses (e.g., Cloudflare HTML error pages, proxy timeouts).
+		if ( ! is_array( $data ) ) {
+			$this->maybe_log( 'Error', [ 'message' => 'Non-JSON response', 'body_preview' => substr( $body_raw, 0, 500 ) ] );
+			return new WP_Error(
+				'api_invalid_response',
+				__( 'The AI service returned an unexpected response. Please try again.', 'leaderspath' ),
+				[ 'status' => 502 ]
+			);
+		}
+
 		// Handle error responses.
 		if ( $status_code >= 400 ) {
 			return $this->handle_api_error( $status_code, $data );
@@ -315,6 +325,16 @@ class Claude_API {
 
 		// Log response if debug mode is enabled.
 		$this->maybe_log( 'Lesson Q&A Response', [ 'status' => $status_code, 'body' => $data ] );
+
+		// Handle non-JSON responses (e.g., Cloudflare HTML error pages, proxy timeouts).
+		if ( ! is_array( $data ) ) {
+			$this->maybe_log( 'Error', [ 'message' => 'Non-JSON response', 'body_preview' => substr( $body_raw, 0, 500 ) ] );
+			return new WP_Error(
+				'api_invalid_response',
+				__( 'The AI service returned an unexpected response. Please try again.', 'leaderspath' ),
+				[ 'status' => 502 ]
+			);
+		}
 
 		// Handle error responses.
 		if ( $status_code >= 400 ) {
@@ -459,6 +479,13 @@ class Claude_API {
 
 		$status_code = wp_remote_retrieve_response_code( $response );
 		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ! is_array( $body ) ) {
+			return new WP_Error(
+				'api_invalid_response',
+				__( 'The AI service returned an unexpected response.', 'leaderspath' )
+			);
+		}
 
 		if ( $status_code >= 400 ) {
 			return $this->handle_api_error( $status_code, $body );
@@ -786,6 +813,15 @@ class Claude_API {
 			$data        = json_decode( $body_raw, true );
 
 			$this->maybe_log( 'Continuation Response', [ 'status' => $status_code, 'body' => $data ] );
+
+			if ( ! is_array( $data ) ) {
+				$this->maybe_log( 'Error', [ 'message' => 'Non-JSON continuation response', 'body_preview' => substr( $body_raw, 0, 500 ) ] );
+				return new WP_Error(
+					'api_invalid_response',
+					__( 'The AI service returned an unexpected response during processing. Please try again.', 'leaderspath' ),
+					[ 'status' => 502 ]
+				);
+			}
 
 			if ( $status_code >= 400 ) {
 				return $this->handle_api_error( $status_code, $data );
