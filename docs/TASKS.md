@@ -172,6 +172,17 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 - [x] 1 MB file size limit with user feedback
 - [x] Visual feedback: drag-over highlight, success/error status messages
 
+### Completed: Markdown Drop for WYSIWYG Editors (2026-02-16)
+
+- [x] Drag-and-drop .md/.markdown files onto any TinyMCE editor (standard WP post editor + ACF WYSIWYG fields)
+- [x] Client-side conversion: marked.js v17.0.2 (42 KB UMD, zero dependencies) converts MD → HTML
+- [x] Defeats WordPress EditorUploader overlay (capture-phase handlers on parent document with `stopImmediatePropagation`)
+- [x] Defeats TinyMCE paste plugin file-drop block (capture-phase handlers on iframe document)
+- [x] Raw HTML in Markdown stripped for XSS prevention
+- [x] 1 MB file size limit, TinyMCE notification feedback (success/error)
+- [x] Scripts only load on LeadersPath CPT editor screens
+- [x] ACF WYSIWYG fields handled via `acf.addAction('wysiwyg_tinymce_init')`
+
 ### Pending Tasks
 
 - [ ] Test Theme Builder template with multiple lesson/activity/course pages
@@ -295,6 +306,7 @@ Standardized admin list table columns across all 5 CPTs to surface slugs (curric
 | 2026-02-16 | Slug column on all CPTs | Slug IS the filesystem identifier (e.g., `lsn001-skills-framework`); primary cross-reference between curriculum registry and WordPress |
 | 2026-02-16 | Context File editor: text-only, no TinyMCE | Context files are markdown/plain text; visual editor mangles whitespace and formatting |
 | 2026-02-16 | Context File drag-and-drop import | Client-side FileReader reads text, sets post_content directly; no server upload needed for text content |
+| 2026-02-16 | Markdown drop for all TinyMCE editors | Client-side marked.js converts MD→HTML on drop; capture-phase handlers defeat WP EditorUploader + TinyMCE paste plugin |
 
 ---
 

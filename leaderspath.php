@@ -49,6 +49,7 @@ require LEADERSPATH_PATH . 'admin/class-admin-menu.php';
 require LEADERSPATH_PATH . 'admin/class-settings.php';
 require LEADERSPATH_PATH . 'admin/class-admin-columns.php';
 require LEADERSPATH_PATH . 'admin/class-context-uploader.php';
+require LEADERSPATH_PATH . 'admin/class-md-drop.php';
 require LEADERSPATH_PATH . 'includes/class-claude-api.php';
 require LEADERSPATH_PATH . 'includes/class-rest-api.php';
 require LEADERSPATH_PATH . 'includes/class-skill-processor.php';
@@ -68,6 +69,7 @@ new LeadersPath\Includes\ACF_Fields();
 new LeadersPath\Admin\Settings();
 new LeadersPath\Admin\Admin_Columns();
 new LeadersPath\Admin\Context_Uploader();
+new LeadersPath\Admin\MD_Drop();
 new LeadersPath\Includes\REST_API();
 new LeadersPath\Includes\Skill_Processor();
 
