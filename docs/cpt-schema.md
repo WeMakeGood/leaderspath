@@ -79,10 +79,6 @@ AI sandbox experiments within a facilitated Lesson.
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
 | `activity_duration` | Number | Estimated duration in minutes |
-| `activity_references` | Repeater | External resources |
-| `activity_references.title` | Text | Resource title |
-| `activity_references.url` | URL | Resource link |
-| `activity_references.description` | Textarea | Resource description |
 
 #### ACF Field Group: AI Sandbox Configuration
 
@@ -131,7 +127,10 @@ The atomic teaching unit, taught as a cohesive whole by a facilitator.
 | `lesson_total_duration` | Text | Total facilitation time (e.g., "90 minutes") |
 | `lesson_objectives` | Repeater | Learning objectives for the lesson |
 | `lesson_objectives.objective` | Text | Single objective |
-| `lesson_access_roles` | Checkbox | User roles that can access |
+| `lesson_references` | Repeater | External resources and reading materials |
+| `lesson_references.title` | Text | Resource title |
+| `lesson_references.url` | URL | Resource link |
+| `lesson_references.description` | Textarea | Resource description |
 
 #### ACF Field Group: Facilitator Content
 
@@ -144,6 +143,12 @@ The atomic teaching unit, taught as a cohesive whole by a facilitator.
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
 | `lesson_learner_overview` | WYSIWYG | What learners will experience (context, not teaching content) |
+
+#### ACF Field Group: Access Roles (sidebar)
+
+| Field Name | Field Type | Description |
+|------------|------------|-------------|
+| `lesson_access_roles` | Checkbox | User roles that can access (empty = public) |
 
 #### ACF Field Group: Lesson Q&A Chatbot
 
@@ -569,4 +574,4 @@ When deactivating:
 - The Activity CPT slug is `leaderspath_activity`
 - The `lesson_activities` field stores activity IDs for a lesson
 - The `course_lessons` field stores lesson IDs for a course
-- All ACF fields use `activity_` prefix (e.g., `activity_duration`, `activity_references`)
+- All ACF fields use their CPT prefix (e.g., `activity_duration`, `lesson_references`)

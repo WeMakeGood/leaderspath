@@ -19,7 +19,6 @@ When you add, change, or remove an ACF field, check this document to find every 
 | `chatbot_max_tokens` | `POST /chat` (internal) | API param |
 | `chatbot_temperature` | `POST /chat` (internal) | API param |
 | `chatbot_allow_model_switch` | `POST /chat` (internal) | Model selector toggle |
-| `activity_references` | — | Not yet surfaced |
 
 ## Lesson (`leaderspath_lesson`)
 
@@ -31,6 +30,7 @@ When you add, change, or remove an ACF field, check this document to find every 
 | `lesson_facilitator_guide` | — | Teaching script (WYSIWYG) |
 | `lesson_learner_overview` | — | Learner-facing content (WYSIWYG) |
 | `lesson_access_roles` | — | Access control |
+| `lesson_references` | — | External resources repeater (title, URL, description) |
 | `lesson_chatbot_enabled` | `POST /chat` (internal) | Q&A gate |
 | `lesson_chatbot_model` | `POST /chat` (internal) | API param |
 | `lesson_chatbot_system_prompt` | `POST /chat` (internal) | System prompt |

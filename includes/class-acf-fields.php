@@ -71,42 +71,7 @@ class ACF_Fields {
 					'step'          => 1,
 					'append'        => __( 'minutes', 'leaderspath' ),
 				],
-				[
-					'key'           => 'field_activity_references',
-					'label'         => __( 'References', 'leaderspath' ),
-					'name'          => 'activity_references',
-					'type'          => 'repeater',
-					'instructions'  => __( 'External resources and reading materials.', 'leaderspath' ),
-					'required'      => 0,
-					'min'           => 0,
-					'max'           => 20,
-					'layout'        => 'block',
-					'button_label'  => __( 'Add Reference', 'leaderspath' ),
-					'sub_fields'    => [
-						[
-							'key'      => 'field_reference_title',
-							'label'    => __( 'Title', 'leaderspath' ),
-							'name'     => 'title',
-							'type'     => 'text',
-							'required' => 1,
-						],
-						[
-							'key'      => 'field_reference_url',
-							'label'    => __( 'URL', 'leaderspath' ),
-							'name'     => 'url',
-							'type'     => 'url',
-							'required' => 1,
-						],
-						[
-							'key'   => 'field_reference_description',
-							'label' => __( 'Description', 'leaderspath' ),
-							'name'  => 'description',
-							'type'  => 'textarea',
-							'rows'  => 2,
-						],
-					],
 				],
-			],
 			'location' => [
 				[
 					[
@@ -366,21 +331,39 @@ class ACF_Fields {
 					],
 				],
 				[
-					'key'           => 'field_lesson_access_roles',
-					'label'         => __( 'Access Roles', 'leaderspath' ),
-					'name'          => 'lesson_access_roles',
-					'type'          => 'checkbox',
-					'instructions'  => __( 'User roles that can access this lesson. Leave empty for public access.', 'leaderspath' ),
-					'choices'       => [
-						'leaderspath_student' => __( 'LeadersPath Student', 'leaderspath' ),
-						'subscriber'          => __( 'Subscriber', 'leaderspath' ),
-						'contributor'         => __( 'Contributor', 'leaderspath' ),
-						'author'              => __( 'Author', 'leaderspath' ),
-						'editor'              => __( 'Editor', 'leaderspath' ),
-						'administrator'       => __( 'Administrator', 'leaderspath' ),
+					'key'           => 'field_lesson_references',
+					'label'         => __( 'References', 'leaderspath' ),
+					'name'          => 'lesson_references',
+					'type'          => 'repeater',
+					'instructions'  => __( 'External resources and reading materials for this lesson.', 'leaderspath' ),
+					'required'      => 0,
+					'min'           => 0,
+					'max'           => 20,
+					'layout'        => 'block',
+					'button_label'  => __( 'Add Reference', 'leaderspath' ),
+					'sub_fields'    => [
+						[
+							'key'      => 'field_lesson_reference_title',
+							'label'    => __( 'Title', 'leaderspath' ),
+							'name'     => 'title',
+							'type'     => 'text',
+							'required' => 1,
+						],
+						[
+							'key'      => 'field_lesson_reference_url',
+							'label'    => __( 'URL', 'leaderspath' ),
+							'name'     => 'url',
+							'type'     => 'url',
+							'required' => 1,
+						],
+						[
+							'key'   => 'field_lesson_reference_description',
+							'label' => __( 'Description', 'leaderspath' ),
+							'name'  => 'description',
+							'type'  => 'textarea',
+							'rows'  => 2,
+						],
 					],
-					'return_format' => 'value',
-					'layout'        => 'horizontal',
 				],
 			],
 			'location' => [
@@ -460,6 +443,46 @@ class ACF_Fields {
 			],
 			'menu_order'            => 10,
 			'position'              => 'normal',
+			'style'                 => 'default',
+			'label_placement'       => 'top',
+			'instruction_placement' => 'label',
+			'active'                => true,
+		] );
+
+		// Access Roles field group - sidebar metabox for access control.
+		acf_add_local_field_group( [
+			'key'      => 'group_lesson_access',
+			'title'    => __( 'Access Roles', 'leaderspath' ),
+			'fields'   => [
+				[
+					'key'           => 'field_lesson_access_roles',
+					'label'         => __( 'Allowed Roles', 'leaderspath' ),
+					'name'          => 'lesson_access_roles',
+					'type'          => 'checkbox',
+					'instructions'  => __( 'User roles that can access this lesson. Leave empty for public access.', 'leaderspath' ),
+					'choices'       => [
+						'leaderspath_student' => __( 'LeadersPath Student', 'leaderspath' ),
+						'subscriber'          => __( 'Subscriber', 'leaderspath' ),
+						'contributor'         => __( 'Contributor', 'leaderspath' ),
+						'author'              => __( 'Author', 'leaderspath' ),
+						'editor'              => __( 'Editor', 'leaderspath' ),
+						'administrator'       => __( 'Administrator', 'leaderspath' ),
+					],
+					'return_format' => 'value',
+					'layout'        => 'vertical',
+				],
+			],
+			'location' => [
+				[
+					[
+						'param'    => 'post_type',
+						'operator' => '==',
+						'value'    => 'leaderspath_lesson',
+					],
+				],
+			],
+			'menu_order'            => 0,
+			'position'              => 'side',
 			'style'                 => 'default',
 			'label_placement'       => 'top',
 			'instruction_placement' => 'label',

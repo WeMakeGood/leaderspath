@@ -321,7 +321,6 @@ Activities demonstrate:
 | Field | Type | Description |
 |-------|------|-------------|
 | `activity_duration` | Number | Estimated duration in minutes (1-480) |
-| `activity_references` | Repeater | External resources (title, URL, description) |
 
 **AI Sandbox Configuration (ACF Fields):**
 
@@ -442,7 +441,13 @@ Lessons are the **atomic teaching unit** in LeadersPath - taught as a cohesive w
 | `lesson_activities` | Relationship | Ordered list of activities |
 | `lesson_total_duration` | Text | Total facilitation time (e.g., "90 minutes") |
 | `lesson_objectives` | Repeater | Learning objectives for the lesson |
-| `lesson_access_roles` | Checkbox | User roles that can access |
+| `lesson_references` | Repeater | External resources (title, URL, description) |
+
+**Access Roles (sidebar):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `lesson_access_roles` | Checkbox | User roles that can access (empty = public) |
 
 **Facilitator Content (ACF Fields):**
 
