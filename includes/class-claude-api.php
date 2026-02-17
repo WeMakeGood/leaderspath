@@ -160,12 +160,21 @@ class Claude_API {
 
 			$body['container'] = $container;
 
-			// Add code execution tool when skills are present.
+			// Add code execution + web tools when skills are present.
 			$tool_type = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
+			$web_tools = \LeadersPath\Admin\Settings::get_web_tool_types();
 			$body['tools'] = [
 				[
 					'type' => $tool_type,
 					'name' => 'code_execution',
+				],
+				[
+					'type' => $web_tools['web_search'],
+					'name' => 'web_search',
+				],
+				[
+					'type' => $web_tools['web_fetch'],
+					'name' => 'web_fetch',
 				],
 			];
 		}
@@ -187,7 +196,7 @@ class Claude_API {
 		];
 
 		if ( ! empty( $skills_for_api ) ) {
-			$headers['anthropic-beta'] = \LeadersPath\Admin\Settings::get_beta_headers( [ 'code_execution', 'skills' ] );
+			$headers['anthropic-beta'] = \LeadersPath\Admin\Settings::get_beta_headers( [ 'code_execution', 'skills', 'web_tools' ] );
 		}
 
 		// Make API request.
@@ -470,11 +479,21 @@ class Claude_API {
 
 			$body['container'] = $container;
 
+			// Add code execution + web tools when skills are present.
 			$tool_type     = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
+			$web_tools     = \LeadersPath\Admin\Settings::get_web_tool_types();
 			$body['tools'] = [
 				[
 					'type' => $tool_type,
 					'name' => 'code_execution',
+				],
+				[
+					'type' => $web_tools['web_search'],
+					'name' => 'web_search',
+				],
+				[
+					'type' => $web_tools['web_fetch'],
+					'name' => 'web_fetch',
 				],
 			];
 		}
@@ -494,7 +513,7 @@ class Claude_API {
 		];
 
 		if ( ! empty( $skills_for_api ) ) {
-			$headers['anthropic-beta'] = \LeadersPath\Admin\Settings::get_beta_headers( [ 'code_execution', 'skills' ] );
+			$headers['anthropic-beta'] = \LeadersPath\Admin\Settings::get_beta_headers( [ 'code_execution', 'skills', 'web_tools' ] );
 		}
 
 		$error = $this->execute_stream( $body, $headers, $messages, $model );

@@ -153,6 +153,30 @@ class Settings {
 			'leaderspath_api_versions_section'
 		);
 
+		add_settings_field(
+			'beta_web_tools',
+			__( 'Web Tools Beta Header', 'leaderspath' ),
+			[ $this, 'render_beta_web_tools_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_versions_section'
+		);
+
+		add_settings_field(
+			'tool_web_search',
+			__( 'Web Search Tool Type', 'leaderspath' ),
+			[ $this, 'render_tool_web_search_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_versions_section'
+		);
+
+		add_settings_field(
+			'tool_web_fetch',
+			__( 'Web Fetch Tool Type', 'leaderspath' ),
+			[ $this, 'render_tool_web_fetch_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_versions_section'
+		);
+
 		// Debug Section.
 		add_settings_section(
 			'leaderspath_debug_section',
@@ -186,7 +210,10 @@ class Settings {
 			'beta_code_execution'       => 'code-execution-2025-08-25',
 			'beta_skills'               => 'skills-2025-10-02',
 			'beta_files'                => 'files-api-2025-04-14',
+			'beta_web_tools'            => 'code-execution-web-tools-2026-02-09',
 			'tool_code_execution'       => 'code_execution_20250825',
+			'tool_web_search'           => 'web_search_20250305',
+			'tool_web_fetch'            => 'web_fetch_20250910',
 		];
 	}
 
@@ -226,7 +253,7 @@ class Settings {
 		$sanitized['debug_mode'] = ! empty( $input['debug_mode'] );
 
 		// Beta header versions (sanitize as text, validate format).
-		$beta_fields = [ 'beta_code_execution', 'beta_skills', 'beta_files', 'tool_code_execution' ];
+		$beta_fields = [ 'beta_code_execution', 'beta_skills', 'beta_files', 'beta_web_tools', 'tool_code_execution', 'tool_web_search', 'tool_web_fetch' ];
 		$defaults    = $this->get_defaults();
 
 		foreach ( $beta_fields as $field ) {
@@ -760,6 +787,10 @@ class Settings {
 			$headers[] = $options['beta_files'] ?? $defaults['beta_files'];
 		}
 
+		if ( in_array( 'web_tools', $features, true ) ) {
+			$headers[] = $options['beta_web_tools'] ?? $defaults['beta_web_tools'];
+		}
+
 		return implode( ',', $headers );
 	}
 
@@ -776,6 +807,93 @@ class Settings {
 		$options  = get_option( self::OPTION_NAME, $defaults );
 
 		return $options['tool_code_execution'] ?? $defaults['tool_code_execution'];
+	}
+
+	/**
+	 * Get the web search and web fetch tool types.
+	 *
+	 * @since 0.11.0
+	 *
+	 * @return array{web_search: string, web_fetch: string} Tool type identifiers.
+	 */
+	public static function get_web_tool_types(): array {
+		$instance = new self();
+		$defaults = $instance->get_defaults();
+		$options  = get_option( self::OPTION_NAME, $defaults );
+
+		return [
+			'web_search' => $options['tool_web_search'] ?? $defaults['tool_web_search'],
+			'web_fetch'  => $options['tool_web_fetch'] ?? $defaults['tool_web_fetch'],
+		];
+	}
+
+	/**
+	 * Render the web tools beta header field.
+	 *
+	 * @since 0.11.0
+	 */
+	public function render_beta_web_tools_field(): void {
+		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$value   = $options['beta_web_tools'] ?? $this->get_defaults()['beta_web_tools'];
+
+		?>
+		<input
+			type="text"
+			id="leaderspath_beta_web_tools"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[beta_web_tools]"
+			value="<?php echo esc_attr( $value ); ?>"
+			class="regular-text"
+		/>
+		<p class="description">
+			<?php esc_html_e( 'Beta header for web search/fetch with dynamic filtering. Format: code-execution-web-tools-YYYY-MM-DD', 'leaderspath' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the web search tool type field.
+	 *
+	 * @since 0.11.0
+	 */
+	public function render_tool_web_search_field(): void {
+		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$value   = $options['tool_web_search'] ?? $this->get_defaults()['tool_web_search'];
+
+		?>
+		<input
+			type="text"
+			id="leaderspath_tool_web_search"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[tool_web_search]"
+			value="<?php echo esc_attr( $value ); ?>"
+			class="regular-text"
+		/>
+		<p class="description">
+			<?php esc_html_e( 'Tool type for web search. Format: web_search_YYYYMMDD', 'leaderspath' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the web fetch tool type field.
+	 *
+	 * @since 0.11.0
+	 */
+	public function render_tool_web_fetch_field(): void {
+		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$value   = $options['tool_web_fetch'] ?? $this->get_defaults()['tool_web_fetch'];
+
+		?>
+		<input
+			type="text"
+			id="leaderspath_tool_web_fetch"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[tool_web_fetch]"
+			value="<?php echo esc_attr( $value ); ?>"
+			class="regular-text"
+		/>
+		<p class="description">
+			<?php esc_html_e( 'Tool type for web fetch. Format: web_fetch_YYYYMMDD', 'leaderspath' ); ?>
+		</p>
+		<?php
 	}
 
 	/**

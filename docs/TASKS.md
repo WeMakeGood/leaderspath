@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
 **Last Updated:** 2026-02-17
-**Current Phase:** Schema refinement — Move references from Activity to Lesson
+**Current Phase:** Web tools for skills — Add web_search + web_fetch to API requests
 
 ---
 
@@ -400,6 +400,23 @@ Automatic retry with backoff for transient Anthropic API errors (500, 502, 503, 
 
 ---
 
+## Phase 11: Web Tools for Skills (2026-02-17)
+
+Skills that need web access (e.g., creating-organization-dossiers) fail in Anthropic's sandboxed container because it has no internet access. Anthropic provides server-side `web_search` and `web_fetch` tools that run on their infrastructure.
+
+- [x] Add `web_search` and `web_fetch` tool types to Settings defaults (`web_search_20250305`, `web_fetch_20250910`)
+- [x] Add `beta_web_tools` header to Settings defaults (`code-execution-web-tools-2026-02-09`)
+- [x] Add `get_web_tool_types()` getter to Settings class
+- [x] Update `get_beta_headers()` to support `'web_tools'` feature key
+- [x] Add admin settings fields for web tool versions (API Version Configuration section)
+- [x] Update `Claude_API::send_message()` — include `web_search` + `web_fetch` in tools array when skills present
+- [x] Update `Claude_API::stream_message()` — same change for streaming path
+- [x] Update beta headers in both methods to include `'web_tools'`
+- [x] Update `docs/claude-api-integration.md` with Web Tools section
+- [x] Build verified
+
+---
+
 ## Discovered Tasks
 
 - [ ] Handle file outputs from code execution (deferred — not critical for MVP)
@@ -475,6 +492,8 @@ Automatic retry with backoff for transient Anthropic API errors (500, 502, 503, 
 | 2026-02-17 | Server-side retry for streaming | PHP retries transient errors (500/502/503/529, curl failures) with 1s/3s backoff, max 2 retries. Sends `retry` SSE event so JS can show status. Non-retryable errors (4xx) fail immediately |
 | 2026-02-17 | Client-side retry for sync path | JS retries same HTTP codes with same delays. "Try again" button on final failure lets user manually retry |
 | 2026-02-17 | References on Lesson, not Activity | References are reading materials that support the lesson as a teaching unit; activities are action-oriented sandbox experiments |
+| 2026-02-17 | Web tools always-on with skills | `web_search` + `web_fetch` auto-included when activity has skills; no per-activity toggle. Container sandbox has zero internet — server-side tools are the only web access path |
+| 2026-02-17 | No web tools for lesson Q&A | Lesson chatbot is a simple Q&A helper, no skills, no web access needed |
 
 ---
 

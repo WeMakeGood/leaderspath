@@ -1,6 +1,6 @@
 # Claude API Integration
 
-**Last Updated:** 2026-02-04
+**Last Updated:** 2026-02-17
 
 This document describes how LeadersPath integrates with the Anthropic Claude API, including the full skill system with code execution support.
 
@@ -63,6 +63,7 @@ Used for chat interactions with code execution and skills enabled.
 | Code Execution | `code-execution-2025-08-25` | `code_execution_20250825` |
 | Skills | `skills-2025-10-02` | N/A (container param) |
 | Files API | `files-api-2025-04-14` | N/A |
+| Web Tools (dynamic filtering) | `code-execution-web-tools-2026-02-09` | `web_search_20250305`, `web_fetch_20250910` |
 
 ### Version Strategy
 
@@ -77,7 +78,10 @@ Beta headers and tool types include dates and may change. To handle this:
 'claude_beta_code_execution' => 'code-execution-2025-08-25',
 'claude_beta_skills'         => 'skills-2025-10-02',
 'claude_beta_files'          => 'files-api-2025-04-14',
+'claude_beta_web_tools'      => 'code-execution-web-tools-2026-02-09',
 'claude_tool_code_execution' => 'code_execution_20250825',
+'claude_tool_web_search'     => 'web_search_20250305',
+'claude_tool_web_fetch'      => 'web_fetch_20250910',
 ```
 
 ### Checking for Updates
@@ -116,6 +120,14 @@ The Anthropic API documentation should be checked periodically:
     {
       "type": "code_execution_20250825",
       "name": "code_execution"
+    },
+    {
+      "type": "web_search_20250305",
+      "name": "web_search"
+    },
+    {
+      "type": "web_fetch_20250910",
+      "name": "web_fetch"
     }
   ]
 }
@@ -127,7 +139,7 @@ The Anthropic API documentation should be checked periodically:
 |-----------|-------------|
 | `container.skills` | Array of skills to load (max 8) |
 | `container.id` | Reuse container from previous response |
-| `tools` | Must include code execution tool for skills |
+| `tools` | Code execution + web search + web fetch (auto-included with skills) |
 | `system` | System prompt with context files embedded |
 | `messages` | Conversation history |
 
@@ -251,6 +263,43 @@ Skills are executable packages with instructions, scripts, and resources. They:
 | API upload | Not needed | Required |
 | System prompt | Full content embedded | Name + description only |
 | Storage | WordPress post_content | Anthropic + WordPress metadata |
+
+---
+
+## Web Tools (Search & Fetch)
+
+When an activity has skills attached, `web_search` and `web_fetch` tools are automatically included alongside `code_execution`. These are **server-side tools** — Anthropic's infrastructure makes the HTTP requests, not the sandboxed container.
+
+### Why Web Tools Are Needed
+
+The code execution container has **no internet access** (hard security boundary). Skills that need to gather web data (e.g., organizational research, content analysis) cannot use Python `requests` or `urllib` from within the sandbox. Web tools solve this by providing Claude with server-side web access.
+
+### How They Work
+
+| Tool | Purpose | Pricing |
+|------|---------|---------|
+| `web_search` | Search the web, returns result URLs + snippets | $10 / 1,000 searches |
+| `web_fetch` | Retrieve full page content from a URL | Free (token costs only) |
+
+**Key constraints:**
+- `web_fetch` can only fetch URLs that appear in the conversation (user-provided or from `web_search` results)
+- Neither tool renders JavaScript — static HTML and PDFs only
+- Code execution can process fetched content (parse, filter, structure)
+- Results appear as `server_tool_use` / `web_search_tool_result` / `web_fetch_tool_result` content blocks
+
+### Dynamic Filtering
+
+The `code-execution-web-tools-2026-02-09` beta header enables dynamic filtering on Opus 4.6 and Sonnet 4.6. Claude can write and execute code to filter fetched content before it reaches the context window, reducing token usage.
+
+### When Web Tools Are Included
+
+- **Activity with skills** → `code_execution` + `web_search` + `web_fetch` (automatic)
+- **Activity without skills** → No tools
+- **Lesson Q&A** → No tools (simple assistant, no skills support)
+
+### Streaming Behavior
+
+Web tool events (`server_tool_use`, `web_search_tool_result`, `web_fetch_tool_result`) are forwarded as raw SSE to the browser. The `parse_sse_event()` method tracks them in `$state['content']` for pause_turn continuation. No special frontend handling is required — these events don't produce user-visible text.
 
 ---
 
@@ -493,6 +542,8 @@ All Claude API integration work is complete:
 
 - [Skills Guide](https://platform.claude.com/docs/en/build-with-claude/skills-guide)
 - [Code Execution Tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/code-execution-tool)
+- [Web Search Tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool)
+- [Web Fetch Tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-fetch-tool)
 - [Files API](https://platform.claude.com/docs/en/build-with-claude/files)
 - [Agent Skills Overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview)
 - [Beta Headers](https://platform.claude.com/docs/en/api/beta-headers)
