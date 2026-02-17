@@ -110,6 +110,59 @@
 		}
 
 		/**
+		 * Create retry indicator element.
+		 */
+		function createRetryIndicator( attempt, max ) {
+			var el = document.createElement( 'div' );
+			el.className = 'leaderspath_chatbot__retry';
+			el.setAttribute( 'aria-label', 'Retrying' );
+			el.innerHTML =
+				'<span class="leaderspath_chatbot__typing_dot"></span>' +
+				'<span class="leaderspath_chatbot__retry_text">Retrying\u2026 (attempt ' + attempt + ' of ' + max + ')</span>';
+			return el;
+		}
+
+		/**
+		 * Remove any existing retry indicator.
+		 */
+		function removeRetryIndicator() {
+			var existing = messagesEl.querySelector( '.leaderspath_chatbot__retry' );
+			if ( existing && existing.parentNode ) {
+				existing.parentNode.removeChild( existing );
+			}
+		}
+
+		/**
+		 * Create a "Try again" button for retrying the last message.
+		 */
+		function createTryAgainButton() {
+			var el = document.createElement( 'button' );
+			el.className = 'leaderspath_chatbot__try_again';
+			el.type = 'button';
+			el.textContent = 'Try again';
+			el.addEventListener( 'click', function () {
+				// Remove this button.
+				if ( el.parentNode ) {
+					el.parentNode.removeChild( el );
+				}
+
+				// Remove the error message above it.
+				var prevEl = el.previousElementSibling;
+				if ( prevEl && prevEl.classList.contains( 'leaderspath_chatbot__error' ) ) {
+					prevEl.parentNode.removeChild( prevEl );
+				}
+
+				// Pop the last user message from history and re-send.
+				if ( history.length > 0 && history[ history.length - 1 ].role === 'user' ) {
+					var lastMessage = history.pop();
+					inputEl.value = lastMessage.content;
+					sendMessage();
+				}
+			} );
+			return el;
+		}
+
+		/**
 		 * Scroll messages to bottom.
 		 */
 		function scrollToBottom() {
@@ -330,11 +383,21 @@
 								continue;
 							}
 
+							// Handle retry events from server — show retry indicator.
+							if ( evt.event === 'retry' ) {
+								removeRetryIndicator();
+								messagesEl.appendChild( createRetryIndicator( data.attempt || 2, data.max || 3 ) );
+								scrollToBottom();
+								continue;
+							}
+
 							// Detect error events: explicit 'error' type from our PHP proxy,
 							// or data payloads with error structure (from Anthropic).
 							if ( evt.event === 'error' || ( data.type === 'error' && data.error ) ) {
+								removeRetryIndicator();
 								var errMsg = ( data.error && data.error.message ) || data.message || 'An error occurred.';
 								messagesEl.appendChild( createError( errMsg ) );
+								messagesEl.appendChild( createTryAgainButton() );
 								continue;
 							}
 
@@ -356,6 +419,7 @@
 
 								case 'done':
 									// Custom [DONE] event from our PHP proxy.
+									removeRetryIndicator();
 									if ( data.container_id ) {
 										containerId = data.container_id;
 									}
@@ -449,72 +513,109 @@
 		}
 
 		/**
+		 * HTTP status codes that are safe to retry.
+		 */
+		var retryableHttpCodes = [ 500, 502, 503, 529 ];
+		var syncRetryDelays = [ 1000, 3000 ]; // ms
+
+		/**
 		 * Send a message via synchronous (non-streaming) endpoint.
 		 */
 		function sendMessageSync( message, body, typing ) {
-			fetch( restUrl, {
-				method: 'POST',
-				headers: buildHeaders(),
-				credentials: 'same-origin',
-				body: JSON.stringify( body ),
-			} )
-				.then( function ( response ) {
-					// Remove typing indicator.
-					if ( typing.parentNode ) {
-						typing.parentNode.removeChild( typing );
-					}
+			var attempt = 0;
+			var maxAttempts = syncRetryDelays.length + 1; // 3 total
 
-					if ( ! response.ok ) {
-						return response.json()
-							.then( function ( errData ) {
-								throw new Error(
-									errData.message || 'HTTP ' + response.status
-								);
-							} )
-							.catch( function ( parseErr ) {
-								if ( parseErr.message && parseErr.message.indexOf( 'HTTP ' ) === 0 ) {
-									throw parseErr;
+			function attemptFetch() {
+				fetch( restUrl, {
+					method: 'POST',
+					headers: buildHeaders(),
+					credentials: 'same-origin',
+					body: JSON.stringify( body ),
+				} )
+					.then( function ( response ) {
+						if ( ! response.ok ) {
+							// Check if retryable.
+							if ( retryableHttpCodes.indexOf( response.status ) !== -1 && attempt < syncRetryDelays.length ) {
+								var delay = syncRetryDelays[ attempt ];
+								attempt++;
+
+								// Swap typing indicator for retry indicator.
+								if ( typing.parentNode ) {
+									typing.parentNode.removeChild( typing );
 								}
-								throw new Error( 'Server error (HTTP ' + response.status + '). Please try again.' );
-							} );
-					}
-					return response.json();
-				} )
-				.then( function ( data ) {
-					// Track container ID.
-					if ( data.container_id ) {
-						containerId = data.container_id;
-					}
+								removeRetryIndicator();
+								messagesEl.appendChild( createRetryIndicator( attempt + 1, maxAttempts ) );
+								scrollToBottom();
 
-					// Add assistant response to history (raw markdown for API).
-					history.push( {
-						role: 'assistant',
-						content: data.content_raw || data.content,
+								setTimeout( attemptFetch, delay );
+								return null; // Signal: retry scheduled.
+							}
+
+							return response.json()
+								.then( function ( errData ) {
+									throw new Error(
+										errData.message || 'HTTP ' + response.status
+									);
+								} )
+								.catch( function ( parseErr ) {
+									if ( parseErr.message && parseErr.message.indexOf( 'HTTP ' ) === 0 ) {
+										throw parseErr;
+									}
+									throw new Error( 'Server error (HTTP ' + response.status + '). Please try again.' );
+								} );
+						}
+						return response.json();
+					} )
+					.then( function ( data ) {
+						if ( data === null ) {
+							return; // Retry scheduled, skip processing.
+						}
+
+						// Remove typing / retry indicators.
+						if ( typing.parentNode ) {
+							typing.parentNode.removeChild( typing );
+						}
+						removeRetryIndicator();
+
+						// Track container ID.
+						if ( data.container_id ) {
+							containerId = data.container_id;
+						}
+
+						// Add assistant response to history (raw markdown for API).
+						history.push( {
+							role: 'assistant',
+							content: data.content_raw || data.content,
+						} );
+
+						// Display HTML response.
+						messagesEl.appendChild(
+							createMessage( 'assistant', data.content, true )
+						);
+						scrollToBottom();
+
+						setSending( false );
+						inputEl.focus();
+					} )
+					.catch( function ( err ) {
+						// Remove typing / retry indicators.
+						if ( typing.parentNode ) {
+							typing.parentNode.removeChild( typing );
+						}
+						removeRetryIndicator();
+
+						messagesEl.appendChild(
+							createError( err.message || 'An error occurred.' )
+						);
+						messagesEl.appendChild( createTryAgainButton() );
+						scrollToBottom();
+
+						setSending( false );
+						inputEl.focus();
 					} );
+			}
 
-					// Display HTML response.
-					messagesEl.appendChild(
-						createMessage( 'assistant', data.content, true )
-					);
-					scrollToBottom();
-
-					setSending( false );
-					inputEl.focus();
-				} )
-				.catch( function ( err ) {
-					// Remove typing indicator.
-					if ( typing.parentNode ) {
-						typing.parentNode.removeChild( typing );
-					}
-
-					messagesEl.appendChild(
-						createError( err.message || 'An error occurred.' )
-					);
-					scrollToBottom();
-
-					setSending( false );
-					inputEl.focus();
-				} );
+			attemptFetch();
 		}
 
 		/**

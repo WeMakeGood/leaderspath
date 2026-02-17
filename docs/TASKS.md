@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
 **Last Updated:** 2026-02-17
-**Current Phase:** Phase 10 complete — SSE streaming for chatbot
+**Current Phase:** Phase 10e complete — Retry logic for transient API errors
 
 ---
 
@@ -349,6 +349,27 @@ New parallel code paths — non-breaking; existing synchronous flow remains as f
 - [ ] Test with slow network (throttled DevTools) to verify chunked delivery
 - [ ] Test browser fallback on non-streaming path
 
+### Completed: Phase 10e — Retry Logic for Transient API Errors (2026-02-17)
+
+Automatic retry with backoff for transient Anthropic API errors (500, 502, 503, 529) and curl connection failures. Prevents skills with code execution from failing on intermittent glitches.
+
+- [x] **`Claude_API::is_retryable_error()`** — helper classifies HTTP codes + curl errors as retryable vs non-retryable
+- [x] **`Claude_API::execute_stream()` retry loop** — wraps curl call, max 2 retries (3 total attempts), 1s/3s backoff delays
+  - Sends SSE `retry` event to browser: `{"attempt": 2, "max": 3, "delay": 1}`
+  - Resets stream state (content_raw, content blocks, error_body, http_error) between retries
+  - Preserves `original_body` for clean retries (not contaminated by pause_turn continuation body)
+  - Resets retry counter after successful response (so pause_turn continuations get fresh retry budget)
+  - Non-retryable errors (400, 401, 403, 404, 422) sent immediately as SSE error
+- [x] **`chatbot.js` streaming retry UI** — handles `retry` SSE event
+  - Shows "Retrying... (attempt 2 of 3)" indicator with animated dot
+  - Removes retry indicator on success (`done` event) or final error
+  - "Try again" button after final error — pops last user message from history, re-sends
+- [x] **`chatbot.js` sync retry** — wraps `fetch()` in retry loop with same config
+  - Retryable HTTP codes: 500, 502, 503, 529
+  - Shows retry indicator between attempts, "Try again" button on final failure
+- [x] **SCSS styles** — `.leaderspath_chatbot__retry`, `.leaderspath_chatbot__try_again`, `.leaderspath_chatbot__stop`
+- [x] **Build verified** — zero errors
+
 ### Key Technical Decisions to Make
 
 | Decision | Options | Notes |
@@ -442,6 +463,8 @@ New parallel code paths — non-breaking; existing synchronous flow remains as f
 | 2026-02-17 | Real-time markdown rendering | `requestAnimationFrame`-throttled `markdownToHtml()` during streaming eliminates jarring raw→formatted reformat. Incomplete markdown syntax is acceptable mid-stream |
 | 2026-02-17 | Intercept non-SSE error responses in PHP | Anthropic HTTP errors return raw JSON (not SSE). PHP `handle_stream_chunk()` detects `http_error` state and accumulates error body instead of forwarding raw JSON to browser |
 | 2026-02-17 | User messages rendered as markdown | User input passed through `markdownToHtml()` for display, supporting pasted markdown content |
+| 2026-02-17 | Server-side retry for streaming | PHP retries transient errors (500/502/503/529, curl failures) with 1s/3s backoff, max 2 retries. Sends `retry` SSE event so JS can show status. Non-retryable errors (4xx) fail immediately |
+| 2026-02-17 | Client-side retry for sync path | JS retries same HTTP codes with same delays. "Try again" button on final failure lets user manually retry |
 
 ---
 

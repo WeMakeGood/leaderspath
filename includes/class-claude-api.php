@@ -64,6 +64,39 @@ class Claude_API {
 	private const MAX_SKILLS_PER_REQUEST = 8;
 
 	/**
+	 * Maximum number of retry attempts for transient API errors.
+	 *
+	 * @var int
+	 */
+	private const MAX_RETRIES = 2;
+
+	/**
+	 * Backoff delays (in seconds) between retry attempts.
+	 *
+	 * @var array<int, int>
+	 */
+	private const RETRY_DELAYS = [ 1, 3 ];
+
+	/**
+	 * HTTP status codes that are safe to retry.
+	 *
+	 * @var array<int, int>
+	 */
+	private const RETRYABLE_HTTP_CODES = [ 500, 502, 503, 529 ];
+
+	/**
+	 * Curl error numbers that are safe to retry.
+	 *
+	 * 7  = CURLE_COULDNT_CONNECT
+	 * 28 = CURLE_OPERATION_TIMEDOUT
+	 * 35 = CURLE_SSL_CONNECT_ERROR
+	 * 56 = CURLE_RECV_ERROR
+	 *
+	 * @var array<int, int>
+	 */
+	private const RETRYABLE_CURL_ERRORS = [ 7, 28, 35, 56 ];
+
+	/**
 	 * Send a message to Claude.
 	 *
 	 * Uses Container API with Skills and Code Execution when skills are configured.
@@ -589,6 +622,8 @@ class Claude_API {
 
 		$max_continuations = 5;
 		$continuation      = 0;
+		$retry_attempt     = 0;
+		$original_body     = $body; // Preserve for retries.
 
 		do {
 			$ch = curl_init();
@@ -604,6 +639,8 @@ class Claude_API {
 			// Reset per-request state.
 			$state['buffer']      = '';
 			$state['stop_reason'] = null;
+			unset( $state['http_error'] );
+			$state['error_body']  = '';
 
 			// Build curl headers array.
 			$curl_headers = [];
@@ -650,13 +687,35 @@ class Claude_API {
 			curl_close( $ch );
 
 			if ( 0 !== $curl_errno ) {
-				$this->maybe_log( 'Stream Error', [ 'curl_errno' => $curl_errno, 'curl_error' => $curl_error ] );
+				$this->maybe_log( 'Stream Error', [ 'curl_errno' => $curl_errno, 'curl_error' => $curl_error, 'attempt' => $retry_attempt + 1 ] );
+
+				// Retry transient curl errors.
+				if ( $this->is_retryable_error( 0, $curl_errno ) && $retry_attempt < self::MAX_RETRIES ) {
+					$delay = self::RETRY_DELAYS[ $retry_attempt ] ?? 3;
+					$retry_attempt++;
+
+					$this->send_sse_event( 'retry', wp_json_encode( [
+						'attempt' => $retry_attempt + 1,
+						'max'     => self::MAX_RETRIES + 1,
+						'delay'   => $delay,
+					] ) );
+
+					sleep( $delay );
+
+					// Reset state for fresh attempt.
+					$state['content_raw'] = '';
+					$state['content']     = [];
+					$body                 = $original_body;
+					$continuation         = 0;
+					continue;
+				}
+
 				$this->send_sse_error( __( 'Connection to AI service failed.', 'leaderspath' ) );
 				break;
 			}
 
 			if ( $http_code >= 400 ) {
-				// Try to extract a meaningful error message from the response body.
+				// Extract error message for logging/display.
 				$error_message = __( 'The AI service returned an error. Please try again.', 'leaderspath' );
 				if ( ! empty( $state['error_body'] ) ) {
 					$error_data = json_decode( $state['error_body'], true );
@@ -664,10 +723,36 @@ class Claude_API {
 						$error_message = $error_data['error']['message'];
 					}
 				}
-				$this->maybe_log( 'Stream HTTP Error', [ 'status' => $http_code, 'body' => $state['error_body'] ?? '' ] );
+
+				$this->maybe_log( 'Stream HTTP Error', [ 'status' => $http_code, 'body' => $state['error_body'] ?? '', 'attempt' => $retry_attempt + 1 ] );
+
+				// Retry transient HTTP errors.
+				if ( $this->is_retryable_error( $http_code, 0 ) && $retry_attempt < self::MAX_RETRIES ) {
+					$delay = self::RETRY_DELAYS[ $retry_attempt ] ?? 3;
+					$retry_attempt++;
+
+					$this->send_sse_event( 'retry', wp_json_encode( [
+						'attempt' => $retry_attempt + 1,
+						'max'     => self::MAX_RETRIES + 1,
+						'delay'   => $delay,
+					] ) );
+
+					sleep( $delay );
+
+					// Reset state for fresh attempt.
+					$state['content_raw'] = '';
+					$state['content']     = [];
+					$body                 = $original_body;
+					$continuation         = 0;
+					continue;
+				}
+
 				$this->send_sse_error( $error_message );
 				break;
 			}
+
+			// Successful response — reset retry counter.
+			$retry_attempt = 0;
 
 			// Check for pause_turn — need continuation.
 			if ( 'pause_turn' === $state['stop_reason'] && $continuation < $max_continuations ) {
@@ -1365,6 +1450,23 @@ class Claude_API {
 		}
 
 		return implode( "\n", $text_parts );
+	}
+
+	/**
+	 * Check if an error is transient and safe to retry.
+	 *
+	 * @since 0.10.0
+	 *
+	 * @param int $http_code  HTTP status code (0 if curl error).
+	 * @param int $curl_errno Curl error number (0 if HTTP error).
+	 * @return bool True if the error is retryable.
+	 */
+	private function is_retryable_error( int $http_code, int $curl_errno ): bool {
+		if ( 0 !== $curl_errno ) {
+			return in_array( $curl_errno, self::RETRYABLE_CURL_ERRORS, true );
+		}
+
+		return in_array( $http_code, self::RETRYABLE_HTTP_CODES, true );
 	}
 
 	/**

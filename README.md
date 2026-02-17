@@ -1,67 +1,84 @@
 # LeadersPath
 
-AI-powered interactive learning platform with Claude chatbot integration for WordPress and Divi 5.
+AI-powered facilitated cohort learning platform for WordPress and Divi 5.
 
-**Version:** 0.2.0
+**Version:** 0.1.0
 **Requires:** WordPress 6.4+, PHP 8.2+, Divi 5, ACF Pro
+**Optional:** WooCommerce (for cohort enrollment)
 **License:** GPLv2 or later
 
 ---
 
 ## Overview
 
-LeadersPath is a WordPress plugin that powers an interactive AI learning community. It supports **facilitated cohort learning** where learners interact with Claude AI chatbots that have been enhanced with context files and executable skills.
+LeadersPath is a WordPress plugin that powers **facilitated cohort learning** where a facilitator presents concepts and learners experiment with AI sandboxes (Activities) to experience specific AI behaviors firsthand. The plugin demonstrates the difference between raw LLM interactions and context-enhanced AI implementations.
 
-### Key Concept
+### Nomenclature
 
-LeadersPath is a **facilitated cohort learning experience**, not a self-paced lesson platform:
+| Term | CPT Slug | Description |
+|------|----------|-------------|
+| **Activity** | `leaderspath_activity` | AI sandbox experiment — what learners DO |
+| **Lesson** | `leaderspath_lesson` | Atomic teaching unit (contains Activities) |
+| **Course** | `leaderspath_course` | Reusable curriculum (contains Lessons) |
+| **Context File** | `leaderspath_context` | Reference material embedded in AI system prompts |
+| **Skill** | `leaderspath_skill` | Executable capability (Python/bash via Anthropic Skills API) |
 
-| Component | Purpose |
-|-----------|---------|
-| **Course** | The atomic teaching unit, taught as a cohesive whole by a facilitator |
-| **Activity** | An AI sandbox experiment within a Course (what learners DO, not what they LEARN) |
-| **Facilitator Guide** | The central teaching document (what to present, when to run activities, discussion prompts) |
-| **Course Q&A Bot** | Optional helpful assistant for answering questions about course content |
-
-The facilitator presents concepts, learners experiment in AI sandboxes (Activities), and discussion happens human-to-human in the cohort.
+Cohorts are **WooCommerce Simple products** with a cohort checkbox — not a separate CPT.
 
 ### Key Features
 
-- **5 Custom Post Types:** Activities, Courses, Cohorts, Context Files, Skills
-- **4 Divi 5 Modules:** Chatbot, Context Library, Skills List, Activity Meta
-- **Dual Chatbot Modes:** Activity sandboxes (demonstrate behaviors) + Course Q&A (answer questions)
+- **5 Custom Post Types** with ACF Pro field groups
+- **8 Divi 5 Modules** for flexible page/template design
+- **Dual Chatbot Modes:** Activity sandbox (demonstrate behaviors) + Lesson Q&A (helpful assistant)
+- **SSE Streaming** with real-time markdown rendering
 - **Claude API Integration:** Container-based API with code execution and skills support
+- **Automatic Retry** for transient API errors with user-visible status
 - **Transparency:** Learners can view and download the exact context and skills powering the AI
+- **WooCommerce Cohorts:** Enrollment management, access control, cohort phases
+- **No Conversation Persistence:** Page reload clears chat — enables experimentation
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         WordPress                                │
-├─────────────────────────────────────────────────────────────────┤
-│  LeadersPath Plugin                                              │
-│                                                                  │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                   Custom Post Types                          ││
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐ ┌─────┐ ││
-│  │  │Activities│ │ Courses  │ │ Cohorts  │ │ Context │ │Skills│ ││
-│  │  └──────────┘ └──────────┘ └──────────┘ └─────────┘ └─────┘ ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                                                                  │
-│  ┌──────────────────────┐  ┌──────────────────────────────────┐ │
-│  │    Claude API        │  │       Divi 5 Modules             │ │
-│  │  ┌────────────────┐  │  │  ┌──────────┐  ┌──────────────┐  │ │
-│  │  │ Messages API   │  │  │  │ Chatbot  │  │Context Library│  │ │
-│  │  │ + Container    │  │  │  └──────────┘  └──────────────┘  │ │
-│  │  │ + Code Exec    │  │  │  ┌──────────┐  ┌──────────────┐  │ │
-│  │  └────────────────┘  │  │  │Skills List│  │Activity Meta │  │ │
-│  │  ┌────────────────┐  │  │  └──────────┘  └──────────────┘  │ │
-│  │  │  Skills API    │  │  └──────────────────────────────────┘ │
-│  │  └────────────────┘  │                                       │
-│  └──────────────────────┘                                       │
-└─────────────────────────────────────────────────────────────────┘
+WordPress + Divi 5
+├── LeadersPath Plugin
+│   ├── Data Layer
+│   │   ├── 5 CPTs (Activity, Lesson, Course, Context File, Skill)
+│   │   ├── 3 Taxonomies (Topics, Context Categories, Skill Categories)
+│   │   └── ACF Pro field groups
+│   │
+│   ├── Claude API
+│   │   ├── Messages API + Container (code execution)
+│   │   ├── Skills API (executable skill packages)
+│   │   ├── SSE streaming (curl + WRITEFUNCTION callback)
+│   │   └── Automatic retry (transient 5xx errors)
+│   │
+│   ├── REST API
+│   │   ├── POST /chat          (synchronous JSON)
+│   │   ├── POST /chat/stream   (SSE streaming)
+│   │   ├── GET  /context/{id}/download
+│   │   └── GET  /skills/{id}/download
+│   │
+│   ├── Divi 5 Modules (8 modules)
+│   │   ├── Chatbot, Context Library, Skills List
+│   │   ├── Lesson Meta, Lesson Activities, Lesson Objectives
+│   │   ├── Activity Meta, Course Lessons
+│   │   └── Frontend = PHP, Visual Builder = React/TS
+│   │
+│   └── WooCommerce Integration (optional)
+│       ├── Cohort products (Simple + checkbox)
+│       ├── Enrollment on purchase, access chain
+│       └── Cohort phases (upcoming/active/completed)
+│
+└── Browser
+    ├── chatbot.js (vanilla JS IIFE)
+    │   ├── SSE streaming with ReadableStream
+    │   ├── Real-time markdown rendering (marked.js)
+    │   ├── Sync fallback for older browsers
+    │   └── Retry indicator + "Try again" button
+    └── context-modal.js (vanilla JS, REST fetch)
 ```
 
 ---
@@ -71,29 +88,32 @@ The facilitator presents concepts, learners experiment in AI sandboxes (Activiti
 ### Requirements
 
 - WordPress 6.4+
-- PHP 8.2+
-- [Divi 5](https://www.elegantthemes.com/gallery/divi/) (required for Visual Builder modules)
-- [Advanced Custom Fields Pro](https://www.advancedcustomfields.com/pro/) (required for custom fields)
+- PHP 8.2+ (targeting 8.3)
+- [Divi 5](https://www.elegantthemes.com/gallery/divi/)
+- [Advanced Custom Fields Pro](https://www.advancedcustomfields.com/pro/)
 - [Anthropic Claude API key](https://console.anthropic.com/)
+- WooCommerce (optional — for cohort enrollment)
 
 ### Steps
 
 1. Upload the `leaderspath` folder to `/wp-content/plugins/`
-2. Install and activate required plugins: Divi 5, Advanced Custom Fields Pro
-3. Activate LeadersPath through the Plugins menu
-4. Navigate to **Settings > LeadersPath**
-5. Enter your Anthropic Claude API key
-6. Click "Test Connection" to verify API access
+2. Run `composer install` from the plugin directory
+3. Run `npm install && npm run build` to compile Divi modules
+4. Activate required plugins: Divi 5, Advanced Custom Fields Pro
+5. Activate LeadersPath through the Plugins menu
+6. Navigate to **Settings > LeadersPath**
+7. Enter your Anthropic Claude API key (or set `LEADERSPATH_API_KEY` in `wp-config.php`)
+8. Click "Test Connection" to verify API access
 
 ---
 
 ## Quick Start
 
-### 1. Create a Context File
+### 1. Create Context Files
 
-**Add > Activities > Context Files > New**
+**Context Files > Add New**
 
-Write markdown content that you want Claude to reference:
+Write or drag-and-drop markdown/text content that Claude will reference:
 
 ```markdown
 # Brand Voice Guidelines
@@ -101,159 +121,184 @@ Write markdown content that you want Claude to reference:
 ## Tone
 - Professional but approachable
 - Clear and concise
-- Encouraging without being patronizing
 
 ## Key Messages
-- We help learners understand AI through hands-on experience
-- Transparency in AI is educational and empowering
+- AI transparency is educational and empowering
 ```
 
-### 2. Create an Activity
+Supported formats: `.md`, `.txt`, `.json`, `.yaml`, `.xml`, `.csv`, `.html`, `.css`, `.js`, `.ts`, `.py`, `.php`, `.rb`, `.sh`, `.sql`
 
-**Add > Activities > New**
+### 2. Create Activities
+
+**Activities > Add New**
 
 Activities are AI sandbox experiments. Configure:
-- Title: What learners will experience (e.g., "Experience Sycophantic AI")
-- Content: "Try this, notice that" instructions for learners
-- AI Sandbox Configuration: System prompt defining the AI behavior
-- Attach context files and skills as needed
+- **Title:** What learners will experience (e.g., "Experience Sycophantic AI")
+- **System Prompt:** Defines the AI's behavior for this sandbox
+- **Context Files:** Reference material embedded in the system prompt
+- **Skills:** Executable capabilities (Python/bash) loaded into the container
+- **Model Settings:** Model selection, temperature, max tokens, model switching
 
-### 3. Create a Course
+### 3. Create Lessons
 
-**Add > Courses > New**
+**Lessons > Add New**
 
-Courses are the teaching unit:
-- Add learning objectives (what learners will achieve)
-- Write a facilitator guide (teaching script with timing and discussion prompts)
-- Add activities in order
-- Optionally enable a Course Q&A chatbot
+Lessons are the atomic teaching unit:
+- **Learning Objectives:** What learners will achieve
+- **Facilitator Guide:** Teaching script (what to present, when to run activities, discussion prompts)
+- **Learner Overview:** Visible to learners as a content summary
+- **Activities:** Linked AI sandbox experiments (relationship field)
+- **Lesson Q&A Chatbot:** Optional helpful assistant for answering questions about lesson content
 
-### 4. Build Pages with Divi
+### 4. Create Courses
 
-Use Divi's Visual Builder to add LeadersPath modules:
+**Courses > Add New**
 
-- **LeadersPath Chatbot** - Works on both Activity pages (sandbox) and Course pages (Q&A)
-- **LeadersPath Context Library** - Shows attached context files
-- **LeadersPath Skills List** - Shows available skills
-- **LeadersPath Activity Meta** - Displays duration and AI model info
+Courses are reusable curricula:
+- **Lessons:** Ordered list of lessons (relationship field)
+- **Prerequisites:** Other courses that must be completed first
 
----
+### 5. Build Pages with Divi 5
 
-## Divi 5 Modules
+Use Theme Builder templates or individual pages with LeadersPath modules:
 
-### LeadersPath Chatbot
-
-Interactive chat interface connected to Claude API.
-
-**Two Modes:**
-- **Activity Sandbox** (on Activity pages): AI configured to demonstrate specific behaviors
-- **Course Q&A** (on Course pages): Helpful assistant for answering questions
-
-**Features:**
-- Rich text input with keyboard shortcuts (Ctrl+B, Ctrl+I, etc.)
-- Full markdown rendering (headers, lists, code blocks, links)
-- Configurable styling for chat area, user bubbles, assistant bubbles
-- Auto-scroll to show new messages at top of visible area
-- Loading indicators and error handling
-
-### LeadersPath Context Library
-
-Displays context files attached to the current activity.
-
-**Features:**
-- Responsive card grid layout
-- View content modal to read full documents
-- Download buttons for file export
-- Configurable visibility for descriptions, badges, buttons
-
-### LeadersPath Skills List
-
-Displays skills attached to the current activity.
-
-**Features:**
-- Responsive card grid layout
-- Compatibility and version badges
-- Download buttons for skill packages
-
-### LeadersPath Activity Meta
-
-Displays activity metadata: duration and AI model info.
-
-**Note:** Learning objectives are now displayed at the Course level, not Activity level.
+| Module | Description | Used On |
+|--------|-------------|---------|
+| **Chatbot** | Interactive chat with Claude | Activity pages, Lesson pages |
+| **Context Library** | Card grid of attached context files with view/download | Activity pages |
+| **Skills List** | Card grid of attached skills | Activity pages |
+| **Activity Meta** | Duration, model name, model switching indicator | Activity pages |
+| **Lesson Meta** | Difficulty, duration, activity count | Lesson pages |
+| **Lesson Activities** | Ordered list of linked activities with number badges | Lesson pages |
+| **Lesson Objectives** | Ordered list of learning objectives | Lesson pages |
+| **Course Lessons** | List of linked lessons with metadata + prerequisites | Course pages |
 
 ---
 
-## Chatbot Configuration: Activity vs Course
+## Chatbot
 
-| Aspect | Activity Sandbox | Course Q&A Bot |
-|--------|------------------|----------------|
-| **Purpose** | Demonstrate specific AI behavior | Answer questions about content |
-| **System Prompt** | Crafted to show specific behavior | Helpful, knowledgeable assistant |
-| **Context** | Activity-specific files | All course content |
-| **Tone** | Varies by activity design | Consistently helpful |
-| **Placement** | Activity page | Course page |
-| **Privacy** | Complete sandbox (no logging) | Complete sandbox (no logging) |
+### Dual Modes
+
+| Aspect | Activity Sandbox | Lesson Q&A |
+|--------|------------------|------------|
+| **Purpose** | Demonstrate specific AI behavior | Answer questions about lesson content |
+| **System Prompt** | Crafted per-activity to show specific behavior | Helpful, knowledgeable assistant |
+| **Context** | Activity-specific context files + skills | Lesson objectives, overview, context files |
+| **Placement** | Activity pages | Lesson pages |
+
+### Streaming
+
+The chatbot uses SSE streaming by default with automatic fallback to synchronous requests for browsers that don't support `ReadableStream`.
+
+- **Real-time markdown rendering:** `marked.js` with `requestAnimationFrame` throttling — headings, bold, lists, and code blocks render progressively as tokens arrive
+- **Stop generating:** AbortController cancels the stream, keeping partial response
+- **Automatic retry:** Transient API errors (500, 502, 503, 529) retry up to 2 times with 1s/3s backoff. The user sees "Retrying... (attempt 2 of 3)" with a "Try again" button if all retries fail.
+
+### No Conversation Persistence
+
+Chat history is held in memory only. Page reload clears the conversation — this is intentional to encourage experimentation.
 
 ---
 
 ## Claude API Integration
 
-LeadersPath uses Anthropic's container-based API with code execution support.
+LeadersPath uses Anthropic's Container API with code execution and skills support.
 
 ### System Prompt Assembly
 
-For Activities:
+**Activity sandbox:**
 ```
 [Custom System Prompt OR Default]
-
 --- Reference Materials ---
-### [Context File 1 Title]
-[Context File 1 Full Content]
-
+### [Context File Title]
+[Context File Content]
 --- Available Skills ---
-### [Skill 1 Name]
-[Skill 1 Description]
+### [Skill Name]
+[Skill Description]
 ```
 
-For Course Q&A:
+**Lesson Q&A:**
 ```
-[Custom Q&A System Prompt OR Default Helpful Assistant]
-
---- Course Learning Objectives ---
-1. [Objective 1]
-2. [Objective 2]
-
---- Course Overview ---
+[Custom Q&A Prompt OR Default Helpful Assistant]
+--- Lesson Learning Objectives ---
+1. [Objective]
+--- Lesson Overview ---
 [Learner Overview Content]
-
 --- Reference Materials ---
-### [Context File 1 Title]
-[Context File 1 Full Content]
+### [Context File Title]
+[Context File Content]
 ```
 
 ### Context Files vs Skills
 
 | Aspect | Context Files | Skills |
 |--------|---------------|--------|
-| **Purpose** | Reference material | Executable capabilities |
-| **Storage** | WordPress only | Anthropic Skills API |
-| **Delivery** | Embedded in system prompt | Loaded by container on-demand |
+| **Purpose** | Reference material (guidelines, standards) | Executable capabilities (scripts, workflows) |
+| **Storage** | WordPress `post_content` only | Anthropic Skills API + WordPress metadata |
+| **Delivery** | Embedded in system prompt | Via `container.skills` array |
 | **Code execution** | No | Yes (Python, bash) |
-| **API upload** | Not required | Required |
+
+### API Key Configuration
+
+Set `LEADERSPATH_API_KEY` as a constant in `wp-config.php` (preferred) or enter it in Settings > LeadersPath (stored encrypted in the database).
+
+---
+
+## WooCommerce Cohorts
+
+When WooCommerce is active, cohorts provide enrollment management:
+
+- **Cohort = Simple Product** with the "Cohort Product" checkbox enabled
+- **Linked to Courses** via ACF relationship field (multiple courses per cohort)
+- **Enrollment:** Automatic on completed order, removed on refund/cancel
+- **Access Control:** Enrollment gates Lesson/Activity access via REST API permission checks
+- **Max Participants:** Uses WooCommerce stock management
+- **Cohort Phases:** Automatically derived from start/end date fields (upcoming, active, completed)
+- **Prerequisites:** Aggregated from linked courses (`course_prerequisites` field)
+
+The plugin works without WooCommerce — enrollment is not enforced when WC is inactive.
+
+---
+
+## REST API
+
+All endpoints are under the `leaderspath/v1` namespace.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/chat` | POST | Send message — synchronous JSON response |
+| `/chat/stream` | POST | Send message — SSE streaming response |
+| `/context/{id}/download` | GET | Download context file content |
+| `/skills/{id}/download` | GET | Download skill package metadata |
+
+### Chat Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `activity_id` | integer | One of activity_id or lesson_id | Activity sandbox mode |
+| `lesson_id` | integer | One of activity_id or lesson_id | Lesson Q&A mode |
+| `message` | string | Yes | User message (max 32,000 chars) |
+| `history` | array | No | Previous conversation `[{role, content}]` |
+| `model` | string | No | `sonnet`, `haiku`, or `opus-4.5` |
+| `container_id` | string | No | Container ID for session continuity |
 
 ---
 
 ## Documentation
 
-Full documentation is available in the [`docs/`](docs/) folder:
+Detailed documentation is in the [`docs/`](docs/) folder:
 
 | Document | Description |
 |----------|-------------|
 | [plugin-design.md](docs/plugin-design.md) | Architecture overview and design decisions |
-| [cpt-schema.md](docs/cpt-schema.md) | Custom post types, taxonomies, and ACF fields |
+| [cpt-schema.md](docs/cpt-schema.md) | Custom post types, taxonomies, ACF fields |
 | [claude-api-integration.md](docs/claude-api-integration.md) | Claude API integration details |
+| [data-contracts.md](docs/data-contracts.md) | ACF field to REST endpoint mapping |
 | [divi-modules.md](docs/divi-modules.md) | Divi 5 module development guide |
+| [divi5-module-architecture.md](docs/divi5-module-architecture.md) | Divi 5 architecture reference (validated patterns) |
+| [ui-ux-catalog.md](docs/ui-ux-catalog.md) | UI/UX catalog: modules, elements, CSS classes |
 | [content-creation-guide.md](docs/content-creation-guide.md) | Guide for creating activities, context files, and skills |
+| [TASKS.md](docs/TASKS.md) | Development task tracker and decisions log |
 
 ---
 
@@ -262,70 +307,61 @@ Full documentation is available in the [`docs/`](docs/) folder:
 ### Prerequisites
 
 ```bash
-# PHP dependencies
-composer install
-
-# Node dependencies (for Divi modules)
-npm install
+composer install     # PHP dependencies
+npm install          # Node dependencies (Divi modules)
 ```
 
 ### Build Commands
 
 ```bash
-npm run build    # Production build
-npm run start    # Development with watch
+npm run build        # Production build
+npm run start        # Development with watch
 ```
 
 ### File Structure
 
 ```
 leaderspath/
-├── leaderspath.php          # Main plugin file
+├── leaderspath.php          # Main plugin file (bootstrap)
 ├── includes/                # Core PHP classes
 │   ├── class-post-types.php
+│   ├── class-taxonomies.php
+│   ├── class-capabilities.php
+│   ├── class-acf-fields.php
 │   ├── class-claude-api.php
 │   ├── class-rest-api.php
-│   └── ...
+│   ├── class-skill-processor.php
+│   └── class-woocommerce.php
 ├── modules/                 # Divi 5 PHP modules
+│   ├── ActivityMeta/
 │   ├── Chatbot/
 │   ├── ContextLibrary/
+│   ├── CourseLessons/
+│   ├── LessonActivities/
+│   ├── LessonMeta/
+│   ├── LessonObjectives/
 │   ├── SkillsList/
-│   └── LessonMeta/
-├── src/                     # Divi 5 TypeScript/React
+│   ├── Shared/              # Shared PHP traits
+│   └── Modules.php          # Module registration hub
+├── src/                     # Divi 5 TypeScript/React (VB only)
 │   └── components/
-├── assets/                  # Frontend CSS/JS
-├── admin/                   # Admin functionality
-└── docs/                    # Documentation
+├── assets/                  # Frontend JS (chatbot, context modal)
+├── admin/                   # Admin settings, columns, uploaders
+├── styles/                  # Compiled CSS (bundle.css, vb-bundle.css)
+├── scripts/                 # Compiled JS (bundle.js)
+├── modules-json/            # Generated module.json + defaults
+├── docs/                    # Documentation
+├── tests/                   # PHPUnit tests
+└── bin/                     # CLI scripts (test-chat, create-test-data)
 ```
 
----
+### Key Architectural Patterns
 
-## Changelog
-
-### 0.2.0
-
-- **Breaking:** Renamed "Lessons" to "Activities" throughout the UI
-- **Breaking:** Moved learning objectives from Activity to Course level
-- Added Course Q&A chatbot (optional helpful assistant)
-- Added Course facilitator guide field
-- Added Course learner overview field
-- Updated Chatbot module to support both Activity and Course modes
-- REST API now supports `course_id` parameter for Course Q&A
-- Updated documentation to reflect facilitated learning model
-
-### 0.1.0
-
-- Initial release
-- 5 Custom Post Types: Lessons, Courses, Cohorts, Context Files, Skills
-- 3 Taxonomies: Topics, Context Categories, Skill Categories
-- 4 Divi 5 Modules: Chatbot, Context Library, Skills List, Lesson Meta
-- Claude API integration with container and code execution support
-- Skills API integration for executable skill packages
-- Rich text input with TinyMCE (keyboard shortcuts, no toolbar)
-- Markdown rendering with marked.js (GitHub Flavored Markdown)
-- Admin settings page with API key encryption
-- Custom capabilities and student role
-- REST API endpoints for chat and content access
+- **Frontend = 100% PHP;** Visual Builder = 100% React/TypeScript (no hydration)
+- **Bottom-up module architecture:** Layer 1 (pure PHP renderer) → Layer 2 (SCSS) → Layer 3 (Divi wrapper) → Layer 4 (settings)
+- **Vanilla JS** for frontend interactivity (chatbot, context modal) — no React on the frontend
+- **SSE streaming** via curl `CURLOPT_WRITEFUNCTION` (not `wp_remote_post`, which can't stream)
+- **Cohorts as product meta** (not a custom WC product type)
 
 ---
 

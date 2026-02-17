@@ -283,6 +283,63 @@
 		font-size: 0.9em;
 	}
 
+	// Retry indicator — shown during automatic retry attempts.
+	&__retry {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+		padding: 0.5em 1em;
+		margin-bottom: 0.75em;
+		color: #868e96;
+		font-size: 0.9em;
+		font-style: italic;
+	}
+
+	&__retry_text {
+		flex: 1;
+	}
+
+	// "Try again" button — shown after all retries exhausted.
+	&__try_again {
+		display: inline-block;
+		margin-bottom: 0.75em;
+		margin-left: 1em;
+		padding: 0.3em 0.75em;
+		background: none;
+		border: 1px solid #0073aa;
+		border-radius: 6px;
+		color: #0073aa;
+		font-size: 0.85em;
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease;
+
+		&:hover {
+			background: #0073aa;
+			color: #fff;
+		}
+	}
+
+	// Stop generating button.
+	&__stop {
+		display: block;
+		width: 100%;
+		padding: 0.4em;
+		margin-bottom: 0.75em;
+		background: none;
+		border: 1px solid #dee2e6;
+		border-radius: 6px;
+		color: #868e96;
+		font-size: 0.85em;
+		text-align: center;
+		cursor: pointer;
+		transition: color 0.15s ease, border-color 0.15s ease;
+
+		&:hover {
+			color: #c92a2a;
+			border-color: #c92a2a;
+		}
+	}
+
 	// Heading.
 	&__heading {
 		flex: 0 0 auto;
