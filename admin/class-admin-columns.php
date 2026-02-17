@@ -2,6 +2,9 @@
 /**
  * Custom admin columns for LeadersPath CPTs.
  *
+ * Manages columns, sorting, and quick edit for Activities, Lessons,
+ * Courses, Context Files, and Skills.
+ *
  * @package LeadersPath
  * @since   0.1.0
  */
@@ -11,7 +14,7 @@ declare(strict_types=1);
 namespace LeadersPath\Admin;
 
 /**
- * Manages custom admin columns for Activities and Lessons.
+ * Manages custom admin columns for all LeadersPath CPTs.
  *
  * @since 0.1.0
  */
@@ -33,6 +36,21 @@ class Admin_Columns {
 		add_action( 'manage_leaderspath_lesson_posts_custom_column', [ $this, 'lesson_column_content' ], 10, 2 );
 		add_filter( 'manage_edit-leaderspath_lesson_sortable_columns', [ $this, 'lesson_sortable_columns' ] );
 
+		// Course columns.
+		add_filter( 'manage_leaderspath_course_posts_columns', [ $this, 'course_columns' ] );
+		add_action( 'manage_leaderspath_course_posts_custom_column', [ $this, 'course_column_content' ], 10, 2 );
+		add_filter( 'manage_edit-leaderspath_course_sortable_columns', [ $this, 'course_sortable_columns' ] );
+
+		// Context File columns.
+		add_filter( 'manage_leaderspath_context_posts_columns', [ $this, 'context_columns' ] );
+		add_action( 'manage_leaderspath_context_posts_custom_column', [ $this, 'context_column_content' ], 10, 2 );
+		add_filter( 'manage_edit-leaderspath_context_sortable_columns', [ $this, 'context_sortable_columns' ] );
+
+		// Skill columns.
+		add_filter( 'manage_leaderspath_skill_posts_columns', [ $this, 'skill_columns' ] );
+		add_action( 'manage_leaderspath_skill_posts_custom_column', [ $this, 'skill_column_content' ], 10, 2 );
+		add_filter( 'manage_edit-leaderspath_skill_sortable_columns', [ $this, 'skill_sortable_columns' ] );
+
 		// Cohort product columns — deferred because WC may not be loaded yet.
 		add_action( 'plugins_loaded', function (): void {
 			if ( class_exists( 'WooCommerce' ) ) {
@@ -50,6 +68,28 @@ class Admin_Columns {
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_quick_edit_script' ] );
 	}
 
+	// -------------------------------------------------------------------------
+	// Shared Renderers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Render the post slug in a code tag.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	private function render_slug( int $post_id ): void {
+		$post = get_post( $post_id );
+		if ( $post ) {
+			echo '<code>' . esc_html( $post->post_name ) . '</code>';
+		}
+	}
+
+	// -------------------------------------------------------------------------
+	// Activity Columns
+	// -------------------------------------------------------------------------
+
 	/**
 	 * Define custom columns for Activities.
 	 *
@@ -66,9 +106,8 @@ class Admin_Columns {
 
 			// Insert custom columns after title.
 			if ( 'title' === $key ) {
-				$new_columns['leaderspath_lesson']   = __( 'Lesson', 'leaderspath' );
+				$new_columns['leaderspath_slug']     = __( 'Slug', 'leaderspath' );
 				$new_columns['leaderspath_duration'] = __( 'Duration', 'leaderspath' );
-				$new_columns['leaderspath_chatbot']  = __( 'Chatbot', 'leaderspath' );
 			}
 		}
 
@@ -85,16 +124,12 @@ class Admin_Columns {
 	 */
 	public function activity_column_content( string $column, int $post_id ): void {
 		switch ( $column ) {
-			case 'leaderspath_lesson':
-				$this->render_activity_lesson( $post_id );
+			case 'leaderspath_slug':
+				$this->render_slug( $post_id );
 				break;
 
 			case 'leaderspath_duration':
 				$this->render_activity_duration( $post_id );
-				break;
-
-			case 'leaderspath_chatbot':
-				$this->render_activity_chatbot_status( $post_id );
 				break;
 		}
 	}
@@ -108,9 +143,14 @@ class Admin_Columns {
 	 * @return array<string, string> Modified sortable columns.
 	 */
 	public function activity_sortable_columns( array $columns ): array {
+		$columns['leaderspath_slug']     = 'leaderspath_slug';
 		$columns['leaderspath_duration'] = 'leaderspath_duration';
 		return $columns;
 	}
+
+	// -------------------------------------------------------------------------
+	// Lesson Columns
+	// -------------------------------------------------------------------------
 
 	/**
 	 * Define custom columns for Lessons.
@@ -128,6 +168,7 @@ class Admin_Columns {
 
 			// Insert custom columns after title.
 			if ( 'title' === $key ) {
+				$new_columns['leaderspath_slug']            = __( 'Slug', 'leaderspath' );
 				$new_columns['leaderspath_activity_count']  = __( 'Activities', 'leaderspath' );
 				$new_columns['leaderspath_total_duration'] = __( 'Total Duration', 'leaderspath' );
 			}
@@ -146,6 +187,10 @@ class Admin_Columns {
 	 */
 	public function lesson_column_content( string $column, int $post_id ): void {
 		switch ( $column ) {
+			case 'leaderspath_slug':
+				$this->render_slug( $post_id );
+				break;
+
 			case 'leaderspath_activity_count':
 				$this->render_lesson_activity_count( $post_id );
 				break;
@@ -165,9 +210,185 @@ class Admin_Columns {
 	 * @return array<string, string> Modified sortable columns.
 	 */
 	public function lesson_sortable_columns( array $columns ): array {
+		$columns['leaderspath_slug']           = 'leaderspath_slug';
 		$columns['leaderspath_activity_count'] = 'leaderspath_activity_count';
 		return $columns;
 	}
+
+	// -------------------------------------------------------------------------
+	// Course Columns
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Define custom columns for Courses.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param array<string, string> $columns Existing columns.
+	 * @return array<string, string> Modified columns.
+	 */
+	public function course_columns( array $columns ): array {
+		$new_columns = [];
+
+		foreach ( $columns as $key => $value ) {
+			$new_columns[ $key ] = $value;
+
+			if ( 'title' === $key ) {
+				$new_columns['leaderspath_slug']           = __( 'Slug', 'leaderspath' );
+				$new_columns['leaderspath_lesson_count']   = __( 'Lessons', 'leaderspath' );
+				$new_columns['leaderspath_prerequisites'] = __( 'Prerequisites', 'leaderspath' );
+			}
+		}
+
+		return $new_columns;
+	}
+
+	/**
+	 * Render content for custom Course columns.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $column  Column name.
+	 * @param int    $post_id Post ID.
+	 */
+	public function course_column_content( string $column, int $post_id ): void {
+		switch ( $column ) {
+			case 'leaderspath_slug':
+				$this->render_slug( $post_id );
+				break;
+
+			case 'leaderspath_lesson_count':
+				$this->render_course_lesson_count( $post_id );
+				break;
+
+			case 'leaderspath_prerequisites':
+				$this->render_course_prerequisites( $post_id );
+				break;
+		}
+	}
+
+	/**
+	 * Define sortable columns for Courses.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param array<string, string> $columns Sortable columns.
+	 * @return array<string, string> Modified sortable columns.
+	 */
+	public function course_sortable_columns( array $columns ): array {
+		$columns['leaderspath_slug'] = 'leaderspath_slug';
+		return $columns;
+	}
+
+	// -------------------------------------------------------------------------
+	// Context File Columns
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Define custom columns for Context Files.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param array<string, string> $columns Existing columns.
+	 * @return array<string, string> Modified columns.
+	 */
+	public function context_columns( array $columns ): array {
+		$new_columns = [];
+
+		foreach ( $columns as $key => $value ) {
+			$new_columns[ $key ] = $value;
+
+			if ( 'title' === $key ) {
+				$new_columns['leaderspath_slug'] = __( 'Slug', 'leaderspath' );
+			}
+		}
+
+		return $new_columns;
+	}
+
+	/**
+	 * Render content for custom Context File columns.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $column  Column name.
+	 * @param int    $post_id Post ID.
+	 */
+	public function context_column_content( string $column, int $post_id ): void {
+		if ( 'leaderspath_slug' === $column ) {
+			$this->render_slug( $post_id );
+		}
+	}
+
+	/**
+	 * Define sortable columns for Context Files.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param array<string, string> $columns Sortable columns.
+	 * @return array<string, string> Modified sortable columns.
+	 */
+	public function context_sortable_columns( array $columns ): array {
+		$columns['leaderspath_slug'] = 'leaderspath_slug';
+		return $columns;
+	}
+
+	// -------------------------------------------------------------------------
+	// Skill Columns
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Define custom columns for Skills.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param array<string, string> $columns Existing columns.
+	 * @return array<string, string> Modified columns.
+	 */
+	public function skill_columns( array $columns ): array {
+		$new_columns = [];
+
+		foreach ( $columns as $key => $value ) {
+			$new_columns[ $key ] = $value;
+
+			if ( 'title' === $key ) {
+				$new_columns['leaderspath_slug'] = __( 'Slug', 'leaderspath' );
+			}
+		}
+
+		return $new_columns;
+	}
+
+	/**
+	 * Render content for custom Skill columns.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $column  Column name.
+	 * @param int    $post_id Post ID.
+	 */
+	public function skill_column_content( string $column, int $post_id ): void {
+		if ( 'leaderspath_slug' === $column ) {
+			$this->render_slug( $post_id );
+		}
+	}
+
+	/**
+	 * Define sortable columns for Skills.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param array<string, string> $columns Sortable columns.
+	 * @return array<string, string> Modified sortable columns.
+	 */
+	public function skill_sortable_columns( array $columns ): array {
+		$columns['leaderspath_slug'] = 'leaderspath_slug';
+		return $columns;
+	}
+
+	// -------------------------------------------------------------------------
+	// Sorting
+	// -------------------------------------------------------------------------
 
 	/**
 	 * Handle custom column sorting.
@@ -183,6 +404,10 @@ class Admin_Columns {
 
 		$orderby = $query->get( 'orderby' );
 
+		if ( 'leaderspath_slug' === $orderby ) {
+			$query->set( 'orderby', 'name' );
+		}
+
 		if ( 'leaderspath_duration' === $orderby ) {
 			$query->set( 'meta_key', 'activity_duration' );
 			$query->set( 'orderby', 'meta_value_num' );
@@ -196,45 +421,9 @@ class Admin_Columns {
 		}
 	}
 
-	/**
-	 * Render the lesson(s) an activity belongs to.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param int $post_id Activity post ID.
-	 */
-	private function render_activity_lesson( int $post_id ): void {
-		// Find lessons that include this activity.
-		$lessons = get_posts( [
-			'post_type'      => 'leaderspath_lesson',
-			'posts_per_page' => -1,
-			'meta_query'     => [
-				[
-					'key'     => 'lesson_activities',
-					'value'   => sprintf( '"%d"', $post_id ),
-					'compare' => 'LIKE',
-				],
-			],
-			'fields'         => 'ids',
-		] );
-
-		if ( empty( $lessons ) ) {
-			echo '<span class="dashicons dashicons-minus" aria-hidden="true"></span>';
-			echo '<span class="screen-reader-text">' . esc_html__( 'No lesson', 'leaderspath' ) . '</span>';
-			return;
-		}
-
-		$lesson_links = [];
-		foreach ( $lessons as $lesson_id ) {
-			$lesson_links[] = sprintf(
-				'<a href="%s">%s</a>',
-				esc_url( get_edit_post_link( $lesson_id ) ),
-				esc_html( get_the_title( $lesson_id ) )
-			);
-		}
-
-		echo implode( ', ', $lesson_links ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Links escaped above.
-	}
+	// -------------------------------------------------------------------------
+	// Activity Column Renderers
+	// -------------------------------------------------------------------------
 
 	/**
 	 * Render the activity duration.
@@ -262,38 +451,9 @@ class Admin_Columns {
 		);
 	}
 
-	/**
-	 * Render the chatbot status for an activity.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param int $post_id Activity post ID.
-	 */
-	private function render_activity_chatbot_status( int $post_id ): void {
-		$enabled = get_field( 'chatbot_enabled', $post_id );
-		$model   = get_field( 'chatbot_model', $post_id );
-
-		// Hidden value for quick edit.
-		echo '<span class="leaderspath-chatbot-value hidden">' . ( $enabled ? '1' : '0' ) . '</span>';
-
-		if ( $enabled ) {
-			$model_labels = [
-				'sonnet'   => __( 'Sonnet', 'leaderspath' ),
-				'haiku'    => __( 'Haiku', 'leaderspath' ),
-				'opus-4.5' => __( 'Opus 4.5', 'leaderspath' ),
-			];
-
-			$model_label = $model_labels[ $model ] ?? $model;
-
-			printf(
-				'<span class="dashicons dashicons-yes-alt" style="color: #46b450;" aria-hidden="true"></span> %s',
-				esc_html( $model_label )
-			);
-		} else {
-			echo '<span class="dashicons dashicons-no-alt" style="color: #dc3232;" aria-hidden="true"></span>';
-			echo '<span class="screen-reader-text">' . esc_html__( 'Disabled', 'leaderspath' ) . '</span>';
-		}
-	}
+	// -------------------------------------------------------------------------
+	// Lesson Column Renderers
+	// -------------------------------------------------------------------------
 
 	/**
 	 * Render the activity count for a lesson.
@@ -374,6 +534,66 @@ class Admin_Columns {
 		}
 	}
 
+	// -------------------------------------------------------------------------
+	// Course Column Renderers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Render the lesson count for a course.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $post_id Course post ID.
+	 */
+	private function render_course_lesson_count( int $post_id ): void {
+		$lessons = get_field( 'course_lessons', $post_id );
+		$count   = is_array( $lessons ) ? count( $lessons ) : 0;
+
+		if ( 0 === $count ) {
+			echo '<span class="dashicons dashicons-minus" aria-hidden="true"></span>';
+			echo '<span class="screen-reader-text">' . esc_html__( 'No lessons', 'leaderspath' ) . '</span>';
+			return;
+		}
+
+		printf(
+			/* translators: %d: number of lessons */
+			esc_html( _n( '%d lesson', '%d lessons', $count, 'leaderspath' ) ),
+			$count
+		);
+	}
+
+	/**
+	 * Render the prerequisites for a course.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $post_id Course post ID.
+	 */
+	private function render_course_prerequisites( int $post_id ): void {
+		$prerequisites = get_field( 'course_prerequisites', $post_id );
+
+		if ( empty( $prerequisites ) || ! is_array( $prerequisites ) ) {
+			echo '<span class="dashicons dashicons-minus" aria-hidden="true"></span>';
+			echo '<span class="screen-reader-text">' . esc_html__( 'None', 'leaderspath' ) . '</span>';
+			return;
+		}
+
+		$links = [];
+		foreach ( $prerequisites as $prereq_id ) {
+			$links[] = sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( get_edit_post_link( (int) $prereq_id ) ),
+				esc_html( get_the_title( (int) $prereq_id ) )
+			);
+		}
+
+		echo implode( ', ', $links ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Links escaped above.
+	}
+
+	// -------------------------------------------------------------------------
+	// Quick Edit
+	// -------------------------------------------------------------------------
+
 	/**
 	 * Render quick edit fields.
 	 *
@@ -384,37 +604,21 @@ class Admin_Columns {
 	 */
 	public function quick_edit_fields( string $column_name, string $post_type ): void {
 		// Activity quick edit fields.
-		if ( 'leaderspath_activity' === $post_type ) {
-			if ( 'leaderspath_duration' === $column_name ) {
-				?>
-				<fieldset class="inline-edit-col-right">
-					<div class="inline-edit-col">
-						<label>
-							<span class="title"><?php esc_html_e( 'Duration', 'leaderspath' ); ?></span>
-							<span class="input-text-wrap">
-								<input type="number" name="leaderspath_activity_duration" class="leaderspath-activity-duration" min="1" max="480" step="1" />
-								<span class="description"><?php esc_html_e( 'minutes', 'leaderspath' ); ?></span>
-							</span>
-						</label>
-					</div>
-				</fieldset>
-				<?php
-			}
-
-			if ( 'leaderspath_chatbot' === $column_name ) {
-				?>
-				<fieldset class="inline-edit-col-right">
-					<div class="inline-edit-col">
-						<label class="alignleft">
-							<input type="checkbox" name="leaderspath_chatbot_enabled" class="leaderspath-chatbot-enabled" value="1" />
-							<span class="checkbox-title"><?php esc_html_e( 'Enable Chatbot', 'leaderspath' ); ?></span>
-						</label>
-					</div>
-				</fieldset>
-				<?php
-			}
+		if ( 'leaderspath_activity' === $post_type && 'leaderspath_duration' === $column_name ) {
+			?>
+			<fieldset class="inline-edit-col-right">
+				<div class="inline-edit-col">
+					<label>
+						<span class="title"><?php esc_html_e( 'Duration', 'leaderspath' ); ?></span>
+						<span class="input-text-wrap">
+							<input type="number" name="leaderspath_activity_duration" class="leaderspath-activity-duration" min="1" max="480" step="1" />
+							<span class="description"><?php esc_html_e( 'minutes', 'leaderspath' ); ?></span>
+						</span>
+					</label>
+				</div>
+			</fieldset>
+			<?php
 		}
-
 	}
 
 	/**
@@ -448,7 +652,6 @@ class Admin_Columns {
 
 		// Save activity fields.
 		if ( 'leaderspath_activity' === $post->post_type ) {
-			// Duration.
 			if ( isset( $_POST['leaderspath_activity_duration'] ) ) {
 				$duration = absint( $_POST['leaderspath_activity_duration'] );
 				if ( $duration > 0 && $duration <= 480 ) {
@@ -457,12 +660,7 @@ class Admin_Columns {
 					delete_field( 'activity_duration', $post_id );
 				}
 			}
-
-			// Chatbot enabled - checkbox won't be sent if unchecked.
-			$chatbot_enabled = isset( $_POST['leaderspath_chatbot_enabled'] ) ? 1 : 0;
-			update_field( 'chatbot_enabled', $chatbot_enabled, $post_id );
 		}
-
 	}
 
 	/**
@@ -504,12 +702,7 @@ class Admin_Columns {
 			if (duration) {
 				$editRow.find('input.leaderspath-activity-duration').val(duration);
 			}
-
-			// Chatbot enabled.
-			var chatbotEnabled = $row.find('.leaderspath-chatbot-value').text();
-			$editRow.find('input.leaderspath-chatbot-enabled').prop('checked', chatbotEnabled === '1');
-
-}
+		}
 	};
 })(jQuery);
 JS;

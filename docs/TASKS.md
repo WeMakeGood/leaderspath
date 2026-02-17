@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-02-12
-**Current Phase:** Phase 8 complete; Frontend Rebuild complete (all 8 modules implemented)
+**Last Updated:** 2026-02-16
+**Current Phase:** Phase 9 complete; Admin columns cleanup
 
 ---
 
@@ -205,6 +205,21 @@ Cohorts are a WooCommerce product type for enrollment management.
 
 ---
 
+## Phase 9: Admin Columns Cleanup (2026-02-16)
+
+Standardized admin list table columns across all 5 CPTs to surface slugs (curriculum filesystem identifiers) and remove implementation-detail columns.
+
+- [x] Add Slug column to all 5 CPTs (Activity, Lesson, Course, Context File, Skill)
+- [x] Add Course columns: Slug, Lessons count, Prerequisites
+- [x] Add Context File columns: Slug
+- [x] Add Skill columns: Slug
+- [x] Remove Activity→Lesson reverse lookup column (many-to-many relationship)
+- [x] Remove Activity Chatbot column + quick edit (implementation detail, not facilitator-relevant)
+- [x] Add slug sorting for all CPTs
+- [x] Build verified
+
+---
+
 ## Discovered Tasks
 
 - [ ] Handle file outputs from code execution (deferred — not critical for MVP)
@@ -265,6 +280,9 @@ Cohorts are a WooCommerce product type for enrollment management.
 | 2026-02-12 | No streaming for chatbot MVP | Standard request/response with typing indicator; streaming (SSE) deferred to enhancement phase |
 | 2026-02-12 | Chatbot frontend as vanilla JS IIFE | Same pattern as `context-modal.js`; config via `wp_localize_script()`, no React/framework dependency |
 | 2026-02-12 | Use Divi built-in icon library | Custom icons had sizing issues in module picker; Divi's built-in `divi/module-*` icons render correctly at all sizes |
+| 2026-02-16 | Remove parent reverse-lookup columns | Relationships are many-to-many (multiple courses can include same lesson); parent lists would be variable-length noise |
+| 2026-02-16 | Remove chatbot column from Activity list | Chatbot model/enabled is an implementation detail; facilitator cares about content identity, not API settings |
+| 2026-02-16 | Slug column on all CPTs | Slug IS the filesystem identifier (e.g., `lsn001-skills-framework`); primary cross-reference between curriculum registry and WordPress |
 
 ---
 
