@@ -630,6 +630,7 @@ class Claude_API {
 			'stop_reason'  => null,
 			'buffer'       => '',
 			'content'      => [], // Accumulated content blocks for pause_turn.
+			'last_activity' => microtime( true ), // For keep-alive tracking.
 		];
 
 		// Flush all WordPress output buffers.
@@ -689,6 +690,25 @@ class Claude_API {
 						}
 					}
 					return strlen( $header_line );
+				},
+				// Enable progress callbacks for SSE keep-alive.
+				// During web_search/web_fetch, Anthropic may go 30+ seconds with no data.
+				// Nginx kills idle FastCGI connections (default 60s). Sending periodic
+				// SSE comments (": keepalive") keeps the Nginx → PHP-FPM connection alive.
+				CURLOPT_NOPROGRESS     => false,
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt
+				CURLOPT_PROGRESSFUNCTION => function ( $ch, $dl_total, $dl_now, $ul_total, $ul_now ) use ( &$state ) {
+					$now     = microtime( true );
+					$elapsed = $now - $state['last_activity'];
+
+					// Send keep-alive every 15 seconds of inactivity.
+					if ( $elapsed >= 15.0 ) {
+						echo ": keepalive\n\n";
+						flush();
+						$state['last_activity'] = $now;
+					}
+
+					return 0; // 0 = continue, non-zero = abort.
 				},
 			] );
 
@@ -844,6 +864,9 @@ class Claude_API {
 		// Forward raw SSE data to browser.
 		echo $chunk;
 		flush();
+
+		// Track activity for keep-alive.
+		$state['last_activity'] = microtime( true );
 
 		// Parse SSE events from the chunk.
 		$state['buffer'] .= $chunk;
