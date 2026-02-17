@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
 **Last Updated:** 2026-02-16
-**Current Phase:** Phase 9 complete; Admin columns cleanup
+**Current Phase:** Phase 10 planned — SSE streaming for chatbot
 
 ---
 
@@ -247,10 +247,133 @@ Standardized admin list table columns across all 5 CPTs to surface slugs (curric
 
 ---
 
+## Phase 10: Streaming Chat Responses (SSE)
+
+The chatbot currently uses synchronous request/response via `wp_remote_post()`. Long-running requests (skills with code execution, large context windows) hit timeouts before the response completes. Streaming eliminates this by delivering tokens as they're generated.
+
+**Motivation:** Skills that process long inputs (e.g., meeting transcript → report) exceed `wp_remote_post` timeout, returning an HTML error page instead of JSON. Streaming keeps the connection alive and delivers partial results immediately.
+
+### Architecture Overview
+
+| Layer | Current | Streaming |
+|-------|---------|-----------|
+| Anthropic request | `wp_remote_post()` (buffered) | `curl` with `CURLOPT_WRITEFUNCTION` callback |
+| PHP → browser | `WP_REST_Response` JSON | Manual SSE headers + `echo` + `flush()` |
+| Browser parsing | `fetch().json()` | `fetch().body.getReader()` + SSE event parser |
+| Markdown rendering | Server-side (`league/commonmark`) | Client-side (`marked.js`, already installed) |
+| Error handling | JSON error objects | SSE error events + graceful fallback |
+
+### Anthropic SSE Event Format
+
+```
+event: message_start
+data: {"type":"message_start","message":{"id":"msg_...","model":"...","usage":{...}}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"text"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":...}}
+
+event: message_stop
+data: {"type":"message_stop"}
+```
+
+### Phase 10a: PHP Streaming Backend
+
+New parallel code paths — non-breaking; existing synchronous flow remains as fallback.
+
+- [ ] **`Claude_API::stream_message()`** — new method parallel to `send_message()`
+  - Uses `curl_exec()` with `CURLOPT_WRITEFUNCTION` for chunked reading
+  - Adds `"stream": true` to Anthropic request body
+  - Callback writes each chunk to PHP output buffer with `echo` + `flush()`
+  - Forwards SSE events from Anthropic directly to browser (passthrough proxy)
+  - Extracts `container_id` from `message_start` event
+  - Detects `stop_reason: "pause_turn"` in `message_delta` for continuation
+- [ ] **`Claude_API::stream_lesson_message()`** — same for lesson Q&A mode
+- [ ] **`REST_API::register_routes()`** — register `/chat/stream` POST endpoint
+- [ ] **`REST_API::handle_stream_chat()`** — streaming endpoint handler
+  - Same permission/validation as `handle_chat()`
+  - Sets SSE headers manually (`Content-Type: text/event-stream`, `Cache-Control: no-cache`, `X-Accel-Buffering: no`)
+  - Calls `Claude_API::stream_message()` which writes directly to output
+  - Sends final `data: [DONE]` event with metadata (model, usage, container_id, content_raw)
+  - Calls `exit()` after stream completes (bypass WP REST response handling)
+- [ ] **Nginx/PHP config** — verify `X-Accel-Buffering: no` disables proxy buffering
+- [ ] **Pause turn handling** — detect in `message_delta`, send continuation marker event, resume stream
+
+### Phase 10b: Frontend Streaming
+
+- [ ] **`chatbot.js` streaming branch** — detect `restStreamUrl` in config
+  - `fetch()` POST to streaming endpoint
+  - `response.body.getReader()` + `TextDecoder` for chunked reading
+  - SSE event parser: split on `\n\n`, extract `event:` and `data:` lines
+  - Handle `content_block_delta` → append text to message element incrementally
+  - Handle `message_start` → extract container_id
+  - Handle `message_delta` → extract stop_reason, usage
+  - Handle `[DONE]` → finalize message, convert accumulated markdown → HTML
+  - Handle `error` events → display inline error
+- [ ] **Markdown rendering** — use `marked.js` (already in plugin for MD drop feature)
+  - Accumulate raw text during stream
+  - On stream complete: convert full markdown → HTML, replace message content
+  - During stream: display raw text with basic formatting (or periodic re-render)
+- [ ] **"Stop generating" button** — abort controller to cancel fetch + close connection
+- [ ] **Typing indicator update** — replace dots with "Generating..." text during stream
+- [ ] **Fallback** — if streaming fetch fails, retry with non-streaming endpoint
+- [ ] **`RenderCallbackTrait`** — add `restStreamUrl` to `wp_localize_script()` config
+
+### Phase 10c: Error Handling & Edge Cases
+
+- [ ] **Mid-stream errors** — Anthropic error event or network drop during stream
+  - Display partial response + error message
+  - Offer "Retry" button that sends same message
+- [ ] **Browser compatibility** — `ReadableStream` requires Chrome 43+, Firefox 65+, Safari 11.1+
+  - Feature detection: `typeof ReadableStream !== 'undefined'`
+  - Fallback to non-streaming for unsupported browsers
+- [ ] **Connection timeout** — implement client-side heartbeat detection
+  - If no event received in 30s, show "Connection interrupted" + retry option
+- [ ] **Container ID management** — extracted from `message_start` SSE event
+  - Store in JS state for subsequent turns (same as current flow)
+- [ ] **Conversation history** — accumulate `content_raw` during stream for history array
+  - Raw markdown text (NOT HTML) stored in history for API replay
+
+### Phase 10d: Documentation & Testing
+
+- [ ] Update `docs/claude-api-integration.md` with streaming event format + architecture
+- [ ] Update `docs/divi-modules.md` chatbot section with streaming config
+- [ ] Manual testing: activity sandbox with skills (long-running), lesson Q&A, error cases
+- [ ] Test with slow network (throttled DevTools) to verify chunked delivery
+- [ ] Test browser fallback on non-streaming path
+
+### Key Technical Decisions to Make
+
+| Decision | Options | Notes |
+|----------|---------|-------|
+| Streaming endpoint | New route `/chat/stream` vs parameter `?stream=1` | New route is cleaner — different response format |
+| During-stream rendering | Raw text vs periodic markdown re-render | Raw text simpler; re-render on complete |
+| Pause turn in stream | Server-side continuation vs client-side retry | Server-side keeps connection open; client-side simpler |
+| marked.js sharing | Reuse existing admin bundle vs enqueue separately on frontend | Separate enqueue — admin bundle not loaded on frontend |
+| Non-streaming fallback | Keep forever vs deprecate after streaming stable | Keep as fallback for compatibility |
+
+### Key Gotchas
+
+1. **`wp_remote_post()` cannot stream** — buffers entire response. Must use `curl` directly.
+2. **WordPress REST API assumes buffered responses** — streaming endpoint must bypass `WP_REST_Response`, output headers manually, and call `exit()`.
+3. **`ob_end_flush()`** — WordPress/plugins may have output buffers active. Must flush all before streaming.
+4. **Markdown during stream** — chunks arrive mid-word/mid-syntax. Full markdown conversion only works on complete text. Show raw text during stream, convert on completion.
+5. **Pause turn** — `stop_reason` appears only in final `message_delta` event. Must accumulate all content blocks and detect pause_turn to continue.
+6. **Code execution blocks** — `server_tool_use` and `bash_code_execution_tool_result` events appear mid-stream. Must handle alongside text deltas.
+
+---
+
 ## Discovered Tasks
 
 - [ ] Handle file outputs from code execution (deferred — not critical for MVP)
-- [ ] Optional: Streaming response support (SSE)
 - [ ] Handle skill deletion (delete from Anthropic when trashed?)
 
 ---
@@ -313,6 +436,10 @@ Standardized admin list table columns across all 5 CPTs to surface slugs (curric
 | 2026-02-16 | Context File editor: text-only, no TinyMCE | Context files are markdown/plain text; visual editor mangles whitespace and formatting |
 | 2026-02-16 | Context File drag-and-drop import | Client-side FileReader reads text, sets post_content directly; no server upload needed for text content |
 | 2026-02-16 | Markdown drop for all TinyMCE editors | Client-side marked.js converts MD→HTML on drop; capture-phase handlers defeat WP EditorUploader + TinyMCE paste plugin |
+| 2026-02-16 | SSE streaming for chatbot (Phase 10) | `wp_remote_post` timeouts on long-running skills; streaming via `curl` + SSE keeps connection alive |
+| 2026-02-16 | Parallel streaming endpoint `/chat/stream` | New route, not parameter toggle — different response format (SSE vs JSON) warrants separate endpoint |
+| 2026-02-16 | Client-side markdown for streaming | During stream: raw text; on complete: `marked.js` converts to HTML. Server-side `league/commonmark` stays for non-streaming fallback |
+| 2026-02-16 | Keep non-streaming fallback | Synchronous endpoint remains for browser compat + simplicity; streaming is opt-in via feature detection |
 
 ---
 
