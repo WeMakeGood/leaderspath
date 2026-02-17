@@ -162,6 +162,16 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 - [x] JSON files copied to modules-json/chatbot/
 - [x] Build verified — zero errors
 
+### Completed: Context File Upload (2026-02-16)
+
+- [x] Add drag-and-drop / file-select upload metabox ("Import from File") to Context File editor
+- [x] Client-side file read populates post_content textarea directly
+- [x] Auto-sets title and slug from filename on new posts
+- [x] Disable TinyMCE visual editor for Context Files (markdown/plain text only)
+- [x] Accepted formats: .md, .txt, .json, .yaml, .yml, .xml, .csv, .html, .css, .js, .ts, .py, .php, .rb, .sh, .sql, .log, .cfg, .conf, .ini, .env, .toml
+- [x] 1 MB file size limit with user feedback
+- [x] Visual feedback: drag-over highlight, success/error status messages
+
 ### Pending Tasks
 
 - [ ] Test Theme Builder template with multiple lesson/activity/course pages
@@ -283,6 +293,8 @@ Standardized admin list table columns across all 5 CPTs to surface slugs (curric
 | 2026-02-16 | Remove parent reverse-lookup columns | Relationships are many-to-many (multiple courses can include same lesson); parent lists would be variable-length noise |
 | 2026-02-16 | Remove chatbot column from Activity list | Chatbot model/enabled is an implementation detail; facilitator cares about content identity, not API settings |
 | 2026-02-16 | Slug column on all CPTs | Slug IS the filesystem identifier (e.g., `lsn001-skills-framework`); primary cross-reference between curriculum registry and WordPress |
+| 2026-02-16 | Context File editor: text-only, no TinyMCE | Context files are markdown/plain text; visual editor mangles whitespace and formatting |
+| 2026-02-16 | Context File drag-and-drop import | Client-side FileReader reads text, sets post_content directly; no server upload needed for text content |
 
 ---
 
