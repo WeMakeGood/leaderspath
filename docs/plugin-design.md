@@ -1,7 +1,7 @@
 # LeadersPath Plugin Design Document
 
 **Version:** 0.6.0
-**Last Updated:** 2026-02-11
+**Last Updated:** 2026-02-17
 **Status:** Core infrastructure + WooCommerce Cohort enrollment implemented; frontend research complete, module implementation pending
 
 ## Executive Summary
@@ -19,6 +19,24 @@ LeadersPath is a WordPress plugin that powers a **facilitated learning experienc
 5. **Stateless Conversations** - No persistence; page reload clears history for experimentation
 6. **Context vs Skills** - Clear separation between reference material (context) and capabilities (skills)
 7. **WooCommerce Integration** - Cohort products gate access via enrollment; graceful degradation without WC
+
+### Learning Philosophy
+
+The Design Philosophy above lists *what* the plugin does architecturally. This section explains *why* — the pedagogical reasoning that drives those decisions. Understanding this reasoning is important for anyone adding features or modifying behavior, because technical choices that seem arbitrary are often grounded in how learning actually works.
+
+**The teaching cycle.** Every lesson follows a rhythm: the facilitator presents a concept, learners experiment with it in an AI sandbox, the group discusses what they observed, and the facilitator builds on that shared experience toward the next concept. This cycle — concept, experiment, discuss, build — repeats 3-5 times per lesson. The plugin's content model (Lessons containing ordered Activities) exists to support this cycle. Activities aren't independent units — they're steps in a facilitated sequence.
+
+**Activities are experiments, not lessons.** An activity is what learners *do*, not what they *learn*. The learning happens in the facilitator's teaching and the group discussion. The AI sandbox is lab equipment. This distinction matters for design: activity pages give instructions about what to try and what to notice, not explanations of concepts. The system prompt defines the AI's behavior; the page content guides the learner's interaction with that behavior.
+
+**Stateless conversations enable experimentation.** Conversations don't persist because experimentation requires the freedom to reset and try again. A learner should be able to try a provocative prompt, see what happens, refresh the page, and try something different — without accumulating confusing history or worrying about being judged. The "no persistence" decision isn't about simplicity; it's about creating a genuine sandbox where failure is free.
+
+**Transparency is a teaching tool.** The Context Library and Skills List modules don't just show learners what the AI has — they demonstrate *how context and capabilities change AI behavior*. When a learner reads the context file that makes the AI write in their organization's voice, they understand concretely what context does and why it matters. Transparency is pedagogy, not just a feature.
+
+**The comparison pattern.** LeadersPath's most powerful teaching technique is having learners use the same AI in different configurations: with and without context, with different models, with different system prompts. Each comparison creates visceral understanding that reading about AI cannot replicate. The plugin supports this through per-activity configuration — every activity can have its own model, temperature, system prompt, context files, and skills.
+
+**Privacy enables honesty.** No conversation logging, no analytics on what learners say, no persistent history. This privacy stance exists because learners need to feel safe asking naive questions, testing boundaries, and making mistakes. The experimental sandbox only works if the sandbox is truly private.
+
+**Education and sales are separate.** LeadersPath courses stand on their own educational value. Make Good sponsors the technology and may provide facilitators, but course content never includes service promotions. The boundary is absolute. If a learner decides they want context library services for their organization, that decision is initiated by the learner — never prompted by the platform.
 
 ### High-Level Architecture
 

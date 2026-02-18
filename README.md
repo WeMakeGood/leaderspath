@@ -2,7 +2,7 @@
 
 AI-powered facilitated cohort learning platform for WordPress and Divi 5.
 
-**Version:** 0.1.0
+**Version:** 0.6.0
 **Requires:** WordPress 6.4+, PHP 8.2+, Divi 5, ACF Pro
 **Optional:** WooCommerce (for cohort enrollment)
 **License:** GPLv2 or later
@@ -32,6 +32,7 @@ Cohorts are **WooCommerce Simple products** with a cohort checkbox — not a sep
 - **Dual Chatbot Modes:** Activity sandbox (demonstrate behaviors) + Lesson Q&A (helpful assistant)
 - **SSE Streaming** with real-time markdown rendering
 - **Claude API Integration:** Container-based API with code execution and skills support
+- **Web Tools:** Server-side `web_search` + `web_fetch` for skills that need web access
 - **Automatic Retry** for transient API errors with user-visible status
 - **Transparency:** Learners can view and download the exact context and skills powering the AI
 - **WooCommerce Cohorts:** Enrollment management, access control, cohort phases
@@ -52,6 +53,7 @@ WordPress + Divi 5
 │   ├── Claude API
 │   │   ├── Messages API + Container (code execution)
 │   │   ├── Skills API (executable skill packages)
+│   │   ├── Web tools (web_search + web_fetch for skills)
 │   │   ├── SSE streaming (curl + WRITEFUNCTION callback)
 │   │   └── Automatic retry (transient 5xx errors)
 │   │
@@ -193,6 +195,7 @@ The chatbot uses SSE streaming by default with automatic fallback to synchronous
 - **Real-time markdown rendering:** `marked.js` with `requestAnimationFrame` throttling — headings, bold, lists, and code blocks render progressively as tokens arrive
 - **Stop generating:** AbortController cancels the stream, keeping partial response
 - **Automatic retry:** Transient API errors (500, 502, 503, 529) retry up to 2 times with 1s/3s backoff. The user sees "Retrying... (attempt 2 of 3)" with a "Try again" button if all retries fail.
+- **Server requirements:** SSE streaming requires Nginx/PHP-FPM configuration to disable response buffering. See [server-requirements.md](docs/server-requirements.md).
 
 ### No Conversation Persistence
 
@@ -298,6 +301,7 @@ Detailed documentation is in the [`docs/`](docs/) folder:
 | [divi5-module-architecture.md](docs/divi5-module-architecture.md) | Divi 5 architecture reference (validated patterns) |
 | [ui-ux-catalog.md](docs/ui-ux-catalog.md) | UI/UX catalog: modules, elements, CSS classes |
 | [content-creation-guide.md](docs/content-creation-guide.md) | Guide for creating activities, context files, and skills |
+| [server-requirements.md](docs/server-requirements.md) | Server config for SSE streaming (Nginx, PHP-FPM) |
 | [TASKS.md](docs/TASKS.md) | Development task tracker and decisions log |
 
 ---
