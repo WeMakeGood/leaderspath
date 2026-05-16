@@ -28,12 +28,16 @@
 
 LeadersPath is a WordPress plugin developed by WeMakeGood that powers a facilitated cohort learning experience. Facilitators present concepts while learners experiment with AI sandboxes (Activities) to experience specific AI behaviors. The plugin demonstrates the difference between raw LLM interactions and context-enhanced AI implementations.
 
-**Key Features:**
-- Custom post types for Activities, Lessons, Courses, Context Files, and Skills
-- Claude API integration for interactive chatbot experiences
-- Divi 5 modules for flexible lesson/activity template design (pending rebuild)
-- Transparency features showing learners the context and skills used by AI
-- Role-based access control for content and features
+**Plugin Scope:**
+- Schema and content management — 5 CPTs, 3 taxonomies, ACF Pro field groups, roles & capabilities
+- Claude API integration — Container API, code execution, skills, SSE streaming, automatic retry
+- REST endpoints — `/chat`, `/chat/stream`, `/context/{id}/download`, `/skills/{id}/download`
+- Chatbot widget — vanilla-JS frontend + `[leaderspath_chatbot]` shortcode
+- WooCommerce cohort integration — enrollment management, access chain, cohort phases
+- Admin tooling — settings, columns, Context File drag-drop import, Markdown drop for TinyMCE editors
+
+**Out of scope (handled by the page builder):**
+- Display markup for Lessons, Activities, Courses, Context Library, Skills List — Bricks Builder reads ACF directly via query loops and dynamic data
 
 ## Directory Structure
 
@@ -41,7 +45,6 @@ LeadersPath is a WordPress plugin developed by WeMakeGood that powers a facilita
 leaderspath/
 ├── leaderspath.php          # Main plugin file, bootstrap
 ├── composer.json            # PHP dependencies
-├── package.json             # Node dependencies (Divi modules)
 │
 ├── includes/                # Core PHP classes
 │   ├── class-post-types.php
@@ -50,18 +53,20 @@ leaderspath/
 │   ├── class-acf-fields.php
 │   ├── class-claude-api.php
 │   ├── class-rest-api.php
-│   └── class-skill-processor.php
-│
-├── modules/                 # Divi 5 modules (pending rebuild)
-│   └── Shared/              # Shared PHP traits (validated)
-│
-├── src/                     # Divi 5 TypeScript (pending rebuild)
-│   └── components/          # Empty — research complete, awaiting implementation
+│   ├── class-skill-processor.php
+│   ├── class-woocommerce.php
+│   ├── class-shortcodes.php # [leaderspath_chatbot] only
+│   └── renderers/
+│       ├── class-post-id-helper.php
+│       └── class-chatbot-renderer.php
 │
 ├── admin/                   # Admin functionality
+├── assets/
+│   ├── css/                 # Chatbot widget styles only
+│   └── js/                  # chatbot.js + marked.js vendor
 ├── docs/                    # Documentation
 ├── tests/                   # PHPUnit tests
-├── bin/                     # Build scripts
+├── bin/                     # CLI scripts
 └── .circleci/               # CI configuration
 ```
 
@@ -77,12 +82,6 @@ wp plugin deactivate leaderspath
 composer install
 composer dump-autoload
 
-# Node dependencies (for Divi modules)
-npm install
-npm run start          # Development with watch
-npm run build          # Production build
-npm run test           # Run JS tests
-
 # PHP tests
 ./bin/install-wp-tests.sh <db-name> <db-user> <db-pass> [db-host] [wp-version]
 ./vendor/bin/phpunit
@@ -92,6 +91,8 @@ npm run test           # Run JS tests
 ./vendor/bin/phpcbf    # Auto-fix coding standards
 ```
 
+There is no JS/CSS build step — frontend assets ship as committed `assets/css/leaderspath.css` and vanilla-JS files in `assets/js/`.
+
 ## Documentation
 
 All documentation lives in the `docs/` folder:
@@ -100,10 +101,8 @@ All documentation lives in the `docs/` folder:
 |----------|---------|
 | [plugin-design.md](docs/plugin-design.md) | Architecture overview, design decisions |
 | [cpt-schema.md](docs/cpt-schema.md) | Custom post types, taxonomies, ACF fields |
-| [divi-modules.md](docs/divi-modules.md) | Divi 5 module status and implementation plan |
-| [divi5-module-architecture.md](docs/divi5-module-architecture.md) | **Divi 5 module architecture reference (READ for frontend work)** |
-| [ui-ux-catalog.md](docs/ui-ux-catalog.md) | **UI/UX catalog: all modules, elements, CSS classes, behaviors** |
-| [wordpress-rendering-pipeline.md](docs/wordpress-rendering-pipeline.md) | WordPress block rendering pipeline reference |
+| [shortcodes.md](docs/shortcodes.md) | `[leaderspath_chatbot]` reference |
+| [ui-ux-catalog.md](docs/ui-ux-catalog.md) | Surface/field reference for page-builder integration |
 | [data-contracts.md](docs/data-contracts.md) | ACF field → REST endpoint mapping |
 | [claude-api-integration.md](docs/claude-api-integration.md) | **Claude API integration (CRITICAL)** |
 | [content-creation-guide.md](docs/content-creation-guide.md) | Content authoring guide |
@@ -115,7 +114,9 @@ All documentation lives in the `docs/` folder:
 - PHP 8.2+ (targeting 8.3)
 - WordPress 6.4+
 - Advanced Custom Fields Pro
-- Divi 5
+
+**Recommended:**
+- Bricks Builder (any builder that calls `do_shortcode()` works)
 
 **Optional:**
 - WooCommerce (for e-commerce/user roles)
@@ -152,12 +153,11 @@ class PostTypes {
 }
 ```
 
-### JavaScript/TypeScript
+### JavaScript
 
-- Use TypeScript for Divi 5 module components
-- Follow WordPress JavaScript coding standards where applicable
-- Use ES6+ features
-- Prefer functional components with hooks for React
+- Vanilla JS (no framework). Frontend scripts are IIFE-wrapped and configured via `wp_localize_script()`.
+- Follow WordPress JavaScript coding standards where applicable.
+- ES6+ features OK; the chatbot script targets modern evergreen browsers (`fetch`, `ReadableStream`).
 
 ### CSS
 
@@ -287,7 +287,7 @@ class Test_API_Handler extends WP_UnitTestCase {
 
 Create a new file when:
 - Adding a new class (one class per file)
-- Adding a new Divi module
+- Adding a new renderer (under `includes/renderers/`)
 - Adding a new REST endpoint that warrants its own controller
 - Adding significant new functionality that doesn't fit existing files
 
@@ -399,7 +399,7 @@ Maintain `CHANGELOG.md` using [Keep a Changelog](https://keepachangelog.com/) fo
 ## [Unreleased]
 
 ### Added
-- New chatbot module for Divi 5
+- New `[leaderspath_chatbot]` shortcode
 
 ### Changed
 - Updated Claude API to use streaming responses
@@ -453,13 +453,15 @@ apply_filters('leaderspath_activity_context_files', $files, $activity_id);
 ## Completed Work
 
 - **Data Layer:** 5 CPTs, 3 taxonomies, ACF field groups, roles & capabilities
-- **Admin Interface:** Settings page, custom columns, quick edit
-- **Claude API:** Container API with code execution + skills
-- **Build System:** Webpack + TypeScript configured and functional
+- **Admin Interface:** Settings page, custom columns, Context File drag-drop import, Markdown drop for TinyMCE
+- **Claude API:** Container API with code execution + skills, SSE streaming, automatic retry
+- **REST API:** `/chat`, `/chat/stream`, `/context/{id}/download`, `/skills/{id}/download`
+- **Chatbot widget:** `[leaderspath_chatbot]` shortcode + vanilla-JS frontend
+- **WooCommerce cohorts:** Enrollment management, access chain, cohort phases
 
 ## Current Status
 
-Divi 5 module code was removed (`844094c`) due to incomplete research. Comprehensive research phase completed (2026-02-11). Frontend rebuild ready to begin. See `docs/divi5-module-architecture.md` for validated patterns and `docs/TASKS.md` for implementation plan.
+Display of CPT data (Lessons, Activities, Courses, Context Library, Skills List) is built in **Bricks Builder** using query loops + dynamic data reading ACF fields directly — the plugin no longer ships display markup for those surfaces. The chatbot is the one rendered surface the plugin owns, exposed as `[leaderspath_chatbot]`. See `docs/ui-ux-catalog.md` for the surface/field reference used when building Bricks templates.
 
 ## Key Architectural Decisions
 

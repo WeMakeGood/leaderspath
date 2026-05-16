@@ -1,9 +1,10 @@
 # LeadersPath
 
-AI-powered facilitated cohort learning platform for WordPress and Divi 5.
+AI-powered facilitated cohort learning platform for WordPress.
 
-**Version:** 0.6.0
-**Requires:** WordPress 6.4+, PHP 8.2+, Divi 5, ACF Pro
+**Version:** 0.7.0
+**Requires:** WordPress 6.4+, PHP 8.2+, ACF Pro
+**Recommended:** Bricks Builder (or any builder/theme that runs `do_shortcode()`)
 **Optional:** WooCommerce (for cohort enrollment)
 **License:** GPLv2 or later
 
@@ -27,14 +28,14 @@ Cohorts are **WooCommerce Simple products** with a cohort checkbox — not a sep
 
 ### Key Features
 
-- **5 Custom Post Types** with ACF Pro field groups
-- **8 Divi 5 Modules** for flexible page/template design
+- **5 Custom Post Types** with ACF Pro field groups — page builders read fields directly
+- **`[leaderspath_chatbot]` shortcode** for the interactive chat widget (the one surface the plugin renders)
 - **Dual Chatbot Modes:** Activity sandbox (demonstrate behaviors) + Lesson Q&A (helpful assistant)
 - **SSE Streaming** with real-time markdown rendering
 - **Claude API Integration:** Container-based API with code execution and skills support
 - **Web Tools:** Server-side `web_search` + `web_fetch` for skills that need web access
 - **Automatic Retry** for transient API errors with user-visible status
-- **Transparency:** Learners can view and download the exact context and skills powering the AI
+- **REST Endpoints** for downloading context files and skill metadata
 - **WooCommerce Cohorts:** Enrollment management, access control, cohort phases
 - **No Conversation Persistence:** Page reload clears chat — enables experimentation
 
@@ -43,7 +44,7 @@ Cohorts are **WooCommerce Simple products** with a cohort checkbox — not a sep
 ## Architecture
 
 ```
-WordPress + Divi 5
+WordPress (any theme/builder)
 ├── LeadersPath Plugin
 │   ├── Data Layer
 │   │   ├── 5 CPTs (Activity, Lesson, Course, Context File, Skill)
@@ -63,24 +64,26 @@ WordPress + Divi 5
 │   │   ├── GET  /context/{id}/download
 │   │   └── GET  /skills/{id}/download
 │   │
-│   ├── Divi 5 Modules (8 modules)
-│   │   ├── Chatbot, Context Library, Skills List
-│   │   ├── Lesson Meta, Lesson Activities, Lesson Objectives
-│   │   ├── Activity Meta, Course Lessons
-│   │   └── Frontend = PHP, Visual Builder = React/TS
+│   ├── Chatbot widget
+│   │   ├── [leaderspath_chatbot] shortcode (auto-detects Activity vs Lesson)
+│   │   └── Chatbot_Renderer (callable directly from theme PHP)
 │   │
 │   └── WooCommerce Integration (optional)
 │       ├── Cohort products (Simple + checkbox)
 │       ├── Enrollment on purchase, access chain
 │       └── Cohort phases (upcoming/active/completed)
 │
+├── Page builder (Bricks recommended)
+│   └── Query loops + dynamic data — read ACF fields directly to display
+│       Lesson Meta, Lesson Objectives, Lesson Activities,
+│       Activity Meta, Context Library, Skills List, Course Lessons
+│
 └── Browser
-    ├── chatbot.js (vanilla JS IIFE)
-    │   ├── SSE streaming with ReadableStream
-    │   ├── Real-time markdown rendering (marked.js)
-    │   ├── Sync fallback for older browsers
-    │   └── Retry indicator + "Try again" button
-    └── context-modal.js (vanilla JS, REST fetch)
+    └── chatbot.js (vanilla JS IIFE)
+        ├── SSE streaming with ReadableStream
+        ├── Real-time markdown rendering (marked.js)
+        ├── Sync fallback for older browsers
+        └── Retry indicator + "Try again" button
 ```
 
 ---
@@ -91,21 +94,20 @@ WordPress + Divi 5
 
 - WordPress 6.4+
 - PHP 8.2+ (targeting 8.3)
-- [Divi 5](https://www.elegantthemes.com/gallery/divi/)
 - [Advanced Custom Fields Pro](https://www.advancedcustomfields.com/pro/)
 - [Anthropic Claude API key](https://console.anthropic.com/)
+- A page builder or theme that runs `do_shortcode()` (e.g. [Bricks Builder](https://bricksbuilder.io/), Gutenberg, classic editor)
 - WooCommerce (optional — for cohort enrollment)
 
 ### Steps
 
 1. Upload the `leaderspath` folder to `/wp-content/plugins/`
 2. Run `composer install` from the plugin directory
-3. Run `npm install && npm run build` to compile Divi modules
-4. Activate required plugins: Divi 5, Advanced Custom Fields Pro
-5. Activate LeadersPath through the Plugins menu
-6. Navigate to **Settings > LeadersPath**
-7. Enter your Anthropic Claude API key (or set `LEADERSPATH_API_KEY` in `wp-config.php`)
-8. Click "Test Connection" to verify API access
+3. Activate required plugins: Advanced Custom Fields Pro
+4. Activate LeadersPath through the Plugins menu
+5. Navigate to **Settings > LeadersPath**
+6. Enter your Anthropic Claude API key (or set `LEADERSPATH_API_KEY` in `wp-config.php`)
+7. Click "Test Connection" to verify API access
 
 ---
 
@@ -160,20 +162,17 @@ Courses are reusable curricula:
 - **Lessons:** Ordered list of lessons (relationship field)
 - **Prerequisites:** Other courses that must be completed first
 
-### 5. Build Pages with Divi 5
+### 5. Build Pages in Your Builder
 
-Use Theme Builder templates or individual pages with LeadersPath modules:
+Build one template per CPT in your page builder. Bricks Builder query loops read ACF fields directly — see [docs/ui-ux-catalog.md](docs/ui-ux-catalog.md) for the surface/field reference and [docs/cpt-schema.md](docs/cpt-schema.md) for the full field inventory.
 
-| Module | Description | Used On |
-|--------|-------------|---------|
-| **Chatbot** | Interactive chat with Claude | Activity pages, Lesson pages |
-| **Context Library** | Card grid of attached context files with view/download | Activity pages |
-| **Skills List** | Card grid of attached skills | Activity pages |
-| **Activity Meta** | Duration, model name, model switching indicator | Activity pages |
-| **Lesson Meta** | Difficulty, duration, activity count | Lesson pages |
-| **Lesson Activities** | Ordered list of linked activities with number badges | Lesson pages |
-| **Lesson Objectives** | Ordered list of learning objectives | Lesson pages |
-| **Course Lessons** | List of linked lessons with metadata + prerequisites | Course pages |
+The one piece of markup the plugin still ships is the chatbot widget — drop it into Activity or Lesson templates:
+
+```
+[leaderspath_chatbot]
+```
+
+See [docs/shortcodes.md](docs/shortcodes.md) for shortcode attributes.
 
 ---
 
@@ -297,9 +296,8 @@ Detailed documentation is in the [`docs/`](docs/) folder:
 | [cpt-schema.md](docs/cpt-schema.md) | Custom post types, taxonomies, ACF fields |
 | [claude-api-integration.md](docs/claude-api-integration.md) | Claude API integration details |
 | [data-contracts.md](docs/data-contracts.md) | ACF field to REST endpoint mapping |
-| [divi-modules.md](docs/divi-modules.md) | Divi 5 module development guide |
-| [divi5-module-architecture.md](docs/divi5-module-architecture.md) | Divi 5 architecture reference (validated patterns) |
-| [ui-ux-catalog.md](docs/ui-ux-catalog.md) | UI/UX catalog: modules, elements, CSS classes |
+| [shortcodes.md](docs/shortcodes.md) | Shortcode reference + template-mode tokens |
+| [ui-ux-catalog.md](docs/ui-ux-catalog.md) | CSS class reference for every shortcode |
 | [content-creation-guide.md](docs/content-creation-guide.md) | Guide for creating activities, context files, and skills |
 | [server-requirements.md](docs/server-requirements.md) | Server config for SSE streaming (Nginx, PHP-FPM) |
 | [TASKS.md](docs/TASKS.md) | Development task tracker and decisions log |
@@ -312,15 +310,9 @@ Detailed documentation is in the [`docs/`](docs/) folder:
 
 ```bash
 composer install     # PHP dependencies
-npm install          # Node dependencies (Divi modules)
 ```
 
-### Build Commands
-
-```bash
-npm run build        # Production build
-npm run start        # Development with watch
-```
+There is no JS/CSS build step — frontend assets ship as committed files in `assets/`.
 
 ### File Structure
 
@@ -335,25 +327,15 @@ leaderspath/
 │   ├── class-claude-api.php
 │   ├── class-rest-api.php
 │   ├── class-skill-processor.php
-│   └── class-woocommerce.php
-├── modules/                 # Divi 5 PHP modules
-│   ├── ActivityMeta/
-│   ├── Chatbot/
-│   ├── ContextLibrary/
-│   ├── CourseLessons/
-│   ├── LessonActivities/
-│   ├── LessonMeta/
-│   ├── LessonObjectives/
-│   ├── SkillsList/
-│   ├── Shared/              # Shared PHP traits
-│   └── Modules.php          # Module registration hub
-├── src/                     # Divi 5 TypeScript/React (VB only)
-│   └── components/
-├── assets/                  # Frontend JS (chatbot, context modal)
+│   ├── class-woocommerce.php
+│   ├── class-shortcodes.php # [leaderspath_chatbot] registration + assets
+│   └── renderers/
+│       ├── class-post-id-helper.php
+│       └── class-chatbot-renderer.php
 ├── admin/                   # Admin settings, columns, uploaders
-├── styles/                  # Compiled CSS (bundle.css, vb-bundle.css)
-├── scripts/                 # Compiled JS (bundle.js)
-├── modules-json/            # Generated module.json + defaults
+├── assets/
+│   ├── css/leaderspath.css  # Chatbot widget styles (loaded on demand)
+│   └── js/                  # chatbot.js + vendor/marked.umd.js
 ├── docs/                    # Documentation
 ├── tests/                   # PHPUnit tests
 └── bin/                     # CLI scripts (test-chat, create-test-data)
@@ -361,11 +343,11 @@ leaderspath/
 
 ### Key Architectural Patterns
 
-- **Frontend = 100% PHP;** Visual Builder = 100% React/TypeScript (no hydration)
-- **Bottom-up module architecture:** Layer 1 (pure PHP renderer) → Layer 2 (SCSS) → Layer 3 (Divi wrapper) → Layer 4 (settings)
-- **Vanilla JS** for frontend interactivity (chatbot, context modal) — no React on the frontend
-- **SSE streaming** via curl `CURLOPT_WRITEFUNCTION` (not `wp_remote_post`, which can't stream)
-- **Cohorts as product meta** (not a custom WC product type)
+- **Page builder owns display.** All CPT display (Lesson Meta, Activity Meta, Context Library, Skills List, Lesson Activities, Lesson Objectives, Course Lessons) is built in Bricks Builder query loops + dynamic data reading ACF directly.
+- **`Chatbot_Renderer`** is the one rendered surface the plugin owns. Called from the `[leaderspath_chatbot]` shortcode, or directly from theme PHP.
+- **Vanilla JS** for the chatbot frontend — no React, no framework.
+- **SSE streaming** via curl `CURLOPT_WRITEFUNCTION` (not `wp_remote_post`, which can't stream).
+- **Cohorts as product meta** (not a custom WC product type).
 
 ---
 

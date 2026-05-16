@@ -29,7 +29,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'LEADERSPATH_VERSION', '0.1.0' );
 define( 'LEADERSPATH_PATH', plugin_dir_path( __FILE__ ) );
 define( 'LEADERSPATH_URL', plugin_dir_url( __FILE__ ) );
-define( 'LEADERSPATH_MODULES_JSON_PATH', LEADERSPATH_PATH . 'modules-json/' );
 
 /**
  * Composer autoloader.
@@ -53,7 +52,13 @@ require LEADERSPATH_PATH . 'admin/class-md-drop.php';
 require LEADERSPATH_PATH . 'includes/class-claude-api.php';
 require LEADERSPATH_PATH . 'includes/class-rest-api.php';
 require LEADERSPATH_PATH . 'includes/class-skill-processor.php';
-require LEADERSPATH_PATH . 'modules/Modules.php';
+
+/**
+ * Load renderers and the shortcode layer that wraps them.
+ */
+require LEADERSPATH_PATH . 'includes/renderers/class-post-id-helper.php';
+require LEADERSPATH_PATH . 'includes/renderers/class-chatbot-renderer.php';
+require LEADERSPATH_PATH . 'includes/class-shortcodes.php';
 
 /**
  * Initialize core functionality.
@@ -72,6 +77,7 @@ new LeadersPath\Admin\Context_Uploader();
 new LeadersPath\Admin\MD_Drop();
 new LeadersPath\Includes\REST_API();
 new LeadersPath\Includes\Skill_Processor();
+new LeadersPath\Includes\Shortcodes();
 
 /**
  * WooCommerce integration (deferred to plugins_loaded).

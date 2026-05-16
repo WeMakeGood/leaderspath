@@ -1,8 +1,8 @@
 # Data Contracts: ACF Fields → REST API
 
-> **Last Updated:** 2026-02-11
+> **Last Updated:** 2026-05-16
 
-When you add, change, or remove an ACF field, check this document to find every REST endpoint that needs updating. See `docs/ui-ux-catalog.md` for which Divi modules consume each field.
+When you add, change, or remove an ACF field, check this document to find every REST endpoint that needs updating. Frontend display is built in the page builder (Bricks query loops reading ACF directly) — see `docs/ui-ux-catalog.md` for which fields drive which surfaces.
 
 ---
 
@@ -111,4 +111,4 @@ All endpoints are under the `leaderspath/v1` namespace.
 | `GET /context/{id}/download` | GET | Login | Download context file content |
 | `GET /skills/{id}/download` | GET | Login | Download skill package metadata |
 
-**Note:** VB preview endpoints for Divi modules were removed. They will be re-added during the frontend rebuild based on each module's data requirements.
+**Note:** The plugin's frontend surface is limited to the chatbot widget (rendered by `Chatbot_Renderer` + `[leaderspath_chatbot]` shortcode) plus the REST endpoints above. All other display markup is built in the page builder reading ACF directly.

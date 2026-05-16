@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-02-17
-**Current Phase:** Web tools for skills — Add web_search + web_fetch to API requests
+**Last Updated:** 2026-05-16
+**Current Phase:** Plugin scope reduced to data + chatbot; Bricks Builder handles all CPT display
 
 ---
 
@@ -191,7 +191,44 @@ These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21
 
 ### Pending Tasks
 
-- [ ] Test Theme Builder template with multiple lesson/activity/course pages
+- [ ] Build sample Bricks templates for Activity / Lesson / Course CPTs and verify chatbot widget renders correctly inside each context
+
+---
+
+## Phase 13: Scope Reduction — Bricks owns display (2026-05-16)
+
+After validating that Bricks Builder query loops + dynamic data can build all CPT display surfaces directly from ACF, the seven non-chatbot shortcodes and renderers were removed. The plugin's responsibility is now schema, REST API, Claude API, WooCommerce cohort integration, and the chatbot widget.
+
+- [x] Delete `Activity_Meta_Renderer`, `Context_Library_Renderer`, `Course_Lessons_Renderer`, `Lesson_Activities_Renderer`, `Lesson_Meta_Renderer`, `Lesson_Objectives_Renderer`, `Skills_List_Renderer`
+- [x] Delete unused `assets/js/context-modal.js` (its only consumer was the Context Library shortcode)
+- [x] Slim `class-shortcodes.php` to only register `[leaderspath_chatbot]` and its assets
+- [x] Strip non-chatbot CSS from `assets/css/leaderspath.css`
+- [x] Update `leaderspath.php` requires (drop 7 renderer files)
+- [x] Rewrite `docs/shortcodes.md` to document just `[leaderspath_chatbot]`
+- [x] Rewrite `docs/ui-ux-catalog.md` as a surface/field reference for Bricks builders
+- [x] Update CLAUDE.md, README.md, plugin-design.md, data-contracts.md
+- [x] PHP syntax verified
+
+---
+
+## Phase 12: Migration off Divi (2026-05-03)
+
+Elegant Themes' support and stability concerns made Divi a poor long-term home for the frontend. Migrated to builder-agnostic WordPress shortcodes that work in any builder — Bricks recommended.
+
+- [x] Port all 8 module renderers to `includes/renderers/` (pure PHP, no builder deps)
+- [x] Replace `PostIdHelper` Theme Builder logic with plain `get_queried_object_id()`
+- [x] Drop `HTMLUtility::render()` use in `ChatbotRenderer` (use `sprintf` + `esc_*`)
+- [x] Add `post_id` parameter override to every renderer for cross-references
+- [x] Hand-port SCSS to plain CSS at `assets/css/leaderspath.css` (no build chain)
+- [x] Create `class-shortcodes.php` with template-mode token engine
+- [x] Register 8 shortcodes wrapping the renderers
+- [x] On-demand asset enqueueing per shortcode
+- [x] Delete `modules/`, `src/`, `modules-json/`, `scripts/`, `styles/`
+- [x] Delete `package.json`, `package-lock.json`, `webpack.config.js`, `tsconfig.json`, `node_modules/`
+- [x] Remove `LEADERSPATH_MODULES_JSON_PATH` constant + `modules/Modules.php` require
+- [x] Replace Divi docs (`divi-modules.md`, `divi5-module-architecture.md`, `wordpress-rendering-pipeline.md`) with `shortcodes.md`
+- [x] Update CLAUDE.md, README.md, plugin-design.md, data-contracts.md, ui-ux-catalog.md
+- [x] PHP syntax verified across all new files
 
 ---
 
@@ -494,6 +531,13 @@ Skills that need web access (e.g., creating-organization-dossiers) fail in Anthr
 | 2026-02-17 | References on Lesson, not Activity | References are reading materials that support the lesson as a teaching unit; activities are action-oriented sandbox experiments |
 | 2026-02-17 | Web tools always-on with skills | `web_search` + `web_fetch` auto-included when activity has skills; no per-activity toggle. Container sandbox has zero internet — server-side tools are the only web access path |
 | 2026-02-17 | No web tools for lesson Q&A | Lesson chatbot is a simple Q&A helper, no skills, no web access needed |
+| 2026-05-03 | Migrated off Divi to builder-agnostic shortcodes | Elegant Themes' support and stability problems made Divi a poor long-term home. Shortcodes work in Bricks, Gutenberg, classic editor, theme PHP — no lock-in |
+| 2026-05-03 | Renderers as the canonical layer, shortcodes as a wrapper | `includes/renderers/` is pure PHP and reusable from theme code. Shortcodes are a thin layer that adds parameter parsing and template-mode token replacement |
+| 2026-05-03 | Template-mode `{token}` syntax with `do_shortcode` first | List shortcodes accept inner content as a per-item template. Inner content runs through `do_shortcode()` before token replacement so nested shortcodes work |
+| 2026-05-03 | Hand-ported plain CSS, no build step | SCSS used only nesting and a few CSS variable resets. Hand-port produced cleaner output than compiled SCSS would; no npm dependency at any point |
+| 2026-05-03 | Drop Theme Builder post-ID resolution logic | Bricks doesn't override WP globals the way Divi's Theme Builder does. Plain `get_queried_object_id()` → `get_the_ID()` is sufficient |
+| 2026-05-16 | Plugin no longer renders CPT display markup | Bricks Builder reads ACF natively via query loops and dynamic data. Shipping our own renderers duplicated work and expanded the attack surface for no gain. The chatbot widget stays as a shortcode because it bundles JS, asset wiring, REST nonce, and dual-mode ACF detection |
+| 2026-05-16 | Keep `Chatbot_Renderer` as the canonical chatbot output | Theme code can call it directly (`\LeadersPath\Renderers\Chatbot_Renderer::render()`); the shortcode is a thin wrapper that handles attribute parsing and asset enqueueing |
 
 ---
 

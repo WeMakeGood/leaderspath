@@ -1,8 +1,8 @@
 # LeadersPath Plugin Design Document
 
-**Version:** 0.6.0
-**Last Updated:** 2026-02-17
-**Status:** Core infrastructure + WooCommerce Cohort enrollment implemented; frontend research complete, module implementation pending
+**Version:** 0.8.0
+**Last Updated:** 2026-05-16
+**Status:** Core infrastructure + WooCommerce Cohort enrollment implemented; UI layer handled by the active page builder (Bricks Builder recommended). The plugin ships one rendered surface — the chatbot widget — and exposes everything else as ACF fields and REST endpoints.
 
 ## Executive Summary
 
@@ -15,7 +15,7 @@ LeadersPath is a WordPress plugin that powers a **facilitated learning experienc
 1. **Facilitated Learning** - Lessons are taught by facilitators; activities let learners experiment
 2. **Transparency First** - Learners can always see and download the context and skills powering the AI
 3. **WordPress Native** - Uses CPTs, taxonomies, ACF, and standard WordPress patterns
-4. **Divi Integration** - Visual Builder modules for flexible page design (research complete, implementation pending)
+4. **Display delegated to the page builder** - the plugin exposes data; Bricks Builder (or another builder reading ACF directly) produces the markup. The exception is the chatbot widget, which ships as `[leaderspath_chatbot]`.
 5. **Stateless Conversations** - No persistence; page reload clears history for experimentation
 6. **Context vs Skills** - Clear separation between reference material (context) and capabilities (skills)
 7. **WooCommerce Integration** - Cohort products gate access via enrollment; graceful degradation without WC
@@ -72,14 +72,15 @@ The Design Philosophy above lists *what* the plugin does architecturally. This s
 │  └──────────────────────┘  └────────────────────────────────────┘  │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐  │
-│  │      Divi 5 Modules (research complete, build pending)       │  │
+│  │  Chatbot widget ([leaderspath_chatbot] + vanilla-JS frontend) │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────────────┤
 │  Dependencies                                                        │
-│  ┌───────────────────┐  ┌───────────────┐  ┌───────────────────┐   │
-│  │  ACF Pro          │  │  Divi 5       │  │  WooCommerce      │   │
-│  │  (Field Groups)   │  │  (Modules)    │  │  (Optional)       │   │
-│  └───────────────────┘  └───────────────┘  └───────────────────┘   │
+│  ┌───────────────────┐  ┌─────────────────┐  ┌───────────────────┐ │
+│  │  ACF Pro          │  │  Page builder   │  │  WooCommerce      │ │
+│  │  (Field Groups)   │  │  (any; Bricks   │  │  (Optional)       │ │
+│  │                   │  │  recommended)   │  │                   │ │
+│  └───────────────────┘  └─────────────────┘  └───────────────────┘ │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -334,7 +335,7 @@ Configurable in Settings > LeadersPath:
 
 All endpoints require authentication (logged in + appropriate capability).
 
-**Note:** VB preview endpoints for Divi modules were removed and will be re-added during the frontend rebuild. See `docs/ui-ux-catalog.md` for module data requirements and `docs/divi5-module-architecture.md` for the rendering strategy.
+**Note:** Display of CPT data is built in the page builder reading ACF fields directly. The chatbot is the one rendered surface the plugin owns — see `docs/shortcodes.md`.
 
 ## Security Model
 
@@ -372,9 +373,8 @@ All endpoints require authentication (logged in + appropriate capability).
 
 ```
 leaderspath/
-├── leaderspath.php              # Bootstrap, constants, autoloader
-├── composer.json                # PHP dependencies (symfony/yaml)
-├── package.json                 # Node dependencies (Divi build tools)
+├── leaderspath.php              # Bootstrap, constants
+├── composer.json                # PHP dependencies (symfony/yaml, league/commonmark)
 │
 ├── includes/
 │   ├── class-post-types.php     # CPT registration
@@ -384,29 +384,28 @@ leaderspath/
 │   ├── class-claude-api.php     # Claude API wrapper
 │   ├── class-rest-api.php       # REST endpoints
 │   ├── class-skill-processor.php # Skill validation and sync
-│   └── class-woocommerce.php    # WC integration: cohort checkbox, enrollment, access chain (loaded if WC active)
+│   ├── class-woocommerce.php    # WC integration: cohort checkbox, enrollment, access chain (loaded if WC active)
+│   ├── class-shortcodes.php     # [leaderspath_chatbot] registration + assets
+│   └── renderers/
+│       ├── class-post-id-helper.php
+│       └── class-chatbot-renderer.php
 │
 ├── admin/
 │   ├── class-admin-menu.php     # Admin menu registration + submenu ordering
 │   ├── class-settings.php       # Settings page
-│   └── class-admin-columns.php  # Custom admin columns
+│   ├── class-admin-columns.php  # Custom admin columns
+│   ├── class-context-uploader.php # File-drop import for Context Files
+│   └── class-md-drop.php        # Markdown drop for TinyMCE editors
 │
-├── modules/                     # Divi 5 PHP modules (implementation pending)
-│   └── Shared/                  # Shared traits (validated)
-│       ├── PostIdHelper.php
-│       ├── CustomCssTrait.php
-│       └── ModuleClassnamesTrait.php
-│
-├── src/                         # Divi 5 TypeScript (implementation pending)
-│   └── components/              # Empty — research complete, ready for build
+├── assets/
+│   ├── css/leaderspath.css      # Shortcode styles (loaded on demand)
+│   └── js/                      # chatbot.js + marked.js vendor
 │
 ├── docs/
 │   ├── plugin-design.md         # This file
 │   ├── cpt-schema.md            # CPT and ACF field details
-│   ├── divi-modules.md          # Module status and implementation plan
-│   ├── divi5-module-architecture.md # Divi 5 architecture reference
-│   ├── wordpress-rendering-pipeline.md # WP block rendering reference
-│   ├── ui-ux-catalog.md         # UI/UX catalog (modules, elements, CSS classes)
+│   ├── shortcodes.md            # `[leaderspath_chatbot]` reference
+│   ├── ui-ux-catalog.md         # UI/UX catalog (elements, CSS classes)
 │   ├── claude-api-integration.md # API integration guide
 │   ├── data-contracts.md        # ACF → REST endpoint mapping
 │   └── content-creation-guide.md # Content authoring guide
