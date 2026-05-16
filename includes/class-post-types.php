@@ -18,12 +18,42 @@ namespace LeadersPath\Includes;
 class Post_Types {
 
 	/**
+	 * CPT slugs that should use the classic editor, not the block editor.
+	 *
+	 * Block-editor UX is poor for these post types — they're driven by ACF
+	 * field groups and (for Context Files) plain-text/markdown content.
+	 * `show_in_rest` stays true so external consumers can still read
+	 * `/wp/v2/{rest_base}` if they want to.
+	 */
+	private const CLASSIC_EDITOR_POST_TYPES = [
+		'leaderspath_activity',
+		'leaderspath_lesson',
+		'leaderspath_course',
+		'leaderspath_context',
+		'leaderspath_skill',
+	];
+
+	/**
 	 * Initialize the class.
 	 *
 	 * @since 0.1.0
 	 */
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_post_types' ] );
+		add_filter( 'use_block_editor_for_post_type', [ $this, 'force_classic_editor' ], 10, 2 );
+	}
+
+	/**
+	 * Disable the block editor on LeadersPath CPTs.
+	 *
+	 * @param bool   $use_block_editor Whether to use the block editor.
+	 * @param string $post_type        Post type slug.
+	 */
+	public function force_classic_editor( bool $use_block_editor, string $post_type ): bool {
+		if ( in_array( $post_type, self::CLASSIC_EDITOR_POST_TYPES, true ) ) {
+			return false;
+		}
+		return $use_block_editor;
 	}
 
 	/**
