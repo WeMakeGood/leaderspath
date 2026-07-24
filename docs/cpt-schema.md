@@ -87,7 +87,8 @@ AI sandbox experiments within a facilitated Lesson.
 | `chatbot_enabled` | True/False | Enable AI sandbox for this activity |
 | `chatbot_model` | Select | Claude model (opus-4.5, sonnet, haiku) |
 | `chatbot_allow_model_switch` | True/False | Allow users to switch models |
-| `chatbot_system_prompt` | Textarea | Custom system prompt defining the AI behavior learners will experience |
+| `activity_instructions` | WYSIWYG | Learner-facing instructions. Rendered as the opening chat message and shown in the lesson stepper. **Never sent to the AI.** |
+| `chatbot_system_prompt` | Textarea | Custom system prompt defining the AI behavior learners will experience. Sent to the AI, not shown to the learner. |
 | `chatbot_context_files` | Relationship | Related Context Files |
 | `chatbot_skills` | Relationship | Related Skills |
 | `chatbot_max_tokens` | Number | Max response tokens (default: 4096) |
@@ -214,6 +215,14 @@ Cohorts are WooCommerce Simple products with the `_cohort` meta flag set to `yes
 | `cohort_start_date` | Date Picker | Cohort start date (return format: `Y-m-d`) |
 | `cohort_end_date` | Date Picker | Cohort end date (return format: `Y-m-d`) |
 | `cohort_facilitator` | User | Facilitator user (filtered to `leaderspath_facilitator` and `administrator` roles) |
+| `current_lesson` | Post Object | The lesson currently in session (single `leaderspath_lesson`, return format: `id`). Drives the "this week" badge on dashboard and lesson page. Facilitator-set. |
+| `cohort_video` | URL | Optional intro/welcome video for the cohort page. Shown when set. |
+
+> **Note:** The Cohort Settings field group currently targets `post_type == product` (all products), not only `_cohort` products. Pre-existing behavior; fields show on every product edit screen. Narrowing to `_cohort` is a separate change if desired.
+
+**Long/short description:** The cohort page's "What to expect" body uses the WC core **product description** (`post_content`); the dashboard short version uses the WC **short description** (`post_excerpt`). No ACF field — WC core fields, read natively by Bricks.
+
+**Facilitator display:** Name, bio, role, and avatar come from the linked WP **user profile** (`cohort_facilitator` → WP user), single source of truth. Role/title beyond WP defaults uses a user-meta field if needed.
 
 **Max Participants:** Uses WooCommerce stock management (Inventory tab > Stock quantity) instead of a custom ACF field. This gives us built-in "X left in stock" display, oversell prevention, and low-stock notifications for free.
 

@@ -154,11 +154,33 @@ class ACF_Fields {
 					],
 				],
 				[
+					'key'           => 'field_activity_instructions',
+					'label'         => __( 'Learner Instructions', 'leaderspath' ),
+					'name'          => 'activity_instructions',
+					'type'          => 'wysiwyg',
+					// Learner-facing, not model-facing. The plugin renders this as the
+					// opening message in the chat and the lesson stepper shows the same
+					// text. It is never sent to the AI — that is the System Prompt below.
+					'instructions'  => __( 'Shown to the learner as the opening chat message and in the lesson stepper. Tells the participant what to try in this sandbox. NOT sent to the AI — see System Prompt below for that.', 'leaderspath' ),
+					'tabs'          => 'all',
+					'toolbar'       => 'basic',
+					'media_upload'  => 0,
+					'conditional_logic' => [
+						[
+							[
+								'field'    => 'field_chatbot_enabled',
+								'operator' => '==',
+								'value'    => '1',
+							],
+						],
+					],
+				],
+				[
 					'key'           => 'field_chatbot_system_prompt',
 					'label'         => __( 'System Prompt', 'leaderspath' ),
 					'name'          => 'chatbot_system_prompt',
 					'type'          => 'textarea',
-					'instructions'  => __( 'Custom system prompt for this activity\'s AI sandbox. Defines the AI behavior learners will experience.', 'leaderspath' ),
+					'instructions'  => __( 'Custom system prompt for this activity\'s AI sandbox. Defines the AI behavior learners will experience. Sent to the AI — not shown to the learner (that is Learner Instructions above).', 'leaderspath' ),
 					'rows'          => 6,
 					'conditional_logic' => [
 						[
@@ -939,6 +961,29 @@ class ACF_Fields {
 					'return_format' => 'id',
 					'multiple'      => 0,
 					'allow_null'    => 1,
+				],
+				[
+					'key'           => 'field_cohort_current_lesson',
+					'label'         => __( 'Current Lesson (This Week)', 'leaderspath' ),
+					'name'          => 'current_lesson',
+					'type'          => 'post_object',
+					// Facilitator-set pointer to the lesson currently in session. Drives
+					// the "this week" badge on the dashboard and lesson page. Single value.
+					'instructions'  => __( 'The lesson currently in session. Drives the "this week" badge on the dashboard and lesson page. Set before each session.', 'leaderspath' ),
+					'required'      => 0,
+					'post_type'     => [ 'leaderspath_lesson' ],
+					'return_format' => 'id',
+					'multiple'      => 0,
+					'allow_null'    => 1,
+					'ui'            => 1,
+				],
+				[
+					'key'           => 'field_cohort_video',
+					'label'         => __( 'Cohort Video', 'leaderspath' ),
+					'name'          => 'cohort_video',
+					'type'          => 'url',
+					'instructions'  => __( 'Optional intro or welcome video for the cohort page (e.g. a YouTube URL). Shown when set.', 'leaderspath' ),
+					'required'      => 0,
 				],
 			],
 			'location' => [

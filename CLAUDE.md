@@ -103,6 +103,7 @@ All documentation lives in the `docs/` folder:
 | [cpt-schema.md](docs/cpt-schema.md) | Custom post types, taxonomies, ACF fields |
 | [shortcodes.md](docs/shortcodes.md) | `[leaderspath_chatbot]` reference |
 | [ui-ux-catalog.md](docs/ui-ux-catalog.md) | Surface/field reference for page-builder integration |
+| [bricks-integration.md](docs/bricks-integration.md) | **Bricks conditions, `{echo:}` function calls, `lp_*` API contract** |
 | [data-contracts.md](docs/data-contracts.md) | ACF field → REST endpoint mapping |
 | [claude-api-integration.md](docs/claude-api-integration.md) | **Claude API integration (CRITICAL)** |
 | [content-creation-guide.md](docs/content-creation-guide.md) | Content authoring guide |

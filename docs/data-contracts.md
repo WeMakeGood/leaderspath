@@ -11,6 +11,7 @@ When you add, change, or remove an ACF field, check this document to find every 
 | ACF Field | REST Endpoint | Usage |
 |-----------|--------------|-------|
 | `activity_duration` | — | Activity duration in minutes |
+| `activity_instructions` | — | Learner-facing. Rendered by the plugin as the opening chat message; Bricks shows the same field in the stepper. **Never sent to `/chat`.** |
 | `chatbot_enabled` | `POST /chat` (internal) | Gate for activity sandbox |
 | `chatbot_model` | `POST /chat` (internal) | API param |
 | `chatbot_system_prompt` | `POST /chat` (internal) | System prompt |
@@ -76,7 +77,9 @@ When you add, change, or remove an ACF field, check this document to find every 
 | `cohort_courses` | `POST /chat` (enrollment check) | Links cohort to courses for access gating |
 | `cohort_start_date` | — | Derives cohort phase (upcoming/active/completed) |
 | `cohort_end_date` | — | Derives cohort phase |
-| `cohort_facilitator` | — | Admin display |
+| `cohort_facilitator` | — | Admin display; Bricks reads linked WP user for name/bio/avatar |
+| `current_lesson` | — | "This week" badge (Bricks Element Condition compares to lesson ID); facilitator write via `[lp_current_lesson]` post-June |
+| `cohort_video` | — | Cohort page intro video (Bricks, shown when set) |
 
 **Prerequisite Aggregation:** `WooCommerce::get_cohort_prerequisites( $cohort_id )` returns a flat `array<int>` of prerequisite course IDs aggregated from the cohort's linked courses, de-duplicated and excluding courses already in the cohort.
 
