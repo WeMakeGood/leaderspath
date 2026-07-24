@@ -237,13 +237,13 @@ Use native ACF/WC dynamic data for everything that is plain field display. Reser
 
 ## The `lp_*` public API layer
 
-The `lp_*` global functions are **thin adapters**, not a second implementation. Each wraps a namespaced method and exists solely because Bricks calls by global name.
+The `lp_*` global functions are **thin adapters**, not a second implementation. Each wraps a namespaced method and exists solely because Bricks calls by global name. Implemented in `includes/bricks-functions.php`; registered in `includes/class-bricks-integration.php`. (Status: implemented 2026-07-24, verified against live cohort/course/lesson data.)
 
-| `lp_*` function | Wraps | Mechanism | Purpose |
-|-----------------|-------|-----------|---------|
-| `lp_user_is_enrolled( $cohort_id = null )` | `WooCommerce::is_user_enrolled()` | Condition (B) | Gate learner content |
-| `lp_is_last_activity( $activity_id )` | activity/lesson order lookup | `{echo:}` (A) | Right-arrow dim state |
-| `lp_enrolled_cohorts( $phase = '' )` | `WooCommerce::get_user_enrollments()` + `get_cohort_phase()` | `{echo:}` or query (A) | Phase-bucketed dashboard loops |
+| `lp_*` function | Wraps | Mechanism | Returns | Purpose |
+|-----------------|-------|-----------|---------|---------|
+| `lp_user_is_enrolled( ?int $cohort_id = null )` | `WooCommerce::is_user_enrolled()` | Condition (B) | `bool` | Gate learner content. Fails **closed**: false for logged-out, unresolvable, or non-cohort post. No sample fallback (it's a security check). Null → current queried object, which must be a cohort product. |
+| `lp_is_last_activity( ?int $activity_id = null )` | lesson `lesson_activities` order lookup | `{echo:}` (A) | `'1'`/`''` | Right-arrow dim state. Display helper — resolves current activity via `Post_Id_Helper` (incl. its sample fallback for builder previews), so it should be passed a valid activity id in real loop use. |
+| `lp_enrolled_cohorts( string $phase = '' )` | `WooCommerce::get_user_enrollments()` + `get_cohort_phase()` | PHP call → query `post__in` | `array<int>` | Phase-bucketed dashboard loops. `$phase` = ''/'active'/'upcoming'/'completed'. Call in PHP for the ID array — `{echo:}` stringifies arrays awkwardly. |
 
 Contract for these functions:
 

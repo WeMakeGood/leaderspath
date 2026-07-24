@@ -61,6 +61,14 @@ require LEADERSPATH_PATH . 'includes/renderers/class-chatbot-renderer.php';
 require LEADERSPATH_PATH . 'includes/class-shortcodes.php';
 
 /**
+ * Bricks Builder integration: global lp_* functions + condition/echo
+ * registration. Functions load unconditionally (Bricks calls them by global
+ * name); WooCommerce-dependent ones guard with class_exists at call time.
+ */
+require LEADERSPATH_PATH . 'includes/bricks-functions.php';
+require LEADERSPATH_PATH . 'includes/class-bricks-integration.php';
+
+/**
  * Initialize core functionality.
  *
  * Note: Admin_Menu must be initialized before Post_Types so the menu exists
@@ -78,6 +86,7 @@ new LeadersPath\Admin\MD_Drop();
 new LeadersPath\Includes\REST_API();
 new LeadersPath\Includes\Skill_Processor();
 new LeadersPath\Includes\Shortcodes();
+new LeadersPath\Includes\Bricks_Integration();
 
 /**
  * WooCommerce integration (deferred to plugins_loaded).
