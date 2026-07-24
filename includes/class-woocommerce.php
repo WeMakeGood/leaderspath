@@ -486,6 +486,41 @@ class WooCommerce {
 		return $prerequisites;
 	}
 
+	/**
+	 * Get all lessons belonging to a cohort, via its linked courses.
+	 *
+	 * Walks the access chain one level: cohort → cohort_courses → each course's
+	 * course_lessons. De-duplicated, order preserved (course order, then lesson
+	 * order within each course). Used to scope the "current lesson" picker and
+	 * by display surfaces that list a cohort's lessons.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param int $cohort_id WooCommerce product (cohort) ID.
+	 * @return array<int> Unique lesson post IDs.
+	 */
+	public static function get_cohort_lessons( int $cohort_id ): array {
+		$cohort_courses = get_field( 'cohort_courses', $cohort_id );
+
+		if ( ! is_array( $cohort_courses ) || empty( $cohort_courses ) ) {
+			return [];
+		}
+
+		$lessons = [];
+
+		foreach ( $cohort_courses as $course_id ) {
+			$course_lessons = get_field( 'course_lessons', $course_id );
+
+			if ( is_array( $course_lessons ) ) {
+				foreach ( $course_lessons as $lesson_id ) {
+					$lessons[] = (int) $lesson_id;
+				}
+			}
+		}
+
+		return array_values( array_unique( $lessons ) );
+	}
+
 	// -------------------------------------------------------------------------
 	// Access Chain Resolution
 	// -------------------------------------------------------------------------

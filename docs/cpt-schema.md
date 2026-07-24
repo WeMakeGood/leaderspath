@@ -215,7 +215,7 @@ Cohorts are WooCommerce Simple products with the `_cohort` meta flag set to `yes
 | `cohort_start_date` | Date Picker | Cohort start date (return format: `Y-m-d`) |
 | `cohort_end_date` | Date Picker | Cohort end date (return format: `Y-m-d`) |
 | `cohort_facilitator` | User | Facilitator user (filtered to `leaderspath_facilitator` and `administrator` roles) |
-| `current_lesson` | Post Object | The lesson currently in session (single `leaderspath_lesson`, return format: `id`). Drives the "this week" badge on dashboard and lesson page. Facilitator-set. |
+| `current_lesson` | Post Object | The lesson currently in session (single `leaderspath_lesson`, return format: `id`). Drives the "this week" badge on dashboard and lesson page. Facilitator-set. **Picker is scoped to lessons in the cohort's selected courses** (cohort → `cohort_courses` → `course_lessons`) via `acf/fields/post_object/query`; an empty result means no courses are selected yet. Helper: `WooCommerce::get_cohort_lessons()`. |
 | `cohort_video` | URL | Optional intro/welcome video for the cohort page. Shown when set. |
 
 > **Note:** The Cohort Settings field group currently targets `post_type == product` (all products), not only `_cohort` products. Pre-existing behavior; fields show on every product edit screen. Narrowing to `_cohort` is a separate change if desired.

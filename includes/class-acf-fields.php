@@ -24,6 +24,46 @@ class ACF_Fields {
 	 */
 	public function __construct() {
 		add_action( 'acf/include_fields', [ $this, 'register_field_groups' ] );
+
+		// Scope the cohort "current lesson" picker to lessons in the cohort's
+		// selected courses (cohort → cohort_courses → course_lessons), rather
+		// than every lesson in the system.
+		add_filter(
+			'acf/fields/post_object/query/key=field_cohort_current_lesson',
+			[ $this, 'filter_current_lesson_choices' ],
+			10,
+			3
+		);
+	}
+
+	/**
+	 * Restrict the cohort `current_lesson` picker to lessons belonging to the
+	 * cohort's selected courses.
+	 *
+	 * If the cohort has no courses (or its courses have no lessons), returns an
+	 * empty result set — the picker shows nothing, signalling "select courses
+	 * first" rather than silently offering every lesson.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param array      $args    WP_Query args ACF will run.
+	 * @param array      $field   The field being queried.
+	 * @param int|string $post_id The post being edited (the cohort product).
+	 * @return array Modified query args.
+	 */
+	public function filter_current_lesson_choices( array $args, array $field, $post_id ): array {
+		// $post_id may be prefixed (e.g. "product_123") in some contexts; normalize.
+		$cohort_id = is_numeric( $post_id ) ? (int) $post_id : (int) preg_replace( '/[^0-9]/', '', (string) $post_id );
+
+		$lesson_ids = $cohort_id && class_exists( WooCommerce::class )
+			? WooCommerce::get_cohort_lessons( $cohort_id )
+			: [];
+
+		// Empty set → force no matches (0 is never a valid post ID) so an
+		// unconfigured cohort shows an empty picker instead of all lessons.
+		$args['post__in'] = ! empty( $lesson_ids ) ? $lesson_ids : [ 0 ];
+
+		return $args;
 	}
 
 	/**
