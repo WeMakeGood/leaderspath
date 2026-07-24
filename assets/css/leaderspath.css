@@ -237,9 +237,27 @@
 .leaderspath_chatbot__typing {
 	display: flex;
 	align-items: center;
-	gap: 0.3em;
+	gap: 0.6em;
 	padding: 0.75em 1em;
 	margin-bottom: 0.75em;
+}
+
+.leaderspath_chatbot__typing_dots {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3em;
+	flex-shrink: 0;
+}
+
+/* Live status label: what the AI is doing (Thinking… / Running code… / etc.). */
+.leaderspath_chatbot__typing_status {
+	font-size: 0.85em;
+	color: #868e96;
+	font-style: italic;
+}
+
+.leaderspath_chatbot__typing_status:empty {
+	display: none;
 }
 
 .leaderspath_chatbot__typing_dot {

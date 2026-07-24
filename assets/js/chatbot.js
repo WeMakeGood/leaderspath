@@ -85,17 +85,45 @@
 		}
 
 		/**
-		 * Create typing indicator.
+		 * Create typing indicator with a live status label.
+		 *
+		 * The label surfaces what the AI is actually doing (thinking, running
+		 * code, reading context) while it works — turning a silent wait into
+		 * visible progress. This is on purpose for LeadersPath: showing the AI's
+		 * real activity is part of the demonstration, not just a loading state.
 		 */
 		function createTypingIndicator() {
 			var el = document.createElement( 'div' );
 			el.className = 'leaderspath_chatbot__typing';
-			el.setAttribute( 'aria-label', 'Thinking...' );
+			el.setAttribute( 'aria-label', 'Working' );
+			el.setAttribute( 'aria-live', 'polite' );
 			el.innerHTML =
+				'<span class="leaderspath_chatbot__typing_dots">' +
 				'<span class="leaderspath_chatbot__typing_dot"></span>' +
 				'<span class="leaderspath_chatbot__typing_dot"></span>' +
-				'<span class="leaderspath_chatbot__typing_dot"></span>';
+				'<span class="leaderspath_chatbot__typing_dot"></span>' +
+				'</span>' +
+				'<span class="leaderspath_chatbot__typing_status"></span>';
 			return el;
+		}
+
+		/**
+		 * Update a typing indicator's status label (e.g. "Running code…").
+		 *
+		 * @param {Element} typingEl The typing indicator element.
+		 * @param {string}  label    Status text, or '' to clear.
+		 */
+		function setTypingStatus( typingEl, label ) {
+			if ( ! typingEl ) {
+				return;
+			}
+			var statusEl = typingEl.querySelector( '.leaderspath_chatbot__typing_status' );
+			if ( statusEl ) {
+				statusEl.textContent = label || '';
+			}
+			if ( label ) {
+				typingEl.setAttribute( 'aria-label', label );
+			}
 		}
 
 		/**
@@ -441,6 +469,33 @@
 									// Extract container ID.
 									if ( data.message && data.message.container && data.message.container.id ) {
 										containerId = data.message.container.id;
+									}
+									break;
+
+								case 'content_block_start':
+									// Surface what the AI is doing while it works. A
+									// skilled activity spends most of its "wait" here:
+									// thinking, then running code (reading its skill and
+									// context files), before any text streams. Showing
+									// that turns silent dots into visible progress.
+									var blockType = data.content_block && data.content_block.type;
+									if ( blockType === 'thinking' ) {
+										setTypingStatus( typing, 'Thinking…' );
+									} else if ( blockType === 'server_tool_use' ) {
+										// The specific server tool the model invoked.
+										var toolName = data.content_block.name || '';
+										if ( toolName === 'web_search' ) {
+											setTypingStatus( typing, 'Searching the web…' );
+										} else if ( toolName === 'web_fetch' ) {
+											setTypingStatus( typing, 'Reading a web page…' );
+										} else {
+											setTypingStatus( typing, 'Running code…' );
+										}
+									} else if (
+										blockType &&
+										blockType.indexOf( 'code_execution_tool_result' ) !== -1
+									) {
+										setTypingStatus( typing, 'Reading reference material…' );
 									}
 									break;
 
