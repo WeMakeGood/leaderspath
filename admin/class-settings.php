@@ -211,9 +211,9 @@ class Settings {
 			'beta_skills'               => 'skills-2025-10-02',
 			'beta_files'                => 'files-api-2025-04-14',
 			'beta_web_tools'            => 'code-execution-web-tools-2026-02-09',
-			'tool_code_execution'       => 'code_execution_20250825',
-			'tool_web_search'           => 'web_search_20250305',
-			'tool_web_fetch'            => 'web_fetch_20250910',
+			'tool_code_execution'       => 'code_execution_20260521',
+			'tool_web_search'           => 'web_search_20260209',
+			'tool_web_fetch'            => 'web_fetch_20260209',
 		];
 	}
 
@@ -242,7 +242,7 @@ class Settings {
 		}
 
 		// Default model.
-		$valid_models = [ 'sonnet', 'haiku', 'opus-4.5' ];
+		$valid_models = [ 'sonnet', 'haiku', 'opus' ];
 		if ( isset( $input['default_model'] ) && in_array( $input['default_model'], $valid_models, true ) ) {
 			$sanitized['default_model'] = $input['default_model'];
 		} else {
@@ -411,9 +411,9 @@ class Settings {
 		$current_model = $options['default_model'] ?? 'sonnet';
 
 		$models = [
-			'sonnet'   => __( 'Sonnet (Recommended - balanced speed and capability)', 'leaderspath' ),
-			'haiku'    => __( 'Haiku (Fastest, lower cost)', 'leaderspath' ),
-			'opus-4.5' => __( 'Opus 4.5 (Most capable, higher cost)', 'leaderspath' ),
+			'sonnet' => __( 'Sonnet (Recommended - balanced speed and capability)', 'leaderspath' ),
+			'haiku'  => __( 'Haiku (Fastest, lower cost)', 'leaderspath' ),
+			'opus'   => __( 'Opus (Most capable, higher cost)', 'leaderspath' ),
 		];
 
 		?>

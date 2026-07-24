@@ -60,10 +60,12 @@ Used for chat interactions with code execution and skills enabled.
 
 | Feature | Beta Header | Tool Type |
 |---------|-------------|-----------|
-| Code Execution | `code-execution-2025-08-25` | `code_execution_20250825` |
+| Code Execution | `code-execution-2025-08-25` (now GA — header optional) | `code_execution_20260521` |
 | Skills | `skills-2025-10-02` | N/A (container param) |
 | Files API | `files-api-2025-04-14` | N/A |
-| Web Tools (dynamic filtering) | `code-execution-web-tools-2026-02-09` | `web_search_20250305`, `web_fetch_20250910` |
+| Web Tools (dynamic filtering) | `code-execution-web-tools-2026-02-09` (optional) | `web_search_20260209`, `web_fetch_20260209` |
+
+> **Updated 2026-07-24 (full API modernization pass).** Tool types moved to current versions. Two constraints from the current API: the `web_search_20260209` / `web_fetch_20260209` tools **require** `code_execution_20260120` or later declared alongside them (we use `code_execution_20260521`) — the three-tool declaration is the required pattern, not a conflict. Code execution and the current web tools are now **GA**; the beta headers remain valid opt-ins but are no longer required. **Sampling parameters (`temperature`/`top_p`/`top_k`) are removed from the API** and return HTTP 400 on current models — the plugin no longer sends them (behavior is steered by the system prompt). Model IDs resolve live via `/v1/models`, preferring bare aliases (e.g. `claude-opus-5`) over dated snapshots.
 
 ### Version Strategy
 
@@ -79,9 +81,9 @@ Beta headers and tool types include dates and may change. To handle this:
 'claude_beta_skills'         => 'skills-2025-10-02',
 'claude_beta_files'          => 'files-api-2025-04-14',
 'claude_beta_web_tools'      => 'code-execution-web-tools-2026-02-09',
-'claude_tool_code_execution' => 'code_execution_20250825',
-'claude_tool_web_search'     => 'web_search_20250305',
-'claude_tool_web_fetch'      => 'web_fetch_20250910',
+'claude_tool_code_execution' => 'code_execution_20260521',
+'claude_tool_web_search'     => 'web_search_20260209',
+'claude_tool_web_fetch'      => 'web_fetch_20260209',
 ```
 
 ### Checking for Updates
@@ -99,7 +101,7 @@ The Anthropic API documentation should be checked periodically:
 
 ```json
 {
-  "model": "claude-sonnet-4-5-20250929",
+  "model": "claude-sonnet-5",
   "max_tokens": 4096,
   "container": {
     "skills": [
@@ -118,15 +120,15 @@ The Anthropic API documentation should be checked periodically:
   ],
   "tools": [
     {
-      "type": "code_execution_20250825",
+      "type": "code_execution_20260521",
       "name": "code_execution"
     },
     {
-      "type": "web_search_20250305",
+      "type": "web_search_20260209",
       "name": "web_search"
     },
     {
-      "type": "web_fetch_20250910",
+      "type": "web_fetch_20260209",
       "name": "web_fetch"
     }
   ]
@@ -358,7 +360,7 @@ The actual skill instructions and scripts are NOT in the system prompt - they're
   "content": [
     {"type": "text", "text": "Response text..."}
   ],
-  "model": "claude-sonnet-4-5-20250929",
+  "model": "claude-sonnet-5",
   "stop_reason": "end_turn",
   "usage": {
     "input_tokens": 1500,

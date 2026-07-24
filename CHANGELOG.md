@@ -34,6 +34,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (plus an inert `<template>` used to restore instructions on reset).
 - Plugin version bumped to 0.7.0 (was stale at 0.1.0; aligns with existing
   `@since 0.7.0` markers in the codebase).
+- **Claude API modernization.** Removed `temperature` (and the obsolete
+  "opus needs temperature=1" logic) from all four request builders — sampling
+  parameters are removed from the current API and 400 on current models;
+  behavior is steered by the system prompt. Refreshed stale fallback model IDs
+  to current bare aliases (`claude-sonnet-5`, `claude-haiku-4-5`,
+  `claude-opus-4-8`); model resolution now prefers bare aliases over dated
+  snapshots. Updated default tool types to `code_execution_20260521`,
+  `web_search_20260209`, `web_fetch_20260209` (the current web tools require
+  code-exec `20260120`+ alongside them). Corrected stale `opus-4.5` model slug
+  to `opus` in settings.
+
+### Removed
+- ACF `chatbot_temperature` / `lesson_chatbot_temperature` fields — the API no
+  longer accepts sampling parameters.
+
+### Migration
+- Sites with saved settings retain old tool-type strings in `wp_options`
+  (`leaderspath_options`). This release ships current defaults, but existing
+  rows must be migrated. Dev/test site migrated in place (old values backed up
+  to `leaderspath_options_backup_premodernize`). **Production deploy:** update
+  the three tool-type settings, or re-save the Settings page. Code execution
+  and web tools are now GA — the beta headers remain valid but are optional.
 
 ### Notes
 - **Deploy prerequisite:** Bricks > Settings > Custom code must enable

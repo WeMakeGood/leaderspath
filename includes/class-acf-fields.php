@@ -298,26 +298,6 @@ class ACF_Fields {
 						],
 					],
 				],
-				[
-					'key'           => 'field_chatbot_temperature',
-					'label'         => __( 'Temperature', 'leaderspath' ),
-					'name'          => 'chatbot_temperature',
-					'type'          => 'number',
-					'instructions'  => __( 'Controls randomness. Lower is more focused, higher is more creative.', 'leaderspath' ),
-					'default_value' => 0.7,
-					'min'           => 0,
-					'max'           => 1,
-					'step'          => 0.1,
-					'conditional_logic' => [
-						[
-							[
-								'field'    => 'field_chatbot_enabled',
-								'operator' => '==',
-								'value'    => '1',
-							],
-						],
-					],
-				],
 			],
 			'location' => [
 				[
@@ -639,26 +619,6 @@ class ACF_Fields {
 					'min'           => 256,
 					'max'           => 16384,
 					'step'          => 256,
-					'conditional_logic' => [
-						[
-							[
-								'field'    => 'field_lesson_chatbot_enabled',
-								'operator' => '==',
-								'value'    => '1',
-							],
-						],
-					],
-				],
-				[
-					'key'           => 'field_lesson_chatbot_temperature',
-					'label'         => __( 'Temperature', 'leaderspath' ),
-					'name'          => 'lesson_chatbot_temperature',
-					'type'          => 'number',
-					'instructions'  => __( 'Controls randomness. Lower is more focused, higher is more creative.', 'leaderspath' ),
-					'default_value' => 0.7,
-					'min'           => 0,
-					'max'           => 1,
-					'step'          => 0.1,
 					'conditional_logic' => [
 						[
 							[

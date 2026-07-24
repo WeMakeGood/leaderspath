@@ -85,14 +85,13 @@ AI sandbox experiments within a facilitated Lesson.
 | Field Name | Field Type | Description |
 |------------|------------|-------------|
 | `chatbot_enabled` | True/False | Enable AI sandbox for this activity |
-| `chatbot_model` | Select | Claude model (opus-4.5, sonnet, haiku) |
+| `chatbot_model` | Select | Claude model (sonnet, haiku, opus) — resolved live to current IDs |
 | `chatbot_allow_model_switch` | True/False | Allow users to switch models |
 | `activity_instructions` | WYSIWYG | Learner-facing instructions. Rendered as the opening chat message and shown in the lesson stepper. **Never sent to the AI.** |
 | `chatbot_system_prompt` | Textarea | Custom system prompt defining the AI behavior learners will experience. Sent to the AI, not shown to the learner. |
 | `chatbot_context_files` | Relationship | Related Context Files |
 | `chatbot_skills` | Relationship | Related Skills |
 | `chatbot_max_tokens` | Number | Max response tokens (default: 4096) |
-| `chatbot_temperature` | Number | Temperature setting (0-1, default: 0.7) |
 
 ---
 
@@ -162,7 +161,6 @@ Optional lesson-level Q&A assistant (different from activity sandboxes).
 | `lesson_chatbot_system_prompt` | Textarea | System prompt (should be helpful assistant) |
 | `lesson_chatbot_context_files` | Relationship | Context files for Q&A |
 | `lesson_chatbot_max_tokens` | Number | Max response tokens |
-| `lesson_chatbot_temperature` | Number | Temperature setting |
 
 ---
 

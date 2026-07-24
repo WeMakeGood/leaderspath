@@ -106,7 +106,7 @@ class Claude_API {
 	 * @param int         $activity_id    Activity ID for context.
 	 * @param string      $message      User message.
 	 * @param array       $history      Previous conversation messages.
-	 * @param string      $model        Model slug (sonnet, haiku, opus-4.5).
+	 * @param string      $model        Model slug (sonnet, haiku, opus).
 	 * @param string|null $container_id Container ID for session continuity.
 	 * @return array|WP_Error Response data or error.
 	 */
@@ -135,8 +135,7 @@ class Claude_API {
 		$messages = $this->build_messages( $message, $history );
 
 		// Get model settings.
-		$max_tokens  = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: 4096 );
-		$temperature = (float) ( get_field( 'chatbot_temperature', $activity_id ) ?? 0.7 );
+		$max_tokens = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: 4096 );
 
 		// Get skills for this activity (with valid Anthropic IDs).
 		$skills_for_api = $this->get_skills_for_api( $activity_id );
@@ -177,12 +176,6 @@ class Claude_API {
 					'name' => 'web_fetch',
 				],
 			];
-		}
-
-		// Only include temperature if not using extended thinking (opus).
-		// Extended thinking requires temperature to be 1.
-		if ( strpos( $model_id, 'opus' ) === false ) {
-			$body['temperature'] = $temperature;
 		}
 
 		// Log request if debug mode is enabled.
@@ -287,7 +280,7 @@ class Claude_API {
 	 * @param int         $lesson_id    Lesson ID for context.
 	 * @param string      $message      User message.
 	 * @param array       $history      Previous conversation messages.
-	 * @param string      $model        Model slug (sonnet, haiku, opus-4.5).
+	 * @param string      $model        Model slug (sonnet, haiku, opus).
 	 * @param string|null $container_id Container ID for session continuity.
 	 * @return array|WP_Error Response data or error.
 	 */
@@ -316,8 +309,7 @@ class Claude_API {
 		$messages = $this->build_messages( $message, $history );
 
 		// Get model settings from lesson.
-		$max_tokens  = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: 4096 );
-		$temperature = (float) ( get_field( 'lesson_chatbot_temperature', $lesson_id ) ?? 0.7 );
+		$max_tokens = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: 4096 );
 
 		// Build request body.
 		$body = [
@@ -326,11 +318,6 @@ class Claude_API {
 			'system'      => $system_prompt,
 			'messages'    => $messages,
 		];
-
-		// Only include temperature if not using extended thinking (opus).
-		if ( strpos( $model_id, 'opus' ) === false ) {
-			$body['temperature'] = $temperature;
-		}
 
 		// Log request if debug mode is enabled.
 		$this->maybe_log( 'Lesson Q&A Request', $body );
@@ -425,7 +412,7 @@ class Claude_API {
 	 * @param int         $activity_id  Activity ID for context.
 	 * @param string      $message      User message.
 	 * @param array       $history      Previous conversation messages.
-	 * @param string      $model        Model slug (sonnet, haiku, opus-4.5).
+	 * @param string      $model        Model slug (sonnet, haiku, opus).
 	 * @param string|null $container_id Container ID for session continuity.
 	 * @return WP_Error|null Null on success, WP_Error on pre-stream failure.
 	 */
@@ -454,8 +441,7 @@ class Claude_API {
 		$messages = $this->build_messages( $message, $history );
 
 		// Get model settings.
-		$max_tokens  = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: 4096 );
-		$temperature = (float) ( get_field( 'chatbot_temperature', $activity_id ) ?? 0.7 );
+		$max_tokens = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: 4096 );
 
 		// Get skills for this activity.
 		$skills_for_api = $this->get_skills_for_api( $activity_id );
@@ -498,11 +484,6 @@ class Claude_API {
 			];
 		}
 
-		// Only include temperature if not using extended thinking (opus).
-		if ( strpos( $model_id, 'opus' ) === false ) {
-			$body['temperature'] = $temperature;
-		}
-
 		$this->maybe_log( 'Stream Request', $body );
 
 		// Build headers with beta features if skills are used.
@@ -538,7 +519,7 @@ class Claude_API {
 	 * @param int    $lesson_id Lesson ID for context.
 	 * @param string $message   User message.
 	 * @param array  $history   Previous conversation messages.
-	 * @param string $model     Model slug (sonnet, haiku, opus-4.5).
+	 * @param string $model     Model slug (sonnet, haiku, opus).
 	 * @return WP_Error|null Null on success, WP_Error on pre-stream failure.
 	 */
 	public function stream_lesson_message( int $lesson_id, string $message, array $history = [], string $model = 'sonnet' ): ?WP_Error {
@@ -566,8 +547,7 @@ class Claude_API {
 		$messages = $this->build_messages( $message, $history );
 
 		// Get model settings from lesson.
-		$max_tokens  = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: 4096 );
-		$temperature = (float) ( get_field( 'lesson_chatbot_temperature', $lesson_id ) ?? 0.7 );
+		$max_tokens = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: 4096 );
 
 		// Build request body.
 		$body = [
@@ -577,11 +557,6 @@ class Claude_API {
 			'messages'   => $messages,
 			'stream'     => true,
 		];
-
-		// Only include temperature if not using extended thinking (opus).
-		if ( strpos( $model_id, 'opus' ) === false ) {
-			$body['temperature'] = $temperature;
-		}
 
 		$this->maybe_log( 'Stream Lesson Request', $body );
 
@@ -987,15 +962,15 @@ class Claude_API {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string $slug Model slug (e.g., 'sonnet', 'haiku', 'opus-4.5').
+	 * @param string $slug Model slug (e.g., 'sonnet', 'haiku', 'opus').
 	 * @return string|WP_Error Model ID or error.
 	 */
 	private function resolve_model_id( string $slug ) {
-		// Normalize the slug.
-		$slug = strtolower( trim( $slug ) );
-
-		// Map opus-4.5 to opus.
-		$family = str_replace( '-4.5', '', $slug );
+		// Normalize the slug. Accept bare family slugs (sonnet/haiku/opus) and
+		// tolerate any legacy version-suffixed form (e.g. opus-4.5) by reducing
+		// to the family prefix.
+		$slug   = strtolower( trim( $slug ) );
+		$family = preg_replace( '/-[0-9.]+$/', '', $slug );
 
 		if ( ! isset( self::MODEL_FAMILIES[ $family ] ) ) {
 			return new WP_Error(
@@ -1012,9 +987,9 @@ class Claude_API {
 		if ( is_wp_error( $models ) ) {
 			// Fallback to known model IDs if we can't fetch the list.
 			$fallbacks = [
-				'sonnet' => 'claude-sonnet-4-20250514',
-				'haiku'  => 'claude-haiku-4-20250514',
-				'opus'   => 'claude-opus-4-5-20251101',
+				'sonnet' => 'claude-sonnet-5',
+				'haiku'  => 'claude-haiku-4-5',
+				'opus'   => 'claude-opus-4-8',
 			];
 			return $fallbacks[ $family ] ?? $fallbacks['sonnet'];
 		}
@@ -1032,14 +1007,28 @@ class Claude_API {
 		if ( empty( $matches ) ) {
 			// No matches found, use fallback.
 			$fallbacks = [
-				'sonnet' => 'claude-sonnet-4-20250514',
-				'haiku'  => 'claude-haiku-4-20250514',
-				'opus'   => 'claude-opus-4-5-20251101',
+				'sonnet' => 'claude-sonnet-5',
+				'haiku'  => 'claude-haiku-4-5',
+				'opus'   => 'claude-opus-4-8',
 			];
 			return $fallbacks[ $family ] ?? $fallbacks['sonnet'];
 		}
 
-		// Return the most recent model (they're typically sorted or we can sort by date in ID).
+		// Prefer a bare current alias (e.g. "claude-opus-4-8") over dated
+		// snapshots (e.g. "claude-opus-4-5-20251101") when the API offers one —
+		// bare IDs are the recommended, always-current aliases. Fall back to the
+		// lexically-last dated ID only when no bare alias exists.
+		$bare = array_values(
+			array_filter(
+				$matches,
+				static fn( string $id ): bool => ! preg_match( '/-\d{8}$/', $id )
+			)
+		);
+		if ( ! empty( $bare ) ) {
+			sort( $bare );
+			return end( $bare );
+		}
+
 		sort( $matches );
 		return end( $matches );
 	}

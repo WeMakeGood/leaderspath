@@ -18,7 +18,6 @@ When you add, change, or remove an ACF field, check this document to find every 
 | `chatbot_context_files` | `POST /chat` (internal) | Context injection |
 | `chatbot_skills` | `POST /chat` (internal) | Container skills array |
 | `chatbot_max_tokens` | `POST /chat` (internal) | API param |
-| `chatbot_temperature` | `POST /chat` (internal) | API param |
 | `chatbot_allow_model_switch` | `POST /chat` (internal) | Model selector toggle |
 
 ## Lesson (`leaderspath_lesson`)
@@ -37,7 +36,6 @@ When you add, change, or remove an ACF field, check this document to find every 
 | `lesson_chatbot_system_prompt` | `POST /chat` (internal) | System prompt |
 | `lesson_chatbot_context_files` | `POST /chat` (internal) | Context injection |
 | `lesson_chatbot_max_tokens` | `POST /chat` (internal) | API param |
-| `lesson_chatbot_temperature` | `POST /chat` (internal) | API param |
 
 ## Course (`leaderspath_course`)
 
