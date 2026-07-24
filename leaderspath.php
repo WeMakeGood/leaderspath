@@ -7,7 +7,7 @@
  * Author URI:      https://wemakegood.org
  * Text Domain:     leaderspath
  * Domain Path:     /languages
- * Version:         0.1.0
+ * Version:         0.7.0
  * Requires PHP:    8.2
  * Requires at least: 6.4
  * License:         GPL-2.0-or-later
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Plugin constants.
  */
-define( 'LEADERSPATH_VERSION', '0.1.0' );
+define( 'LEADERSPATH_VERSION', '0.7.0' );
 define( 'LEADERSPATH_PATH', plugin_dir_path( __FILE__ ) );
 define( 'LEADERSPATH_URL', plugin_dir_url( __FILE__ ) );
 

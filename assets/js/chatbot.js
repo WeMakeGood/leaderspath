@@ -33,6 +33,15 @@
 	 * Initialize a single chatbot instance.
 	 */
 	function initChatbot( container ) {
+		// Init-once guard. On the lesson page every activity's chatbot is
+		// pre-rendered and stays in the DOM; the MutationObserver may call this
+		// again when a hidden section is revealed. Never re-initialize — that
+		// would discard the activity's persisted conversation. Hidden != reset.
+		if ( container.dataset.lpInit === '1' ) {
+			return;
+		}
+		container.dataset.lpInit = '1';
+
 		var messagesEl = container.querySelector( '.leaderspath_chatbot__messages' );
 		var inputEl = container.querySelector( '.leaderspath_chatbot__input' );
 		var sendBtn = container.querySelector( '.leaderspath_chatbot__send' );
@@ -41,6 +50,12 @@
 
 		var postId = container.dataset.postId;
 		var postType = container.dataset.postType;
+
+		// Capture the empty-state text now, so reset() can rebuild it after
+		// clearing the messages container.
+		var emptyText = ( emptyState && emptyState.textContent )
+			? emptyState.textContent.trim()
+			: 'Send a message to start the conversation.';
 
 		// State.
 		var history = [];
@@ -662,6 +677,53 @@
 			}
 		}
 
+		/**
+		 * Reset this activity's conversation to a clean slate.
+		 *
+		 * Scoped to THIS instance only — other activities' conversations are
+		 * untouched. Clears history + container ID (so the API session restarts),
+		 * removes rendered messages, and re-shows the opening instructions and
+		 * empty state. Not a page reload; no fetch.
+		 */
+		function resetChat() {
+			if ( isSending && abortController ) {
+				abortController.abort();
+			}
+
+			history = [];
+			containerId = null;
+			isSending = false;
+
+			// Clear all rendered messages.
+			messagesEl.innerHTML = '';
+
+			// Re-render the opening instructions from the stashed template, if any.
+			var tpl = container.querySelector( '.leaderspath_chatbot__instructions_tpl' );
+			if ( tpl && tpl.content ) {
+				messagesEl.appendChild( tpl.content.cloneNode( true ) );
+			}
+
+			// Restore the empty state (re-create it — original node was cleared).
+			emptyState = document.createElement( 'div' );
+			emptyState.className = 'leaderspath_chatbot__empty';
+			var emptyMsg = document.createElement( 'p' );
+			emptyMsg.textContent = emptyText;
+			emptyState.appendChild( emptyMsg );
+			messagesEl.appendChild( emptyState );
+
+			// Re-enable input.
+			setSending( false );
+			inputEl.value = '';
+			inputEl.style.height = 'auto';
+			scrollToBottom();
+		}
+
+		// Expose this instance's reset for the marker's reset control (a Bricks
+		// element outside the widget) via window.LeadersPath.resetActivity(id).
+		if ( postType === 'activity' && container.dataset.activityId ) {
+			registerInstance( container.dataset.activityId, { reset: resetChat } );
+		}
+
 		// Event listeners.
 		sendBtn.addEventListener( 'click', sendMessage );
 
@@ -673,7 +735,59 @@
 		} );
 
 		inputEl.addEventListener( 'input', autoGrow );
+
+		// A reset button rendered inside the widget (optional) also works.
+		var innerReset = container.querySelector( '.leaderspath_chatbot__reset' );
+		if ( innerReset ) {
+			innerReset.addEventListener( 'click', resetChat );
+		}
 	}
+
+	// Registry of initialized activity instances, keyed by activity id, so the
+	// lesson-page marker's reset control can reach a specific chatbot.
+	var instances = {};
+
+	function registerInstance( activityId, api ) {
+		instances[ String( activityId ) ] = api;
+	}
+
+	/**
+	 * Public API for the lesson page (Bricks marker elements call these).
+	 */
+	var publicApi = {
+		/**
+		 * Reset a specific activity's conversation. Called by the Activity
+		 * Marker's "Start over" control.
+		 *
+		 * @param {number|string} activityId
+		 * @return {boolean} true if an instance was found and reset.
+		 */
+		resetActivity: function ( activityId ) {
+			var inst = instances[ String( activityId ) ];
+			if ( inst && typeof inst.reset === 'function' ) {
+				inst.reset();
+				return true;
+			}
+			return false;
+		},
+
+		/**
+		 * Ensure the chatbot for a given container/activity is initialized.
+		 * Safe to call repeatedly (init-once guarded).
+		 *
+		 * @param {Element} container
+		 */
+		ensureInit: function ( container ) {
+			if ( container ) {
+				initChatbot( container );
+			}
+		},
+	};
+
+	// Merge onto any existing namespace (config object shares window.LeadersPath* ).
+	window.LeadersPath = window.LeadersPath || {};
+	window.LeadersPath.resetActivity = publicApi.resetActivity;
+	window.LeadersPath.ensureInit = publicApi.ensureInit;
 
 	/**
 	 * Initialize all chatbot instances on the page.
@@ -683,6 +797,52 @@
 			'.leaderspath_chatbot__container'
 		);
 		containers.forEach( initChatbot );
+
+		observeLessonWorkspace();
+	}
+
+	/**
+	 * Lesson page: watch the workspace for activity sections becoming active,
+	 * and initialize that section's chatbot the FIRST time it is shown.
+	 *
+	 * Init-once only: revealing a previously-hidden section must not reset its
+	 * conversation. A section is considered active when it gains the `is-active`
+	 * class (added by the Bricks Interaction). The workspace opts in by carrying
+	 * a `data-lp-workspace` attribute (set in the Bricks template).
+	 */
+	function observeLessonWorkspace() {
+		if ( typeof MutationObserver === 'undefined' ) {
+			return;
+		}
+
+		var workspace = document.querySelector( '[data-lp-workspace]' );
+		if ( ! workspace ) {
+			return; // Not a lesson page — nothing to observe.
+		}
+
+		var observer = new MutationObserver( function ( mutations ) {
+			for ( var i = 0; i < mutations.length; i++ ) {
+				var target = mutations[ i ].target;
+				if (
+					target.nodeType === 1 &&
+					target.classList &&
+					target.classList.contains( 'is-active' )
+				) {
+					var containerEl = target.querySelector(
+						'.leaderspath_chatbot__container'
+					);
+					if ( containerEl ) {
+						initChatbot( containerEl ); // init-once guarded
+					}
+				}
+			}
+		} );
+
+		observer.observe( workspace, {
+			subtree: true,
+			attributes: true,
+			attributeFilter: [ 'class' ],
+		} );
 	}
 
 	// Initialize when DOM is ready.

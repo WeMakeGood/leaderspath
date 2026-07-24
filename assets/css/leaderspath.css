@@ -263,6 +263,27 @@
 	animation-delay: 0s;
 }
 
+/* Learner-facing opening instructions — the framing message for the activity.
+   Rendered by the plugin as the first item in the message log; not from the AI.
+   Dashed treatment distinguishes it from user/assistant bubbles. */
+.leaderspath_chatbot__instructions {
+	padding: 0.75em 1em;
+	margin-bottom: 0.75em;
+	border: 1px dashed #ced4da;
+	border-radius: 4px;
+	background: #f8f9fa;
+	color: #495057;
+	line-height: 1.6;
+}
+
+.leaderspath_chatbot__instructions > *:first-child {
+	margin-top: 0;
+}
+
+.leaderspath_chatbot__instructions > *:last-child {
+	margin-bottom: 0;
+}
+
 .leaderspath_chatbot__empty {
 	display: flex;
 	align-items: center;

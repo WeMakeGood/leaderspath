@@ -39,7 +39,8 @@ class Chatbot_Renderer {
 	 *     post_id:int,
 	 *     post_type:string,
 	 *     allow_model_switch:bool,
-	 *     default_model:string
+	 *     default_model:string,
+	 *     instructions:string
 	 * }|array{}
 	 */
 	public static function get_data( int $override = 0 ): array {
@@ -52,6 +53,9 @@ class Chatbot_Renderer {
 				'post_type'          => 'activity',
 				'allow_model_switch' => $enabled && (bool) get_field( 'chatbot_allow_model_switch', $activity_id ),
 				'default_model'      => $enabled ? ( (string) get_field( 'chatbot_model', $activity_id ) ?: 'sonnet' ) : 'sonnet',
+				// Learner-facing opening instructions (WYSIWYG). Rendered as the
+				// first message in the chat; NOT sent to the AI. Empty for lessons.
+				'instructions'       => $enabled ? (string) get_field( 'activity_instructions', $activity_id ) : '',
 			];
 		}
 
@@ -64,6 +68,7 @@ class Chatbot_Renderer {
 				'post_type'          => 'lesson',
 				'allow_model_switch' => false,
 				'default_model'      => $enabled ? ( (string) get_field( 'lesson_chatbot_model', $lesson_id ) ?: 'sonnet' ) : 'sonnet',
+				'instructions'       => '',
 			];
 		}
 
@@ -80,10 +85,32 @@ class Chatbot_Renderer {
 			);
 		}
 
+		// Learner-facing opening instructions, rendered as the first message.
+		// Only for activities with instructions set. wp_kses_post: it's WYSIWYG.
+		$instructions      = isset( $data['instructions'] ) ? (string) $data['instructions'] : '';
+		$instructions_html = '';
+		if ( '' !== trim( $instructions ) ) {
+			$instructions_html = sprintf(
+				'<div class="leaderspath_chatbot__instructions" role="note">%s</div>',
+				wp_kses_post( $instructions )
+			);
+		}
+
 		$parts .= sprintf(
-			'<div class="leaderspath_chatbot__messages" role="log" aria-live="polite"><div class="leaderspath_chatbot__empty"><p>%s</p></div></div>',
+			'<div class="leaderspath_chatbot__messages" role="log" aria-live="polite">%s<div class="leaderspath_chatbot__empty"><p>%s</p></div></div>',
+			$instructions_html,
 			esc_html( $options['empty_text'] )
 		);
+
+		// Stash the instructions markup so the reset control can re-render the
+		// opening message client-side without a round trip. Inert until cloned.
+		$instructions_template = '';
+		if ( '' !== $instructions_html ) {
+			$instructions_template = sprintf(
+				'<template class="leaderspath_chatbot__instructions_tpl">%s</template>',
+				$instructions_html
+			);
+		}
 
 		$input_area_parts = '';
 
@@ -127,11 +154,20 @@ class Chatbot_Renderer {
 			$input_area_parts
 		);
 
+		// data-activity-id lets the lesson-page MutationObserver and the marker's
+		// reset control (window.LeadersPath.resetActivity) target this instance.
+		// Only meaningful for activities; empty for lessons.
+		$activity_id_attr = ( 'activity' === $data['post_type'] )
+			? sprintf( ' data-activity-id="%d"', $data['post_id'] )
+			: '';
+
 		return sprintf(
-			'<div class="leaderspath_chatbot"><div class="leaderspath_chatbot__container" data-post-id="%d" data-post-type="%s">%s</div></div>',
+			'<div class="leaderspath_chatbot"><div class="leaderspath_chatbot__container" data-post-id="%d" data-post-type="%s"%s>%s%s</div></div>',
 			$data['post_id'],
 			esc_attr( $data['post_type'] ),
-			$parts
+			$activity_id_attr,
+			$parts,
+			$instructions_template
 		);
 	}
 }
