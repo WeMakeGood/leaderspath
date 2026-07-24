@@ -283,6 +283,101 @@ class Claude_API {
 	}
 
 	/**
+	 * Pre-warm the prompt cache for an activity or lesson.
+	 *
+	 * Sends a max_tokens:0 request whose prefix (tools + cached system prompt)
+	 * byte-matches what the real chat request will send, so the API writes the
+	 * cache during idle time (chat focus). The learner's first real message then
+	 * reads the ~28K-token context from cache instead of processing it cold.
+	 *
+	 * max_tokens:0 runs prefill only — it writes the cache but does NOT provision
+	 * a container (no generation → no code execution), and bills zero output
+	 * tokens. Non-streaming (max_tokens:0 is rejected with stream:true).
+	 * Best-effort: returns false on any problem; a cold first message still works.
+	 *
+	 * @since 0.12.0
+	 *
+	 * @param int $activity_id Activity ID, or 0 for a lesson.
+	 * @param int $lesson_id   Lesson ID, or 0 for an activity.
+	 * @return bool True if the cache write was accepted.
+	 */
+	public function warm_cache( int $activity_id = 0, int $lesson_id = 0 ): bool {
+		$api_key = \LeadersPath\Admin\Settings::get_api_key();
+		if ( empty( $api_key ) ) {
+			return false;
+		}
+
+		if ( $activity_id ) {
+			$model         = (string) ( get_field( 'chatbot_model', $activity_id ) ?: \LeadersPath\Admin\Settings::get_default_model() );
+			$system_prompt = $this->build_system_prompt( $activity_id );
+			$skills        = $this->get_skills_for_api( $activity_id );
+		} elseif ( $lesson_id ) {
+			$model         = (string) ( get_field( 'lesson_chatbot_model', $lesson_id ) ?: \LeadersPath\Admin\Settings::get_default_model() );
+			$system_prompt = $this->build_lesson_system_prompt( $lesson_id );
+			$skills        = []; // Lesson Q&A has no skills/container.
+		} else {
+			return false;
+		}
+
+		$model_id = $this->resolve_model_id( $model );
+		if ( is_wp_error( $model_id ) ) {
+			return false;
+		}
+
+		// Prefix must byte-match the real request for the cache to be reused:
+		// same tools + same cached system block, in the same order.
+		$body = [
+			'model'      => $model_id,
+			'max_tokens' => 0,
+			'system'     => $this->cacheable_system( $system_prompt ),
+			'messages'   => [ [ 'role' => 'user', 'content' => 'warmup' ] ],
+		];
+
+		$headers = [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => $api_key,
+			'anthropic-version' => self::API_VERSION,
+		];
+
+		if ( ! empty( $skills ) ) {
+			$body['container'] = [ 'skills' => $skills ];
+
+			$tool_type     = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
+			$web_tools     = \LeadersPath\Admin\Settings::get_web_tool_types();
+			$body['tools'] = [
+				[ 'type' => $tool_type, 'name' => 'code_execution' ],
+				[ 'type' => $web_tools['web_search'], 'name' => 'web_search' ],
+				[ 'type' => $web_tools['web_fetch'], 'name' => 'web_fetch' ],
+			];
+
+			$headers['anthropic-beta'] = \LeadersPath\Admin\Settings::get_beta_headers( [ 'code_execution', 'skills', 'web_tools' ] );
+		}
+
+		$response = wp_remote_post(
+			self::API_URL . '/messages',
+			[
+				'timeout' => 30,
+				'headers' => $headers,
+				'body'    => wp_json_encode( $body ),
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->maybe_log( 'Warm Error', [ 'message' => $response->get_error_message() ] );
+			return false;
+		}
+
+		$status = wp_remote_retrieve_response_code( $response );
+		$data   = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		$created = is_array( $data ) ? ( $data['usage']['cache_creation_input_tokens'] ?? 0 ) : 0;
+		$read    = is_array( $data ) ? ( $data['usage']['cache_read_input_tokens'] ?? 0 ) : 0;
+		$this->maybe_log( 'Warm', "status={$status} cache_created={$created} cache_read={$read}" );
+
+		return $status < 400;
+	}
+
+	/**
 	 * Send a message to Claude for lesson Q&A chatbot.
 	 *
 	 * Similar to send_message but configured for lesson-level Q&A assistance.

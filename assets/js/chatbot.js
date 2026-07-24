@@ -24,6 +24,7 @@
 	var config = window.LeadersPathChatbot || {};
 	var restUrl = config.restUrl || '/wp-json/leaderspath/v1/chat';
 	var restStreamUrl = config.restStreamUrl || '';
+	var restWarmUrl = config.restWarmUrl || '';
 	var nonce = config.nonce || '';
 
 	// Feature detection: streaming requires ReadableStream and a stream endpoint.
@@ -758,8 +759,39 @@
 			registerInstance( container.dataset.activityId, { reset: resetChat } );
 		}
 
+		// Cache pre-warm: on first focus of the input (before the first message),
+		// fire a fire-and-forget request that writes the prompt cache during the
+		// learner's "reading/thinking" time, so the first real message is a cache
+		// hit instead of processing ~28K tokens of context cold. Once per instance.
+		var warmSent = false;
+		function warmCache() {
+			if ( warmSent || ! restWarmUrl ) {
+				return;
+			}
+			warmSent = true;
+
+			var warmBody = {};
+			if ( postType === 'activity' ) {
+				warmBody.activity_id = parseInt( postId, 10 );
+			} else {
+				warmBody.lesson_id = parseInt( postId, 10 );
+			}
+
+			// Fire-and-forget: failures are harmless (a cold first message still
+			// works). keepalive lets it survive a quick navigation.
+			fetch( restWarmUrl, {
+				method: 'POST',
+				headers: buildHeaders(),
+				credentials: 'same-origin',
+				body: JSON.stringify( warmBody ),
+				keepalive: true,
+			} ).catch( function () {} );
+		}
+
 		// Event listeners.
 		sendBtn.addEventListener( 'click', sendMessage );
+
+		inputEl.addEventListener( 'focus', warmCache );
 
 		inputEl.addEventListener( 'keydown', function ( e ) {
 			if ( e.key === 'Enter' && ! e.shiftKey ) {

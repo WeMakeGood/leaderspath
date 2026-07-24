@@ -151,6 +151,7 @@ class Shortcodes {
 				[
 					'restUrl'       => rest_url( 'leaderspath/v1/chat' ),
 					'restStreamUrl' => rest_url( 'leaderspath/v1/chat/stream' ),
+					'restWarmUrl'   => rest_url( 'leaderspath/v1/chat/warm' ),
 					'nonce'         => wp_create_nonce( 'wp_rest' ),
 				]
 			);

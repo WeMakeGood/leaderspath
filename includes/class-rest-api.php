@@ -69,6 +69,21 @@ class REST_API {
 			]
 		);
 
+		// Cache pre-warm endpoint. Fired when a learner focuses the chat (before
+		// their first message) to write the prompt cache during idle time, so the
+		// real first message is a cache hit instead of processing ~28K tokens of
+		// context cold. Fire-and-forget from the client.
+		register_rest_route(
+			self::NAMESPACE,
+			'/chat/warm',
+			[
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'handle_warm' ],
+				'permission_callback' => [ $this, 'check_chat_permission' ],
+				'args'                => $this->get_chat_args(),
+			]
+		);
+
 		// Download context file content.
 		register_rest_route(
 			self::NAMESPACE,
@@ -464,6 +479,33 @@ class REST_API {
 
 		// Activity sandbox mode.
 		return $this->handle_activity_chat( (int) $activity_id, $message, $history, $model );
+	}
+
+	/**
+	 * Handle a cache pre-warm request.
+	 *
+	 * Fired on chat focus, before the first message. Writes the prompt cache for
+	 * this activity/lesson (a max_tokens:0 request) so the real first message is
+	 * a cache hit. Best-effort: any failure is swallowed — a cold first message
+	 * still works, just slower.
+	 *
+	 * @since 0.12.0
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response Always 200 with a small status body.
+	 */
+	public function handle_warm( WP_REST_Request $request ): WP_REST_Response {
+		$activity_id = (int) $request->get_param( 'activity_id' );
+		$lesson_id   = (int) $request->get_param( 'lesson_id' );
+
+		if ( ! $activity_id && ! $lesson_id ) {
+			return new WP_REST_Response( [ 'warmed' => false, 'reason' => 'no_context' ], 200 );
+		}
+
+		$claude = new Claude_API();
+		$warmed = $claude->warm_cache( $activity_id, $lesson_id );
+
+		return new WP_REST_Response( [ 'warmed' => $warmed ], 200 );
 	}
 
 	/**

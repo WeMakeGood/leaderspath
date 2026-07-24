@@ -29,6 +29,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `WooCommerce::get_cohort_lessons()` — resolves a cohort's lessons via its
   courses (cohort → `cohort_courses` → `course_lessons`).
 
+### Added
+- **Cache pre-warm on chat focus.** When a learner focuses the chat input
+  (before their first message), the client fires a fire-and-forget
+  `POST /chat/warm` request. The server sends a `max_tokens: 0` request that
+  writes the prompt cache during idle "reading/thinking" time, so the first
+  real message is a cache hit instead of processing ~28K tokens of context
+  cold. Verified end-to-end: warm → real request reads 28,834 tokens from
+  cache. New `Claude_API::warm_cache()` + `/chat/warm` REST route. Fires once
+  per widget; failures are harmless (a cold first message still works).
+  Note: `max_tokens: 0` writes the cache but does not provision a container
+  (prefill only, no code execution) — container cold-start is a separate,
+  deferred optimization.
+
 ### Changed
 - **Prompt caching (Phase B — latency).** The system prompt (custom prompt +
   context files + skill descriptions — stable per activity/lesson, no volatile
