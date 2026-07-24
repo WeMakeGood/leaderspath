@@ -91,7 +91,7 @@ AI sandbox experiments within a facilitated Lesson.
 | `chatbot_system_prompt` | Textarea | Custom system prompt defining the AI behavior learners will experience. Sent to the AI, not shown to the learner. |
 | `chatbot_context_files` | Relationship | Related Context Files |
 | `chatbot_skills` | Relationship | Related Skills |
-| `chatbot_max_tokens` | Number | Max response tokens (default: 4096) |
+| `chatbot_max_tokens` | Number | Per-response token ceiling (default: 16384, max 64000). Streaming auto-continues if hit, so long outputs still finish. |
 
 ---
 

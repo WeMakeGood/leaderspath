@@ -283,10 +283,10 @@ class ACF_Fields {
 					'label'         => __( 'Max Response Tokens', 'leaderspath' ),
 					'name'          => 'chatbot_max_tokens',
 					'type'          => 'number',
-					'instructions'  => __( 'Maximum tokens in Claude\'s response.', 'leaderspath' ),
-					'default_value' => 4096,
+					'instructions'  => __( 'Per-response token ceiling. Responses stream and auto-continue if they hit this, so long outputs (e.g. reports) still finish — this is a budget, not a hard wall. Default 16384. Higher = fewer continuation round-trips.', 'leaderspath' ),
+					'default_value' => 16384,
 					'min'           => 256,
-					'max'           => 16384,
+					'max'           => 64000,
 					'step'          => 256,
 					'conditional_logic' => [
 						[
@@ -614,10 +614,10 @@ class ACF_Fields {
 					'label'         => __( 'Max Response Tokens', 'leaderspath' ),
 					'name'          => 'lesson_chatbot_max_tokens',
 					'type'          => 'number',
-					'instructions'  => __( 'Maximum tokens in Claude\'s response.', 'leaderspath' ),
-					'default_value' => 4096,
+					'instructions'  => __( 'Per-response token ceiling. Responses stream and auto-continue if they hit this, so long outputs still finish — this is a budget, not a hard wall. Default 16384.', 'leaderspath' ),
+					'default_value' => 16384,
 					'min'           => 256,
-					'max'           => 16384,
+					'max'           => 64000,
 					'step'          => 256,
 					'conditional_logic' => [
 						[

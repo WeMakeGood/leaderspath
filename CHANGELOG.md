@@ -30,6 +30,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   courses (cohort → `cohort_courses` → `course_lessons`).
 
 ### Changed
+- **Response length + truncation.** Default `max_tokens` raised 4096 → 16384
+  (new `DEFAULT_MAX_TOKENS`; ACF field default + max raised, max now 64000).
+  The **streaming path now auto-continues when a response hits `max_tokens`**
+  (previously only `pause_turn` continued) — long outputs like meeting reports
+  finish seamlessly instead of truncating mid-sentence. Continuation appends
+  the partial assistant turn and reuses the warm container; capped at 5
+  continuations; guarded against empty-content continuation. Non-streaming
+  path unchanged (streaming is the live surface).
+- Added a `Container: reusing/provisioning` debug log line so container reuse
+  (warm vs cold start) is visible with debug mode on. Reuse was already wired
+  end-to-end; this makes it observable. Note: the slow first response on a
+  skilled activity is inherent container provisioning + skill load, not the
+  skill upload (that is cached once at save time).
 - Chatbot renderer emits `data-activity-id` and the opening-instructions block
   (plus an inert `<template>` used to restore instructions on reset).
 - Plugin version bumped to 0.7.0 (was stale at 0.1.0; aligns with existing

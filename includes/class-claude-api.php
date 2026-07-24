@@ -64,6 +64,18 @@ class Claude_API {
 	private const MAX_SKILLS_PER_REQUEST = 8;
 
 	/**
+	 * Default max output tokens when an activity/lesson has none configured.
+	 *
+	 * Responses stream, so we can afford a generous ceiling (streaming supports
+	 * up to 128K). 16384 comfortably fits long outputs like meeting reports;
+	 * the stream also auto-continues on a max_tokens cut, so this is a starting
+	 * budget, not a hard wall.
+	 *
+	 * @var int
+	 */
+	private const DEFAULT_MAX_TOKENS = 16384;
+
+	/**
 	 * Maximum number of retry attempts for transient API errors.
 	 *
 	 * @var int
@@ -135,7 +147,7 @@ class Claude_API {
 		$messages = $this->build_messages( $message, $history );
 
 		// Get model settings.
-		$max_tokens = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: 4096 );
+		$max_tokens = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: self::DEFAULT_MAX_TOKENS );
 
 		// Get skills for this activity (with valid Anthropic IDs).
 		$skills_for_api = $this->get_skills_for_api( $activity_id );
@@ -309,7 +321,7 @@ class Claude_API {
 		$messages = $this->build_messages( $message, $history );
 
 		// Get model settings from lesson.
-		$max_tokens = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: 4096 );
+		$max_tokens = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: self::DEFAULT_MAX_TOKENS );
 
 		// Build request body.
 		$body = [
@@ -441,7 +453,7 @@ class Claude_API {
 		$messages = $this->build_messages( $message, $history );
 
 		// Get model settings.
-		$max_tokens = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: 4096 );
+		$max_tokens = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: self::DEFAULT_MAX_TOKENS );
 
 		// Get skills for this activity.
 		$skills_for_api = $this->get_skills_for_api( $activity_id );
@@ -464,6 +476,13 @@ class Claude_API {
 			}
 
 			$body['container'] = $container;
+
+			// Container reuse visibility: a reused (warm) container skips the slow
+			// provisioning + skill-load on the first message. Fresh = slow start.
+			$this->maybe_log(
+				'Container',
+				$container_id ? "reusing {$container_id} (warm)" : 'provisioning fresh (cold start — expected on first message)'
+			);
 
 			// Add code execution + web tools when skills are present.
 			$tool_type     = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
@@ -547,7 +566,7 @@ class Claude_API {
 		$messages = $this->build_messages( $message, $history );
 
 		// Get model settings from lesson.
-		$max_tokens = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: 4096 );
+		$max_tokens = (int) ( get_field( 'lesson_chatbot_max_tokens', $lesson_id ) ?: self::DEFAULT_MAX_TOKENS );
 
 		// Build request body.
 		$body = [
@@ -768,11 +787,25 @@ class Claude_API {
 			// Successful response — reset retry counter.
 			$retry_attempt = 0;
 
-			// Check for pause_turn — need continuation.
-			if ( 'pause_turn' === $state['stop_reason'] && $continuation < $max_continuations ) {
+			// Continue the response when it was cut short. Two cases:
+			//   pause_turn  — the model paused for a long tool/code operation.
+			//   max_tokens  — the model hit the output-token ceiling mid-response
+			//                 (e.g. a long meeting report). Appending the partial
+			//                 and continuing lets it finish seamlessly instead of
+			//                 truncating. The container is reused (warm, skills
+			//                 already loaded), so the continuation needs only
+			//                 model/max_tokens/messages/stream + container id.
+			$needs_continuation = in_array( $state['stop_reason'], [ 'pause_turn', 'max_tokens' ], true );
+
+			// Only continue when there is partial assistant content to build on —
+			// appending an empty assistant turn would be rejected by the API.
+			$has_partial = ! empty( array_values( $state['content'] ) );
+
+			if ( $needs_continuation && $has_partial && $continuation < $max_continuations ) {
 				$continuation++;
 
-				$this->send_sse_event( 'pause', wp_json_encode( [ 'continuation' => $continuation ] ) );
+				$event_name = ( 'max_tokens' === $state['stop_reason'] ) ? 'continue' : 'pause';
+				$this->send_sse_event( $event_name, wp_json_encode( [ 'continuation' => $continuation ] ) );
 
 				// Add assistant's partial response to messages for continuation.
 				$messages[]       = [
@@ -793,7 +826,10 @@ class Claude_API {
 					$body['container'] = [ 'id' => $state['container_id'] ];
 				}
 
-				$this->maybe_log( 'Stream Continuation', [ 'attempt' => $continuation ] );
+				$this->maybe_log( 'Stream Continuation', [
+					'attempt'     => $continuation,
+					'stop_reason' => $state['stop_reason'],
+				] );
 				continue;
 			}
 
@@ -1383,7 +1419,7 @@ class Claude_API {
 			// Continue the conversation.
 			$body = [
 				'model'     => $this->resolve_model_id( $model ),
-				'max_tokens' => (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: 4096 ),
+				'max_tokens' => (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: self::DEFAULT_MAX_TOKENS ),
 				'messages'  => $messages,
 			];
 
