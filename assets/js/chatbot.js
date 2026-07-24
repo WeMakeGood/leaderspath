@@ -339,6 +339,24 @@
 			// Create stop button.
 			var stopBtn = createStopButton();
 
+			// Keep the typing indicator up until the first character actually
+			// arrives, then swap it for the message bubble. A connected-but-silent
+			// stream (container provisioning, code execution before any text) would
+			// otherwise show an empty bubble that looks stalled/broken.
+			var bubbleShown = false;
+			function showBubble() {
+				if ( bubbleShown ) {
+					return;
+				}
+				bubbleShown = true;
+				if ( typing.parentNode ) {
+					typing.parentNode.removeChild( typing );
+				}
+				messagesEl.appendChild( assistantEl );
+				messagesEl.appendChild( stopBtn );
+				scrollToBottom();
+			}
+
 			fetch( restStreamUrl, {
 				method: 'POST',
 				headers: buildHeaders(),
@@ -347,19 +365,16 @@
 				signal: abortController.signal,
 			} )
 				.then( function ( response ) {
-					// Remove typing indicator.
-					if ( typing.parentNode ) {
-						typing.parentNode.removeChild( typing );
-					}
-
 					if ( ! response.ok ) {
+						// Remove the typing indicator before surfacing the error.
+						if ( typing.parentNode ) {
+							typing.parentNode.removeChild( typing );
+						}
 						throw new Error( 'Server error (HTTP ' + response.status + '). Please try again.' );
 					}
 
-					// Show the assistant message element and stop button.
-					messagesEl.appendChild( assistantEl );
-					messagesEl.appendChild( stopBtn );
-					scrollToBottom();
+					// Do NOT show the bubble yet — wait for the first text delta
+					// (see showBubble). The typing indicator stays up meanwhile.
 
 					var reader = response.body.getReader();
 					var decoder = new TextDecoder();
@@ -410,6 +425,10 @@
 							// or data payloads with error structure (from Anthropic).
 							if ( evt.event === 'error' || ( data.type === 'error' && data.error ) ) {
 								removeRetryIndicator();
+								// Clear the typing indicator if still up (error before any text).
+								if ( typing.parentNode ) {
+									typing.parentNode.removeChild( typing );
+								}
 								var errMsg = ( data.error && data.error.message ) || data.message || 'An error occurred.';
 								messagesEl.appendChild( createError( errMsg ) );
 								messagesEl.appendChild( createTryAgainButton() );
@@ -427,6 +446,9 @@
 								case 'content_block_delta':
 									// Append text delta and schedule throttled markdown render.
 									if ( data.delta && data.delta.type === 'text_delta' && data.delta.text ) {
+										// First real character: swap the typing indicator
+										// for the message bubble now.
+										showBubble();
 										accumulatedText += data.delta.text;
 										scheduleRender();
 									}
@@ -444,6 +466,9 @@
 
 									// Only record and render if there's actual content.
 									if ( rawContent ) {
+										// Ensure the bubble is shown (e.g. if content
+										// arrived via content_raw without a text delta).
+										showBubble();
 										history.push( {
 											role: 'assistant',
 											content: rawContent,
@@ -465,16 +490,25 @@
 						stopBtn.parentNode.removeChild( stopBtn );
 					}
 
-					// If no done event was received, still finalize.
-					if ( accumulatedText && ! contentEl.innerHTML ) {
-						history.push( {
-							role: 'assistant',
-							content: accumulatedText,
-						} );
-						renderNow();
+					// If no done event was received but text arrived, finalize.
+					if ( accumulatedText ) {
+						showBubble();
+						if ( ! contentEl.innerHTML ) {
+							history.push( {
+								role: 'assistant',
+								content: accumulatedText,
+							} );
+							renderNow();
+						}
 					}
 
-					// Remove empty assistant bubble (error case).
+					// Stream ended with no content at all: clear the typing
+					// indicator so it doesn't hang (bubble was never shown).
+					if ( ! accumulatedText && typing.parentNode ) {
+						typing.parentNode.removeChild( typing );
+					}
+
+					// Defensive: remove the bubble if it was shown but stayed empty.
 					if ( ! accumulatedText && assistantEl.parentNode ) {
 						assistantEl.parentNode.removeChild( assistantEl );
 					}
