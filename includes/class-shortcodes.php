@@ -85,7 +85,16 @@ class Shortcodes {
 			$options['empty_text'] = $atts['empty_text'];
 		}
 
-		$html = Chatbot_Renderer::render( $options, (int) $atts['post_id'] );
+		// Resolve the post to render. Prefer the explicit `post_id`; fall back to
+		// `id` as an alias (matches the design-doc `id="{activity_id}"` convention
+		// and how Bricks routes the loop item's ID into the shortcode). A numeric
+		// `id` is treated as the post; a non-numeric `id` stays a cosmetic wrapper.
+		$post_id = (int) $atts['post_id'];
+		if ( 0 === $post_id && is_numeric( $atts['id'] ) ) {
+			$post_id = (int) $atts['id'];
+		}
+
+		$html = Chatbot_Renderer::render( $options, $post_id );
 		if ( '' === $html ) {
 			return '';
 		}
@@ -115,8 +124,11 @@ class Shortcodes {
 			$classes[] = (string) $atts['class'];
 		}
 
+		// Only emit a cosmetic wrapper id when `id` is non-numeric. A numeric
+		// `id` is consumed as the post to render (see chatbot()), not an HTML id —
+		// and numeric ids repeated across loop items would be invalid anyway.
 		$id_attr = '';
-		if ( ! empty( $atts['id'] ) ) {
+		if ( ! empty( $atts['id'] ) && ! is_numeric( $atts['id'] ) ) {
 			$id_attr = sprintf( ' id="%s"', esc_attr( (string) $atts['id'] ) );
 		}
 

@@ -44,7 +44,10 @@ class Chatbot_Renderer {
 	 * }|array{}
 	 */
 	public static function get_data( int $override = 0 ): array {
-		$activity_id = Post_Id_Helper::get_post_id( 'activity', $override );
+		// No sample-post fallback: the live chatbot must render the specific
+		// activity/lesson requested, never a stand-in. A miss returns [] so the
+		// widget renders nothing instead of the wrong AI configuration.
+		$activity_id = Post_Id_Helper::get_post_id( 'activity', $override, false );
 		if ( $activity_id ) {
 			$enabled = (bool) get_field( 'chatbot_enabled', $activity_id );
 			return [
@@ -59,7 +62,7 @@ class Chatbot_Renderer {
 			];
 		}
 
-		$lesson_id = Post_Id_Helper::get_post_id( 'lesson', $override );
+		$lesson_id = Post_Id_Helper::get_post_id( 'lesson', $override, false );
 		if ( $lesson_id ) {
 			$enabled = (bool) get_field( 'lesson_chatbot_enabled', $lesson_id );
 			return [
