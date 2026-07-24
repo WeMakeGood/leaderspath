@@ -30,6 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   courses (cohort → `cohort_courses` → `course_lessons`).
 
 ### Changed
+- **Prompt caching (Phase B — latency).** The system prompt (custom prompt +
+  context files + skill descriptions — stable per activity/lesson, no volatile
+  content) is now sent as a cacheable content-block array with a
+  `cache_control: {type: ephemeral}` breakpoint. The (often large, ~16K-token)
+  context is re-processed only on the first request of a session; later
+  messages and auto-continuations read it from cache — much faster and ~10%
+  cost. Added a `Cache: read/created/uncached_input` debug log so the hit rate
+  is measurable. Note: this speeds up turns 2+; the first message of a session
+  still writes the cache (and provisions the container). Phase A (context as
+  container files, for a fast first message) is a planned follow-up.
 - **Response length + truncation.** Default `max_tokens` raised 4096 → 16384
   (new `DEFAULT_MAX_TOKENS`; ACF field default + max raised, max now 64000).
   The **streaming path now auto-continues when a response hits `max_tokens`**

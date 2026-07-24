@@ -156,7 +156,7 @@ class Claude_API {
 		$body = [
 			'model'       => $model_id,
 			'max_tokens'  => $max_tokens,
-			'system'      => $system_prompt,
+			'system'      => $this->cacheable_system( $system_prompt ),
 			'messages'    => $messages,
 		];
 
@@ -327,7 +327,7 @@ class Claude_API {
 		$body = [
 			'model'       => $model_id,
 			'max_tokens'  => $max_tokens,
-			'system'      => $system_prompt,
+			'system'      => $this->cacheable_system( $system_prompt ),
 			'messages'    => $messages,
 		];
 
@@ -462,7 +462,7 @@ class Claude_API {
 		$body = [
 			'model'      => $model_id,
 			'max_tokens' => $max_tokens,
-			'system'     => $system_prompt,
+			'system'     => $this->cacheable_system( $system_prompt ),
 			'messages'   => $messages,
 			'stream'     => true,
 		];
@@ -572,7 +572,7 @@ class Claude_API {
 		$body = [
 			'model'      => $model_id,
 			'max_tokens' => $max_tokens,
-			'system'     => $system_prompt,
+			'system'     => $this->cacheable_system( $system_prompt ),
 			'messages'   => $messages,
 			'stream'     => true,
 		];
@@ -929,6 +929,20 @@ class Claude_API {
 				if ( isset( $msg['usage']['input_tokens'] ) ) {
 					$state['usage']['input_tokens'] = $msg['usage']['input_tokens'];
 				}
+				// Prompt-cache visibility: cache_read > 0 means the context prefix
+				// was served from cache (fast); cache_creation > 0 means this
+				// request wrote it (the slow first message). Lets us measure the
+				// caching win in debug mode.
+				$cache_read     = $msg['usage']['cache_read_input_tokens'] ?? null;
+				$cache_creation = $msg['usage']['cache_creation_input_tokens'] ?? null;
+				if ( null !== $cache_read || null !== $cache_creation ) {
+					$this->maybe_log( 'Cache', sprintf(
+						'read=%d created=%d uncached_input=%d',
+						(int) $cache_read,
+						(int) $cache_creation,
+						(int) ( $msg['usage']['input_tokens'] ?? 0 )
+					) );
+				}
 				break;
 
 			case 'content_block_start':
@@ -1236,6 +1250,32 @@ class Claude_API {
 		$system_prompt = apply_filters( 'leaderspath_chatbot_system_prompt', implode( '', $parts ), $activity_id );
 
 		return $system_prompt;
+	}
+
+	/**
+	 * Wrap a system prompt string as a cached content-block array.
+	 *
+	 * The LeadersPath system prompt is stable per activity/lesson (custom prompt
+	 * + context files + skill descriptions — no per-request/volatile content), so
+	 * it is an ideal prompt-cache prefix. Caching it means the model re-processes
+	 * the (often large) context only on the first request of a session; every
+	 * later message and every auto-continuation reads it from cache (~10% cost,
+	 * far faster to process). Render order is tools -> system -> messages, so a
+	 * breakpoint here also caches the tools that precede it.
+	 *
+	 * @since 0.12.0
+	 *
+	 * @param string $system_prompt The assembled system prompt.
+	 * @return array<int, array<string, mixed>> System content blocks with a cache breakpoint.
+	 */
+	private function cacheable_system( string $system_prompt ): array {
+		return [
+			[
+				'type'          => 'text',
+				'text'          => $system_prompt,
+				'cache_control' => [ 'type' => 'ephemeral' ],
+			],
+		];
 	}
 
 	/**
@@ -1583,10 +1623,16 @@ class Claude_API {
 			return;
 		}
 
-		// Sanitize sensitive data.
+		// Sanitize sensitive data. `system` may be a string (legacy) or a
+		// cacheable content-block array (see cacheable_system()); truncate the
+		// text either way so logs stay readable.
 		if ( is_array( $data ) && isset( $data['system'] ) ) {
-			// Truncate system prompt in logs.
-			$data['system'] = substr( $data['system'], 0, 500 ) . '...';
+			if ( is_string( $data['system'] ) ) {
+				$data['system'] = substr( $data['system'], 0, 500 ) . '...';
+			} elseif ( is_array( $data['system'] ) ) {
+				$text            = $data['system'][0]['text'] ?? '';
+				$data['system']  = '[cached] ' . substr( (string) $text, 0, 500 ) . '...';
+			}
 		}
 
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
