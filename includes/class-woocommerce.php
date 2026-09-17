@@ -2,12 +2,18 @@
 /**
  * WooCommerce integration for LeadersPath.
  *
- * Handles Cohort product checkbox, enrollment management,
- * and access gating for the content chain:
- * Cohort (WC product) → Course(s) → Lessons → Activities.
+ * Handles the Cohort *product* — the reusable catalog offering (e.g. "Core
+ * Cohort Package") sellable to any number of organizations — and translates
+ * WooCommerce order events into calls to Enrollment::create_cohort() /
+ * Enrollment::set_cohort_payment_status(). This class is one *caller* of
+ * that operation, not its implementation — see class-enrollment.php and
+ * docs/TASKS.md Phase 14 ("cohort creation as a first-class, multi-caller
+ * operation") for the full rationale. A cohort *instance* (facilitator,
+ * dates, roster, payment status) lives on the `leaderspath_cohort` CPT, not
+ * here — see Post_Types::register_cohort().
  *
- * Cohorts are Simple products with a "_cohort" meta flag, following the
- * same pattern as WooCommerce's built-in "Virtual" and "Downloadable"
+ * Cohort products are Simple products with a "_cohort" meta flag, following
+ * the same pattern as WooCommerce's built-in "Virtual" and "Downloadable"
  * checkboxes and the wc-donation-platform's "Donation" checkbox.
  *
  * @package LeadersPath
@@ -24,15 +30,6 @@ namespace LeadersPath\Includes;
  * @since 0.4.0
  */
 class WooCommerce {
-
-	/**
-	 * User meta key for enrollment tracking.
-	 *
-	 * Stores an array of cohort product IDs the user is enrolled in.
-	 *
-	 * @var string
-	 */
-	public const ENROLLMENT_META_KEY = 'leaderspath_enrollments';
 
 	/**
 	 * Product meta key for cohort flag.
@@ -57,10 +54,19 @@ class WooCommerce {
 		// Rewrite stock availability text for cohort products.
 		add_filter( 'woocommerce_get_availability_text', [ $this, 'cohort_availability_text' ], 10, 2 );
 
-		// Enrollment on order status changes.
-		add_action( 'woocommerce_order_status_completed', [ $this, 'handle_order_completed' ] );
-		add_action( 'woocommerce_order_status_refunded', [ $this, 'handle_order_refunded' ] );
-		add_action( 'woocommerce_order_status_cancelled', [ $this, 'handle_order_cancelled' ] );
+		// Cohort instance creation happens on real commitment (e.g. an
+		// on-hold PO/invoice order), not on completion — see docs/TASKS.md
+		// Phase 14, "Creation trigger and payment status." `on-hold` is
+		// WooCommerce's own native "awaiting payment confirmation" status,
+		// used by manual/PO/invoice payment methods; `processing` covers
+		// gateways that skip on-hold entirely for immediate payment.
+		add_action( 'woocommerce_order_status_on_hold', [ $this, 'handle_order_commitment' ] );
+		add_action( 'woocommerce_order_status_processing', [ $this, 'handle_order_commitment' ] );
+
+		// Ongoing payment-status sync as the order progresses — the
+		// repeatable half of the two-event boundary. Deliberately does NOT
+		// touch access/enrollment; see handle_order_refunded()'s docblock.
+		add_action( 'woocommerce_order_status_changed', [ $this, 'handle_order_status_changed' ], 10, 4 );
 	}
 
 	// -------------------------------------------------------------------------
@@ -192,485 +198,161 @@ class WooCommerce {
 		<?php
 	}
 
-	/**
-	 * Get the cohort phase based on start and end dates.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $product_id WooCommerce product ID.
-	 * @return string One of 'upcoming', 'active', or 'completed'.
-	 */
-	public static function get_cohort_phase( int $product_id ): string {
-		$start_date = get_field( 'cohort_start_date', $product_id );
-		$end_date   = get_field( 'cohort_end_date', $product_id );
-		$today      = current_time( 'Y-m-d' );
-
-		if ( ! empty( $start_date ) && $today < $start_date ) {
-			return 'upcoming';
-		}
-
-		if ( ! empty( $end_date ) && $today > $end_date ) {
-			return 'completed';
-		}
-
-		return 'active';
-	}
-
 	// -------------------------------------------------------------------------
-	// Enrollment System
+	// Order → Cohort Instance Translation
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Handle order completion — enroll user in cohort(s).
+	 * Handle an order reflecting real commitment — create the cohort instance.
 	 *
-	 * @since 0.4.0
+	 * Fires on `on-hold` (WooCommerce's native "awaiting payment
+	 * confirmation" status — how manual/PO/invoice payment methods hold an
+	 * order) or `processing` (gateways that clear payment immediately, e.g.
+	 * card/Stripe). Either way, this is "the org committed to this," not
+	 * "payment cleared" — see docs/TASKS.md Phase 14, "Creation trigger and
+	 * payment status." One cohort-package per order is enforced at the
+	 * product level (WooCommerce's native "Sold Individually" checkbox — see
+	 * docs/TASKS.md, no plugin code involved), so this only ever expects one
+	 * cohort-package line item.
 	 *
-	 * @param int $order_id WooCommerce order ID.
-	 */
-	public function handle_order_completed( int $order_id ): void {
-		$order = wc_get_order( $order_id );
-
-		if ( ! $order ) {
-			return;
-		}
-
-		$user_id = $order->get_customer_id();
-		if ( 0 === $user_id ) {
-			return; // Guest checkout — no enrollment.
-		}
-
-		foreach ( $order->get_items() as $item ) {
-			$product = $item->get_product();
-			if ( $product && self::is_cohort_product( $product->get_id() ) ) {
-				self::enroll_user( $user_id, $product->get_id() );
-			}
-		}
-	}
-
-	/**
-	 * Handle order refund — unenroll user from cohort(s).
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $order_id WooCommerce order ID.
-	 */
-	public function handle_order_refunded( int $order_id ): void {
-		$this->unenroll_order_cohorts( $order_id );
-	}
-
-	/**
-	 * Handle order cancellation — unenroll user from cohort(s).
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $order_id WooCommerce order ID.
-	 */
-	public function handle_order_cancelled( int $order_id ): void {
-		$this->unenroll_order_cohorts( $order_id );
-	}
-
-	/**
-	 * Unenroll a user from all cohorts in an order.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $order_id WooCommerce order ID.
-	 */
-	private function unenroll_order_cohorts( int $order_id ): void {
-		$order = wc_get_order( $order_id );
-
-		if ( ! $order ) {
-			return;
-		}
-
-		$user_id = $order->get_customer_id();
-		if ( 0 === $user_id ) {
-			return;
-		}
-
-		foreach ( $order->get_items() as $item ) {
-			$product = $item->get_product();
-			if ( $product && self::is_cohort_product( $product->get_id() ) ) {
-				self::unenroll_user( $user_id, $product->get_id() );
-			}
-		}
-	}
-
-	/**
-	 * Enroll a user in a cohort.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $user_id   WordPress user ID.
-	 * @param int $cohort_id WooCommerce product (cohort) ID.
-	 * @return bool True on success.
-	 */
-	public static function enroll_user( int $user_id, int $cohort_id ): bool {
-		$enrollments = get_user_meta( $user_id, self::ENROLLMENT_META_KEY, true );
-
-		if ( ! is_array( $enrollments ) ) {
-			$enrollments = [];
-		}
-
-		// Already enrolled.
-		if ( in_array( $cohort_id, $enrollments, true ) ) {
-			return true;
-		}
-
-		$enrollments[] = $cohort_id;
-		update_user_meta( $user_id, self::ENROLLMENT_META_KEY, $enrollments );
-		update_user_meta( $user_id, "leaderspath_enrollment_{$cohort_id}_date", current_time( 'mysql' ) );
-
-		// Grant student role if user doesn't have it.
-		$user = get_userdata( $user_id );
-		if ( $user && ! in_array( 'leaderspath_student', $user->roles, true ) ) {
-			$user->add_role( 'leaderspath_student' );
-		}
-
-		/**
-		 * Fires after a user is enrolled in a cohort.
-		 *
-		 * @since 0.4.0
-		 *
-		 * @param int $user_id   WordPress user ID.
-		 * @param int $cohort_id WooCommerce product (cohort) ID.
-		 */
-		do_action( 'leaderspath_user_enrolled', $user_id, $cohort_id );
-
-		return true;
-	}
-
-	/**
-	 * Unenroll a user from a cohort.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $user_id   WordPress user ID.
-	 * @param int $cohort_id WooCommerce product (cohort) ID.
-	 * @return bool True on success.
-	 */
-	public static function unenroll_user( int $user_id, int $cohort_id ): bool {
-		$enrollments = get_user_meta( $user_id, self::ENROLLMENT_META_KEY, true );
-
-		if ( ! is_array( $enrollments ) ) {
-			return true; // Nothing to remove.
-		}
-
-		$key = array_search( $cohort_id, $enrollments, true );
-		if ( false === $key ) {
-			return true; // Not enrolled.
-		}
-
-		unset( $enrollments[ $key ] );
-		$enrollments = array_values( $enrollments ); // Re-index.
-
-		if ( empty( $enrollments ) ) {
-			delete_user_meta( $user_id, self::ENROLLMENT_META_KEY );
-		} else {
-			update_user_meta( $user_id, self::ENROLLMENT_META_KEY, $enrollments );
-		}
-
-		delete_user_meta( $user_id, "leaderspath_enrollment_{$cohort_id}_date" );
-
-		/**
-		 * Fires after a user is unenrolled from a cohort.
-		 *
-		 * @since 0.4.0
-		 *
-		 * @param int $user_id   WordPress user ID.
-		 * @param int $cohort_id WooCommerce product (cohort) ID.
-		 */
-		do_action( 'leaderspath_user_unenrolled', $user_id, $cohort_id );
-
-		return true;
-	}
-
-	/**
-	 * Check if a user is enrolled in a specific cohort.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $user_id   WordPress user ID.
-	 * @param int $cohort_id WooCommerce product (cohort) ID.
-	 * @return bool True if enrolled.
-	 */
-	public static function is_user_enrolled( int $user_id, int $cohort_id ): bool {
-		$enrollments = get_user_meta( $user_id, self::ENROLLMENT_META_KEY, true );
-
-		if ( ! is_array( $enrollments ) ) {
-			return false;
-		}
-
-		return in_array( $cohort_id, $enrollments, true );
-	}
-
-	/**
-	 * Get all cohort IDs a user is enrolled in.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $user_id WordPress user ID.
-	 * @return array<int> Array of cohort product IDs.
-	 */
-	public static function get_user_enrollments( int $user_id ): array {
-		$enrollments = get_user_meta( $user_id, self::ENROLLMENT_META_KEY, true );
-
-		if ( ! is_array( $enrollments ) ) {
-			return [];
-		}
-
-		return array_map( 'intval', $enrollments );
-	}
-
-	/**
-	 * Get all users enrolled in a specific cohort.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $cohort_id WooCommerce product (cohort) ID.
-	 * @return array<int> Array of user IDs.
-	 */
-	public static function get_cohort_enrollees( int $cohort_id ): array {
-		$users = get_users( [
-			'meta_key'     => self::ENROLLMENT_META_KEY,
-			'meta_value'   => sprintf( '"%d"', $cohort_id ),
-			'meta_compare' => 'LIKE',
-			'fields'       => 'ID',
-		] );
-
-		return array_map( 'intval', $users );
-	}
-
-	// -------------------------------------------------------------------------
-	// Prerequisite Resolution
-	// -------------------------------------------------------------------------
-
-	/**
-	 * Get all prerequisite courses for a cohort.
-	 *
-	 * Aggregates the `course_prerequisites` from every course linked to
-	 * the cohort, de-duplicates, and excludes courses that are already
-	 * included in the cohort itself (a course can't be both required AND
-	 * delivered by the same cohort).
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param int $cohort_id WooCommerce product (cohort) ID.
-	 * @return array<int> Unique prerequisite course post IDs.
-	 */
-	public static function get_cohort_prerequisites( int $cohort_id ): array {
-		$cohort_courses = get_field( 'cohort_courses', $cohort_id );
-
-		if ( ! is_array( $cohort_courses ) || empty( $cohort_courses ) ) {
-			return [];
-		}
-
-		$prerequisites = [];
-
-		foreach ( $cohort_courses as $course_id ) {
-			$course_prereqs = get_field( 'course_prerequisites', $course_id );
-
-			if ( is_array( $course_prereqs ) ) {
-				foreach ( $course_prereqs as $prereq_id ) {
-					$prerequisites[] = (int) $prereq_id;
-				}
-			}
-		}
-
-		// De-duplicate and exclude courses already in the cohort.
-		$prerequisites = array_unique( $prerequisites );
-		$prerequisites = array_values(
-			array_diff( $prerequisites, array_map( 'intval', $cohort_courses ) )
-		);
-
-		return $prerequisites;
-	}
-
-	/**
-	 * Get all lessons belonging to a cohort, via its linked courses.
-	 *
-	 * Walks the access chain one level: cohort → cohort_courses → each course's
-	 * course_lessons. De-duplicated, order preserved (course order, then lesson
-	 * order within each course). Used to scope the "current lesson" picker and
-	 * by display surfaces that list a cohort's lessons.
+	 * Idempotent against being fired twice for the same order (both hooks
+	 * could plausibly fire in sequence for one order in some gateway flows):
+	 * checks whether a cohort already carries this order ID before creating
+	 * another.
 	 *
 	 * @since 0.7.0
 	 *
-	 * @param int $cohort_id WooCommerce product (cohort) ID.
-	 * @return array<int> Unique lesson post IDs.
+	 * @param int $order_id WooCommerce order ID.
 	 */
-	public static function get_cohort_lessons( int $cohort_id ): array {
-		$cohort_courses = get_field( 'cohort_courses', $cohort_id );
+	public function handle_order_commitment( int $order_id ): void {
+		$order = wc_get_order( $order_id );
 
-		if ( ! is_array( $cohort_courses ) || empty( $cohort_courses ) ) {
-			return [];
+		if ( ! $order ) {
+			return;
 		}
 
-		$lessons = [];
+		if ( self::get_cohort_for_order( $order_id ) ) {
+			return; // Already created for this order.
+		}
 
-		foreach ( $cohort_courses as $course_id ) {
-			$course_lessons = get_field( 'course_lessons', $course_id );
+		$user_id = $order->get_customer_id();
+		if ( 0 === $user_id ) {
+			return; // Guest checkout — no owner to assign.
+		}
 
-			if ( is_array( $course_lessons ) ) {
-				foreach ( $course_lessons as $lesson_id ) {
-					$lessons[] = (int) $lesson_id;
-				}
+		foreach ( $order->get_items() as $item ) {
+			$product = $item->get_product();
+
+			if ( ! $product || ! self::is_cohort_product( $product->get_id() ) ) {
+				continue;
 			}
-		}
 
-		return array_values( array_unique( $lessons ) );
+			// TODO: 'cohort_is_mixed_offering' doesn't exist yet — the
+			// mixed-organization product tier isn't built (see
+			// docs/TASKS.md Phase 14, side-benefit note). Reads as
+			// false/single-org until that field is registered.
+			$is_mixed = (bool) get_field( 'cohort_is_mixed_offering', $product->get_id() );
+
+			Enrollment::create_cohort( [
+				'offering_id'          => $product->get_id(),
+				'owner_user_id'        => $is_mixed ? 0 : $user_id,
+				'is_mixed'             => $is_mixed,
+				'org_name'             => $order->get_billing_company() ?: $order->get_formatted_billing_full_name(),
+				'seats'                => $item->get_quantity() > 1 ? 1 : $this->get_variation_seats( $product ),
+				'requested_start_date' => get_field( 'cohort_requested_start_date', $product->get_id() ) ?: '',
+				'source_record_id'     => $order_id,
+				'source_url'           => $order->get_edit_order_url(),
+				'source'               => 'woocommerce',
+			] );
+
+			// One cohort-package per order is enforced at checkout (product
+			// level), so there's at most one relevant line item — stop here
+			// rather than looping further.
+			return;
+		}
 	}
 
-	// -------------------------------------------------------------------------
-	// Access Chain Resolution
-	// -------------------------------------------------------------------------
+	/**
+	 * Sync a cohort's payment status as its order progresses.
+	 *
+	 * The ongoing half of the two-event boundary — deliberately separate
+	 * from `handle_order_commitment()`, which only ever fires once per
+	 * order. This fires on every status transition and just forwards the
+	 * new status to whichever cohort was created from this order, via
+	 * `Enrollment::set_cohort_payment_status()`. Does not create a cohort if
+	 * one doesn't exist yet (a status change on an order with no committed
+	 * cohort — e.g. still `pending` — has nothing to update).
+	 *
+	 * Deliberately does **not** call unenroll/access-closed logic on refund
+	 * or cancellation — see docs/TASKS.md Phase 14, "Refund/cancellation
+	 * must NOT auto-revoke access." That's a manual `cohort_access_closed`
+	 * toggle, a separate admin/store-manager action, not an automatic side
+	 * effect of a billing status change.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param int    $order_id   WooCommerce order ID.
+	 * @param string $old_status Previous order status (no `wc-` prefix).
+	 * @param string $new_status New order status (no `wc-` prefix).
+	 * @param \WC_Order $order   The order object.
+	 */
+	public function handle_order_status_changed( int $order_id, string $old_status, string $new_status, \WC_Order $order ): void {
+		$cohort_id = self::get_cohort_for_order( $order_id );
+
+		if ( ! $cohort_id ) {
+			return;
+		}
+
+		$payment_status = 'completed' === $new_status ? 'paid' : 'pending_payment';
+
+		Enrollment::set_cohort_payment_status( $cohort_id, $payment_status );
+	}
 
 	/**
-	 * Check if a user can access a specific course via cohort enrollment.
+	 * Find the cohort instance created from a given order, if any.
 	 *
-	 * Admin and editor roles bypass enrollment checks.
+	 * @since 0.7.0
 	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $user_id   WordPress user ID.
-	 * @param int $course_id LeadersPath course post ID.
-	 * @return bool True if the user can access the course.
+	 * @param int $order_id WooCommerce order ID.
+	 * @return int Cohort post ID, or 0 if none.
 	 */
-	public static function can_user_access_course( int $user_id, int $course_id ): bool {
-		// Admin/Editor bypass.
-		if ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'edit_others_posts' ) ) {
-			return true;
-		}
-
-		$enrollments = self::get_user_enrollments( $user_id );
-		if ( empty( $enrollments ) ) {
-			return false;
-		}
-
-		// Find published cohort products that link to this course.
+	private static function get_cohort_for_order( int $order_id ): int {
 		$cohorts = get_posts( [
-			'post_type'      => 'product',
-			'posts_per_page' => -1,
-			'post_status'    => 'publish',
+			'post_type'      => 'leaderspath_cohort',
+			'posts_per_page' => 1,
+			'post_status'    => 'any',
 			'meta_query'     => [
-				'relation' => 'AND',
 				[
-					'key'     => self::COHORT_META_KEY,
-					'value'   => 'yes',
-					'compare' => '=',
-				],
-				[
-					'key'     => 'cohort_courses',
-					'value'   => sprintf( '"%d"', $course_id ),
-					'compare' => 'LIKE',
+					'key'   => 'cohort_source_record_id',
+					'value' => $order_id,
 				],
 			],
 			'fields'         => 'ids',
 		] );
 
-		if ( empty( $cohorts ) ) {
-			return false;
-		}
-
-		// Check if user is enrolled in any of these cohorts.
-		foreach ( $cohorts as $cohort_id ) {
-			if ( in_array( $cohort_id, $enrollments, true ) ) {
-				return true;
-			}
-		}
-
-		return false;
+		return ! empty( $cohorts ) ? (int) $cohorts[0] : 0;
 	}
 
 	/**
-	 * Check if a user can access a specific lesson via cohort enrollment.
+	 * Get the seat count for a purchased product/variation.
 	 *
-	 * Resolves the chain: Lesson → Course(s) → Cohort(s) → Enrollment.
+	 * TODO: 'cohort_variation_seats' doesn't exist yet — the Variable
+	 * Product/team-size migration isn't built (see docs/TASKS.md Phase 14,
+	 * "Cohort seat count is a WC Variable Product attribute"). This method
+	 * is the intended read point once it is: the team-size attribute's seat
+	 * count, per purchased variation. Falls back to 1 for a plain Simple
+	 * product with no variation, so cohort creation never fails outright for
+	 * lack of a seat-count field existing yet — every cohort created before
+	 * that migration lands will show 1 seat, which is wrong but not fatal.
 	 *
-	 * @since 0.4.0
+	 * @since 0.7.0
 	 *
-	 * @param int $user_id   WordPress user ID.
-	 * @param int $lesson_id LeadersPath lesson post ID.
-	 * @return bool True if the user can access the lesson.
+	 * @param \WC_Product $product The purchased product (or variation).
+	 * @return int Seat count, minimum 1.
 	 */
-	public static function can_user_access_lesson( int $user_id, int $lesson_id ): bool {
-		// Admin/Editor bypass.
-		if ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'edit_others_posts' ) ) {
-			return true;
-		}
+	private function get_variation_seats( \WC_Product $product ): int {
+		$seats = (int) get_field( 'cohort_variation_seats', $product->get_id() );
 
-		// Find courses that contain this lesson.
-		$courses = get_posts( [
-			'post_type'      => 'leaderspath_course',
-			'posts_per_page' => -1,
-			'post_status'    => 'publish',
-			'meta_query'     => [
-				[
-					'key'     => 'course_lessons',
-					'value'   => sprintf( '"%d"', $lesson_id ),
-					'compare' => 'LIKE',
-				],
-			],
-			'fields'         => 'ids',
-		] );
-
-		if ( empty( $courses ) ) {
-			return false;
-		}
-
-		// Check if user can access any of those courses.
-		foreach ( $courses as $course_id ) {
-			if ( self::can_user_access_course( $user_id, $course_id ) ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Check if a user can access a specific activity via cohort enrollment.
-	 *
-	 * Resolves the chain: Activity → Lesson(s) → Course(s) → Cohort(s) → Enrollment.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @param int $user_id     WordPress user ID.
-	 * @param int $activity_id LeadersPath activity post ID.
-	 * @return bool True if the user can access the activity.
-	 */
-	public static function can_user_access_activity( int $user_id, int $activity_id ): bool {
-		// Admin/Editor bypass.
-		if ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'edit_others_posts' ) ) {
-			return true;
-		}
-
-		// Find lessons that contain this activity.
-		$lessons = get_posts( [
-			'post_type'      => 'leaderspath_lesson',
-			'posts_per_page' => -1,
-			'post_status'    => 'publish',
-			'meta_query'     => [
-				[
-					'key'     => 'lesson_activities',
-					'value'   => sprintf( '"%d"', $activity_id ),
-					'compare' => 'LIKE',
-				],
-			],
-			'fields'         => 'ids',
-		] );
-
-		if ( empty( $lessons ) ) {
-			return false;
-		}
-
-		// Check if user can access any of those lessons.
-		foreach ( $lessons as $lesson_id ) {
-			if ( self::can_user_access_lesson( $user_id, $lesson_id ) ) {
-				return true;
-			}
-		}
-
-		return false;
+		return $seats > 0 ? $seats : 1;
 	}
 }

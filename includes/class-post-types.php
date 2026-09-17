@@ -67,6 +67,7 @@ class Post_Types {
 		$this->register_course();
 		$this->register_context();
 		$this->register_skill();
+		$this->register_cohort();
 	}
 
 	/**
@@ -249,7 +250,7 @@ class Post_Types {
 			'new_item'              => __( 'New Context File', 'leaderspath' ),
 			'edit_item'             => __( 'Edit Context File', 'leaderspath' ),
 			'view_item'             => __( 'View Context File', 'leaderspath' ),
-			'all_items'             => __( 'Context Files', 'leaderspath' ),
+			'all_items'             => __( 'All Context Files', 'leaderspath' ),
 			'search_items'          => __( 'Search Context Files', 'leaderspath' ),
 			'parent_item_colon'     => __( 'Parent Context Files:', 'leaderspath' ),
 			'not_found'             => __( 'No context files found.', 'leaderspath' ),
@@ -300,7 +301,7 @@ class Post_Types {
 			'new_item'              => __( 'New Skill', 'leaderspath' ),
 			'edit_item'             => __( 'Edit Skill', 'leaderspath' ),
 			'view_item'             => __( 'View Skill', 'leaderspath' ),
-			'all_items'             => __( 'Skills', 'leaderspath' ),
+			'all_items'             => __( 'All Skills', 'leaderspath' ),
 			'search_items'          => __( 'Search Skills', 'leaderspath' ),
 			'parent_item_colon'     => __( 'Parent Skills:', 'leaderspath' ),
 			'not_found'             => __( 'No skills found.', 'leaderspath' ),
@@ -333,5 +334,70 @@ class Post_Types {
 		];
 
 		register_post_type( 'leaderspath_skill', $args );
+	}
+
+	/**
+	 * Register the Cohort post type.
+	 *
+	 * A Cohort is a purchase-time instance — created when a WC order for a
+	 * cohort-package product reflects real commitment (see
+	 * Enrollment::create_cohort()) — not the WC product itself. It carries
+	 * the facilitator, dates, courses, roster, and payment status for one
+	 * specific organization's (or, for the mixed-cohort tier, one specific
+	 * group's) run through the curriculum. The product stays a reusable
+	 * catalog offering sellable to many organizations.
+	 *
+	 * Deliberately not `publicly_queryable` (unlike Context Files, which need
+	 * it for ACF relationship search) — a cohort holds org-confidential data
+	 * (facilitator, roster, payment status) and should only ever be resolved
+	 * through the controlled /learn/{cohort}/lesson/{lesson}/ lookup
+	 * (Cohort_Rewrite), never by direct query.
+	 *
+	 * @since 0.7.0
+	 */
+	private function register_cohort(): void {
+		$labels = [
+			'name'                  => _x( 'Cohorts', 'Post type general name', 'leaderspath' ),
+			'singular_name'         => _x( 'Cohort', 'Post type singular name', 'leaderspath' ),
+			'menu_name'             => _x( 'Cohorts', 'Admin Menu text', 'leaderspath' ),
+			'name_admin_bar'        => _x( 'Cohort', 'Add New on Toolbar', 'leaderspath' ),
+			'add_new'               => __( 'Add New', 'leaderspath' ),
+			'add_new_item'          => __( 'Add New Cohort', 'leaderspath' ),
+			'new_item'              => __( 'New Cohort', 'leaderspath' ),
+			'edit_item'             => __( 'Edit Cohort', 'leaderspath' ),
+			'view_item'             => __( 'View Cohort', 'leaderspath' ),
+			'all_items'             => __( 'All Cohorts', 'leaderspath' ),
+			'search_items'          => __( 'Search Cohorts', 'leaderspath' ),
+			'parent_item_colon'     => __( 'Parent Cohorts:', 'leaderspath' ),
+			'not_found'             => __( 'No cohorts found.', 'leaderspath' ),
+			'not_found_in_trash'    => __( 'No cohorts found in Trash.', 'leaderspath' ),
+			'archives'              => _x( 'Cohort archives', 'The post type archive label', 'leaderspath' ),
+			'insert_into_item'      => _x( 'Insert into cohort', 'Overrides the "Insert into post" phrase', 'leaderspath' ),
+			'uploaded_to_this_item' => _x( 'Uploaded to this cohort', 'Overrides the "Uploaded to this post" phrase', 'leaderspath' ),
+			'filter_items_list'     => _x( 'Filter cohorts list', 'Screen reader text', 'leaderspath' ),
+			'items_list_navigation' => _x( 'Cohorts list navigation', 'Screen reader text', 'leaderspath' ),
+			'items_list'            => _x( 'Cohorts list', 'Screen reader text', 'leaderspath' ),
+		];
+
+		$args = [
+			'labels'              => $labels,
+			'public'              => false,
+			'publicly_queryable'  => false,
+			'exclude_from_search' => true,
+			'show_ui'             => true,
+			'show_in_menu'        => \LeadersPath\Admin\Admin_Menu::MENU_SLUG,
+			'show_in_rest'        => true,
+			'rest_base'           => 'cohorts',
+			'rest_namespace'      => 'wp/v2',
+			'query_var'           => false,
+			'rewrite'             => false,
+			'capability_type'     => [ 'leaderspath_cohort', 'leaderspath_cohorts' ],
+			'map_meta_cap'        => true,
+			'has_archive'         => false,
+			'hierarchical'        => false,
+			'supports'            => [ 'title', 'revisions', 'custom-fields' ],
+		];
+
+		register_post_type( 'leaderspath_cohort', $args );
 	}
 }

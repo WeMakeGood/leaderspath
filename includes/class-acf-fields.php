@@ -34,6 +34,68 @@ class ACF_Fields {
 			10,
 			3
 		);
+
+		// Scope a facilitator's Context File "Cohort" picker to the cohort(s)
+		// they actually facilitate — they should never see, let alone assign,
+		// a cohort they don't run. Admins/editors see every cohort product.
+		add_filter(
+			'acf/fields/post_object/query/key=field_context_cohort',
+			[ $this, 'filter_context_cohort_choices' ],
+			10,
+			3
+		);
+
+		// Hard gate: a facilitator's context file must belong to a cohort they
+		// facilitate. Runs regardless of what the picker showed, so a crafted
+		// request can't slip an unscoped or another-cohort's value through.
+		add_filter(
+			'acf/validate_value/key=field_context_cohort',
+			[ $this, 'validate_context_cohort' ],
+			10,
+			4
+		);
+
+		// Renders the Cohort "Source Record" field as a real button linking
+		// to cohort_source_url post meta, rather than a plain readonly ACF
+		// field value — see docs/TASKS.md Phase 14.
+		add_action(
+			'acf/render_field/key=field_cohort_instance_source_link',
+			[ $this, 'render_cohort_source_link_button' ]
+		);
+	}
+
+	/**
+	 * Render the Cohort "Source Record" button.
+	 *
+	 * Reads `cohort_source_url` from plain post meta (set by whichever
+	 * commerce-backend caller created the cohort — `WooCommerce` or
+	 * `WS_Form_Integration` — via `update_post_meta()`, not ACF) and, if
+	 * present, renders it as a real button-styled link. Renders nothing if
+	 * no source URL was recorded (e.g. a cohort created via WP-CLI with no
+	 * originating record).
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param array $field The ACF field array being rendered.
+	 */
+	public function render_cohort_source_link_button( array $field ): void {
+		// acf_get_form_data('post_id') is ACF's own real API for the post
+		// being edited during a render_field call — the $field array
+		// itself carries no post-ID key (confirmed against ACF Pro core;
+		// no such key exists on it).
+		$post_id = (int) acf_get_form_data( 'post_id' );
+		$url     = $post_id ? get_post_meta( $post_id, 'cohort_source_url', true ) : '';
+
+		if ( ! $url ) {
+			echo '<p>' . esc_html__( 'No source record on file.', 'leaderspath' ) . '</p>';
+			return;
+		}
+
+		printf(
+			'<a href="%1$s" target="_blank" rel="noopener noreferrer" class="button">%2$s</a>',
+			esc_url( $url ),
+			esc_html__( 'View Source Record', 'leaderspath' )
+		);
 	}
 
 	/**
@@ -48,22 +110,104 @@ class ACF_Fields {
 	 *
 	 * @param array      $args    WP_Query args ACF will run.
 	 * @param array      $field   The field being queried.
-	 * @param int|string $post_id The post being edited (the cohort product).
+	 * @param int|string $post_id The post being edited (the leaderspath_cohort instance).
 	 * @return array Modified query args.
 	 */
 	public function filter_current_lesson_choices( array $args, array $field, $post_id ): array {
-		// $post_id may be prefixed (e.g. "product_123") in some contexts; normalize.
+		// $post_id is normally a plain int on a regular CPT; the non-numeric
+		// fallback is defensive left-over from when this field lived on the
+		// WC product (some WC/ACF contexts prefix it, e.g. "product_123").
 		$cohort_id = is_numeric( $post_id ) ? (int) $post_id : (int) preg_replace( '/[^0-9]/', '', (string) $post_id );
 
-		$lesson_ids = $cohort_id && class_exists( WooCommerce::class )
-			? WooCommerce::get_cohort_lessons( $cohort_id )
-			: [];
+		// Enrollment::get_cohort_lessons() reads ACF fields directly — no
+		// commerce-backend dependency, consistent with cohorts being their
+		// own CPT now.
+		$lesson_ids = $cohort_id ? Enrollment::get_cohort_lessons( $cohort_id ) : [];
 
 		// Empty set → force no matches (0 is never a valid post ID) so an
 		// unconfigured cohort shows an empty picker instead of all lessons.
 		$args['post__in'] = ! empty( $lesson_ids ) ? $lesson_ids : [ 0 ];
 
 		return $args;
+	}
+
+	/**
+	 * Restrict the Context File "Cohort" picker to cohort products only, and
+	 * for facilitators, to only the cohort(s) they facilitate.
+	 *
+	 * Admins and editors (anyone who can edit others' posts) see every cohort
+	 * product — they're the ones who create shared/public content and may
+	 * need to reassign a file to any cohort. Facilitators only ever see their
+	 * own, so the field can't even display a choice validate_context_cohort()
+	 * would reject.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param array      $args  WP_Query args ACF will run.
+	 * @param array      $field The field being queried.
+	 * @param int|string $post_id The post being edited.
+	 * @return array Modified query args.
+	 */
+	public function filter_context_cohort_choices( array $args, array $field, $post_id ): array {
+		// Cohorts are their own CPT (a purchase-time instance), not the WC
+		// product — every leaderspath_cohort post is a cohort by
+		// construction, so no _cohort meta flag is needed here.
+		$args['post_type'] = 'leaderspath_cohort';
+
+		if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_others_posts' ) ) {
+			return $args;
+		}
+
+		$cohort_ids = Enrollment::get_facilitator_cohorts( get_current_user_id() );
+
+		// No assigned cohort → empty picker, not "every cohort" (0 never matches).
+		$args['post__in'] = ! empty( $cohort_ids ) ? $cohort_ids : [ 0 ];
+
+		return $args;
+	}
+
+	/**
+	 * Enforce that a facilitator's context file is scoped to a cohort they
+	 * actually facilitate — required, not optional, and not just any cohort.
+	 *
+	 * Only "public" content (an empty Cohort field) may skip this, and only
+	 * admins/editors are allowed to leave it empty or assign across cohorts;
+	 * facilitators can only create/edit cohort-owned files for their own
+	 * cohort(s). Runs on every save regardless of what the field's own query
+	 * filter showed, so this is the authoritative check, not the UI narrowing.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param bool|string $valid   Current validation result (true, or an error message).
+	 * @param mixed       $value   Submitted field value (cohort post ID, or empty).
+	 * @param array       $field   The field being validated.
+	 * @param string      $input   The input's HTML name attribute.
+	 * @return bool|string True if valid, or an error message string.
+	 */
+	public function validate_context_cohort( $valid, $value, array $field, string $input ) {
+		// Already invalid for another reason — don't pile on.
+		if ( true !== $valid ) {
+			return $valid;
+		}
+
+		// Admins/editors may leave it empty (public content) or assign any cohort.
+		if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_others_posts' ) ) {
+			return $valid;
+		}
+
+		// Anyone else editing a Context File is treated as a facilitator: a
+		// cohort is required, and it must be one they actually facilitate.
+		if ( empty( $value ) ) {
+			return __( 'A cohort is required. Only Make Good staff can create shared/public context files.', 'leaderspath' );
+		}
+
+		$cohort_ids = Enrollment::get_facilitator_cohorts( get_current_user_id() );
+
+		if ( ! in_array( (int) $value, $cohort_ids, true ) ) {
+			return __( 'You can only assign context files to a cohort you facilitate.', 'leaderspath' );
+		}
+
+		return $valid;
 	}
 
 	/**
@@ -82,8 +226,14 @@ class ACF_Fields {
 		$this->register_course_settings();
 		$this->register_context_settings();
 		$this->register_skill_settings();
+		$this->register_cohort_instance_settings();
 
-		// Cohort fields on WooCommerce products (only when WC is active).
+		// Cohort *catalog* fields on WooCommerce products (only when WC is
+		// active). Deliberately separate from register_cohort_instance_settings()
+		// above — the product is the reusable offering, the CPT is the
+		// purchase-time instance. See class-post-types.php register_cohort()
+		// for the full "cohort is a purchase-time instance, not the product"
+		// rationale.
 		if ( class_exists( 'WooCommerce' ) ) {
 			$this->register_cohort_settings();
 		}
@@ -733,6 +883,19 @@ class ACF_Fields {
 					'instructions' => __( 'Semantic version (e.g., 1.0.0).', 'leaderspath' ),
 					'placeholder'  => '1.0.0',
 				],
+				[
+					'key'           => 'field_context_cohort',
+					'label'         => __( 'Cohort', 'leaderspath' ),
+					'name'          => 'context_cohort',
+					'type'          => 'post_object',
+					'instructions'  => __( 'Leave empty for shared curriculum content available to every cohort. Set a cohort to scope this file to that organization only — required for anything a facilitator creates or edits.', 'leaderspath' ),
+					'required'      => 0,
+					'post_type'     => [ 'leaderspath_cohort' ],
+					'return_format' => 'id',
+					'multiple'      => 0,
+					'allow_null'    => 1,
+					'ui'            => 1,
+				],
 			],
 			'location' => [
 				[
@@ -919,7 +1082,7 @@ class ACF_Fields {
 					'label'         => __( 'Courses', 'leaderspath' ),
 					'name'          => 'cohort_courses',
 					'type'          => 'relationship',
-					'instructions'  => __( 'Select the courses included in this cohort. Enrolled learners will have access to all lessons and activities within these courses.', 'leaderspath' ),
+					'instructions'  => __( 'Courses this cohort package includes. Copied onto each purchased cohort instance at creation — see the Cohort post type for the instance-level copy, which stays independently editable per cohort afterward.', 'leaderspath' ),
 					'required'      => 0,
 					'post_type'     => [ 'leaderspath_course' ],
 					'filters'       => [ 'search' ],
@@ -929,60 +1092,27 @@ class ACF_Fields {
 					'return_format' => 'id',
 				],
 				[
-					'key'           => 'field_cohort_start_date',
-					'label'         => __( 'Start Date', 'leaderspath' ),
-					'name'          => 'cohort_start_date',
+					'key'           => 'field_cohort_requested_start_date',
+					'label'         => __( 'Requested Start Date', 'leaderspath' ),
+					'name'          => 'cohort_requested_start_date',
 					'type'          => 'date_picker',
-					'instructions'  => __( 'When this cohort begins. Used to determine cohort phase (upcoming/active/completed).', 'leaderspath' ),
+					// Checkout-time intake only — the org's stated intent when
+					// buying, before a facilitator is even assigned. Seeds the
+					// new cohort instance's own start/end dates at creation;
+					// never written back to from the instance afterward. Real
+					// scheduling lives on the Cohort CPT, not here.
+					'instructions'  => __( 'Optional. Captured at checkout as the organization\'s intent — not authoritative scheduling. Seeds the new cohort\'s start date once created; adjust the actual dates on the Cohort itself afterward.', 'leaderspath' ),
 					'required'      => 0,
 					'display_format' => 'F j, Y',
 					'return_format' => 'Y-m-d',
 					'first_day'     => 0,
-				],
-				[
-					'key'           => 'field_cohort_end_date',
-					'label'         => __( 'End Date', 'leaderspath' ),
-					'name'          => 'cohort_end_date',
-					'type'          => 'date_picker',
-					'instructions'  => __( 'When this cohort ends. Enrolled learners retain access after completion for review.', 'leaderspath' ),
-					'required'      => 0,
-					'display_format' => 'F j, Y',
-					'return_format' => 'Y-m-d',
-					'first_day'     => 0,
-				],
-				[
-					'key'           => 'field_cohort_facilitator',
-					'label'         => __( 'Facilitator', 'leaderspath' ),
-					'name'          => 'cohort_facilitator',
-					'type'          => 'user',
-					'instructions'  => __( 'The facilitator who will lead this cohort.', 'leaderspath' ),
-					'required'      => 0,
-					'role'          => [ 'leaderspath_facilitator', 'administrator' ],
-					'return_format' => 'id',
-					'multiple'      => 0,
-					'allow_null'    => 1,
-				],
-				[
-					'key'           => 'field_cohort_current_lesson',
-					'label'         => __( 'Current Lesson (This Week)', 'leaderspath' ),
-					'name'          => 'current_lesson',
-					'type'          => 'post_object',
-					// Facilitator-set pointer to the lesson currently in session. Drives
-					// the "this week" badge on the dashboard and lesson page. Single value.
-					'instructions'  => __( 'The lesson currently in session. Drives the "this week" badge on the dashboard and lesson page. Set before each session.', 'leaderspath' ),
-					'required'      => 0,
-					'post_type'     => [ 'leaderspath_lesson' ],
-					'return_format' => 'id',
-					'multiple'      => 0,
-					'allow_null'    => 1,
-					'ui'            => 1,
 				],
 				[
 					'key'           => 'field_cohort_video',
 					'label'         => __( 'Cohort Video', 'leaderspath' ),
 					'name'          => 'cohort_video',
 					'type'          => 'url',
-					'instructions'  => __( 'Optional intro or welcome video for the cohort page (e.g. a YouTube URL). Shown when set.', 'leaderspath' ),
+					'instructions'  => __( 'Optional intro or welcome video for the cohort sales page (e.g. a YouTube URL). Shown when set.', 'leaderspath' ),
 					'required'      => 0,
 				],
 			],
@@ -997,6 +1127,291 @@ class ACF_Fields {
 			],
 			'menu_order'            => 50,
 			'position'              => 'normal',
+			'style'                 => 'default',
+			'label_placement'       => 'top',
+			'instruction_placement' => 'label',
+			'active'                => true,
+		] );
+	}
+
+	/**
+	 * Register Cohort (purchase-time instance) field groups.
+	 *
+	 * Lives on the `leaderspath_cohort` CPT, not the WC product — see
+	 * Post_Types::register_cohort() for the full rationale. `cohort_courses`,
+	 * `cohort_start_date`, `cohort_end_date`, `cohort_facilitator`,
+	 * `current_lesson` moved here from the product's field group (0.7.0);
+	 * `cohort_owner`, `cohort_payment_status`, `cohort_access_closed`, and
+	 * `cohort_source_record_id`/`cohort_source_url` are new.
+	 *
+	 * Split into four groups by concern rather than one flat list, matching
+	 * this plugin's existing convention (Activity separates Settings from
+	 * Chatbot, Skill visually separates its sync fields) — grouped by what a
+	 * facilitator is actually doing when they look at each: who's involved,
+	 * when it runs, what curriculum it covers, and its current status. The
+	 * status group sits in the sidebar (`position: side`) — glanceable
+	 * state, same treatment WordPress gives the Publish/status boxes,
+	 * deliberately separate from content a facilitator edits routinely.
+	 *
+	 * Not gated on `class_exists('WooCommerce')` — a cohort instance should
+	 * be usable regardless of which commerce backend (if any) created it.
+	 *
+	 * @since 0.7.0
+	 */
+	private function register_cohort_instance_settings(): void {
+		acf_add_local_field_group( [
+			'key'      => 'group_cohort_instance_details',
+			'title'    => __( 'Cohort Details', 'leaderspath' ),
+			'fields'   => [
+				[
+					'key'           => 'field_cohort_instance_org_name',
+					'label'         => __( 'Organization', 'leaderspath' ),
+					'name'          => 'cohort_org_name',
+					'type'          => 'text',
+					'instructions'  => __( 'The organization this cohort is for. For a mixed-organization cohort, leave blank or describe the group instead.', 'leaderspath' ),
+					'required'      => 0,
+				],
+				[
+					'key'           => 'field_cohort_instance_owner',
+					'label'         => __( 'Owner', 'leaderspath' ),
+					'name'          => 'cohort_owner',
+					'type'          => 'user',
+					// Roster-management authority — who can invite/revoke seats.
+					// Defaults at creation per product type (single-org: the
+					// purchaser, who also fills a seat; mixed-org: the
+					// facilitator, who does not) but is reassignable afterward,
+					// e.g. if the buyer isn't the day-to-day contact.
+					'instructions'  => __( 'Has authority to invite/revoke roster seats. Defaults to the purchaser (single-org cohorts) or the facilitator (mixed-organization cohorts) at creation; reassignable afterward.', 'leaderspath' ),
+					'required'      => 0,
+					'role'          => '', // Any role — a purchaser may hold no LeadersPath-specific role at all.
+					'return_format' => 'id',
+					'multiple'      => 0,
+					'allow_null'    => 1,
+				],
+				[
+					'key'           => 'field_cohort_instance_facilitator',
+					'label'         => __( 'Facilitator', 'leaderspath' ),
+					'name'          => 'cohort_facilitator',
+					'type'          => 'user',
+					'instructions'  => __( 'The facilitator who will lead this cohort.', 'leaderspath' ),
+					'required'      => 0,
+					'role'          => [ 'leaderspath_facilitator', 'administrator' ],
+					'return_format' => 'id',
+					'multiple'      => 0,
+					'allow_null'    => 1,
+				],
+			],
+			'location' => [
+				[
+					[
+						'param'    => 'post_type',
+						'operator' => '==',
+						'value'    => 'leaderspath_cohort',
+					],
+				],
+			],
+			'menu_order'            => 0,
+			'position'              => 'normal',
+			'style'                 => 'default',
+			'label_placement'       => 'top',
+			'instruction_placement' => 'label',
+			'active'                => true,
+		] );
+
+		acf_add_local_field_group( [
+			'key'      => 'group_cohort_instance_scheduling',
+			'title'    => __( 'Scheduling', 'leaderspath' ),
+			'fields'   => [
+				[
+					'key'           => 'field_cohort_instance_start_date',
+					'label'         => __( 'Start Date', 'leaderspath' ),
+					'name'          => 'cohort_start_date',
+					'type'          => 'date_picker',
+					'instructions'  => __( 'When this cohort begins. Used to determine cohort phase (upcoming/active/completed). Seeded from the product\'s Requested Start Date at creation; adjust freely afterward for real scheduling.', 'leaderspath' ),
+					'required'      => 0,
+					'display_format' => 'F j, Y',
+					'return_format' => 'Y-m-d',
+					'first_day'     => 0,
+				],
+				[
+					'key'           => 'field_cohort_instance_end_date',
+					'label'         => __( 'End Date', 'leaderspath' ),
+					'name'          => 'cohort_end_date',
+					'type'          => 'date_picker',
+					'instructions'  => __( 'When this cohort ends. Enrolled learners retain access after completion for review.', 'leaderspath' ),
+					'required'      => 0,
+					'display_format' => 'F j, Y',
+					'return_format' => 'Y-m-d',
+					'first_day'     => 0,
+				],
+				[
+					'key'           => 'field_cohort_instance_current_lesson',
+					'label'         => __( 'Current Lesson (This Week)', 'leaderspath' ),
+					'name'          => 'current_lesson',
+					'type'          => 'post_object',
+					// Facilitator-set pointer to the lesson currently in session. Drives
+					// the "this week" badge on the dashboard and lesson page. Single value.
+					// Grouped with Scheduling, not Curriculum: it's a week-to-week
+					// facilitator action (like the dates), not a one-time content
+					// selection (like the courses list).
+					'instructions'  => __( 'The lesson currently in session. Drives the "this week" badge on the dashboard and lesson page. Set before each session.', 'leaderspath' ),
+					'required'      => 0,
+					'post_type'     => [ 'leaderspath_lesson' ],
+					'return_format' => 'id',
+					'multiple'      => 0,
+					'allow_null'    => 1,
+					'ui'            => 1,
+				],
+			],
+			'location' => [
+				[
+					[
+						'param'    => 'post_type',
+						'operator' => '==',
+						'value'    => 'leaderspath_cohort',
+					],
+				],
+			],
+			'menu_order'            => 1,
+			'position'              => 'normal',
+			'style'                 => 'default',
+			'label_placement'       => 'top',
+			'instruction_placement' => 'label',
+			'active'                => true,
+		] );
+
+		acf_add_local_field_group( [
+			'key'      => 'group_cohort_instance_curriculum',
+			'title'    => __( 'Curriculum', 'leaderspath' ),
+			'fields'   => [
+				[
+					'key'           => 'field_cohort_instance_courses',
+					'label'         => __( 'Courses', 'leaderspath' ),
+					'name'          => 'cohort_courses',
+					'type'          => 'relationship',
+					'instructions'  => __( 'Courses included in this cohort. Copied from the purchased product at creation; editable afterward for an organization-specific adjustment.', 'leaderspath' ),
+					'required'      => 0,
+					'post_type'     => [ 'leaderspath_course' ],
+					'filters'       => [ 'search' ],
+					'elements'      => [ 'featured_image' ],
+					'min'           => 0,
+					'max'           => 20,
+					'return_format' => 'id',
+				],
+				[
+					'key'           => 'field_cohort_instance_seats',
+					'label'         => __( 'Seats', 'leaderspath' ),
+					'name'          => 'cohort_seats',
+					'type'          => 'number',
+					'instructions'  => __( 'Total seats for this cohort, from the purchased product/variation. Caps roster invites — see the Roster box below.', 'leaderspath' ),
+					'required'      => 0,
+					'min'           => 1,
+				],
+			],
+			'location' => [
+				[
+					[
+						'param'    => 'post_type',
+						'operator' => '==',
+						'value'    => 'leaderspath_cohort',
+					],
+				],
+			],
+			'menu_order'            => 2,
+			'position'              => 'normal',
+			'style'                 => 'default',
+			'label_placement'       => 'top',
+			'instruction_placement' => 'label',
+			'active'                => true,
+		] );
+
+		acf_add_local_field_group( [
+			'key'      => 'group_cohort_instance_status',
+			'title'    => __( 'Status', 'leaderspath' ),
+			'fields'   => [
+				[
+					'key'           => 'field_cohort_instance_payment_status',
+					'label'         => __( 'Payment Status', 'leaderspath' ),
+					'name'          => 'cohort_payment_status',
+					'type'          => 'select',
+					// Separate axis from get_cohort_phase()'s pedagogical phase
+					// (upcoming/active/completed) — this tracks commitment/
+					// payment, not the curriculum timeline. Updated as the
+					// underlying order progresses, not written once and left
+					// stale. Gates chatbot/sandbox access (requires 'paid');
+					// facilitator assignment, roster invites, and curriculum
+					// visibility are allowed on 'pending_payment'.
+					'instructions'  => __( 'Tracks the underlying order/PO, not the curriculum timeline. Prep work (facilitator, roster, curriculum preview) is allowed while pending; learner-facing sandbox access requires Paid.', 'leaderspath' ),
+					'required'      => 0,
+					'choices'       => [
+						'pending_payment' => __( 'Pending Payment', 'leaderspath' ),
+						'paid'             => __( 'Paid', 'leaderspath' ),
+					],
+					'default_value' => 'pending_payment',
+					'return_format' => 'value',
+				],
+				[
+					'key'           => 'field_cohort_instance_access_closed',
+					'label'         => __( 'Access Closed', 'leaderspath' ),
+					'name'          => 'cohort_access_closed',
+					'type'          => 'true_false',
+					// Manual, admin/store-manager-only override — deliberately
+					// decoupled from refund/cancellation, which must NOT
+					// auto-revoke access (docs/TASKS.md Phase 14, "Refund/
+					// cancellation must NOT auto-revoke access" — a refund
+					// issued after a cohort completed shouldn't silently cut
+					// off a team that already went through the material).
+					// Checked live ahead of the enrollment chain in every
+					// can_user_access_* call; flipping it off fully and
+					// instantly restores access since no enrollment record is
+					// ever touched by this field.
+					'instructions'  => __( 'Manually closes access for the whole cohort, independent of refund/billing status. Reversible — flipping this off instantly restores access. Does not affect enrollment records.', 'leaderspath' ),
+					'required'      => 0,
+					'default_value' => 0,
+					'ui'            => 1,
+				],
+				[
+					'key'           => 'field_cohort_instance_source_record_id',
+					'label'         => __( 'Source Record ID', 'leaderspath' ),
+					'name'          => 'cohort_source_record_id',
+					'type'          => 'number',
+					// Generic on purpose — the originating record could be a
+					// WooCommerce order, a WS Form submission, or a future
+					// commerce backend. Traceability only, matching the old
+					// cohort_source_order_id field's role — never read by
+					// access-control or roster-management logic (Owner/
+					// Facilitator above are authoritative for that).
+					'instructions'  => __( 'The order, submission, or other backend record that created this cohort. Traceability only.', 'leaderspath' ),
+					'required'      => 0,
+					'readonly'      => 1,
+				],
+				[
+					'key'           => 'field_cohort_instance_source_link',
+					'label'         => __( 'Source Record', 'leaderspath' ),
+					'name'          => 'cohort_source_link_button',
+					'type'          => 'message',
+					// The URL itself lives in plain post meta
+					// (`cohort_source_url`, set via update_post_meta() —
+					// not an ACF field), not as its own field value — this
+					// field exists only to render a button pointing at it.
+					// Content built dynamically per-post in
+					// render_cohort_source_link_button().
+					'message'       => '',
+					'new_lines'     => '',
+					'esc_html'      => 0,
+				],
+			],
+			'location' => [
+				[
+					[
+						'param'    => 'post_type',
+						'operator' => '==',
+						'value'    => 'leaderspath_cohort',
+					],
+				],
+			],
+			'menu_order'            => 0,
+			'position'              => 'side',
 			'style'                 => 'default',
 			'label_placement'       => 'top',
 			'instruction_placement' => 'label',

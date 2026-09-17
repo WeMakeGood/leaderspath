@@ -25,6 +25,12 @@ class Capabilities {
 	public function __construct() {
 		// Ensure capabilities are added (handles case where plugin was updated without reactivation).
 		add_action( 'admin_init', [ __CLASS__, 'maybe_add_caps' ] );
+
+		// Per-post exception letting a facilitator reach a co-facilitator's or
+		// admin-seeded context file for a cohort they actually run, without
+		// granting the blanket edit_others_/delete_others_ capability that
+		// would expose every cohort's files. See get_facilitator_caps().
+		add_filter( 'map_meta_cap', [ __CLASS__, 'grant_facilitator_own_cohort_context' ], 10, 4 );
 	}
 
 	/**
@@ -56,6 +62,8 @@ class Capabilities {
 		// Check for newer capabilities that may have been added in updates.
 		self::maybe_add_facilitator_caps();
 		self::maybe_add_cohort_caps();
+		self::maybe_add_facilitator_context_caps();
+		self::maybe_add_cohort_cpt_caps();
 	}
 
 	/**
@@ -120,11 +128,71 @@ class Capabilities {
 	}
 
 	/**
+	 * Add facilitator Context File capabilities if missing.
+	 *
+	 * Handles upgrades where facilitators gained cohort-owned Context File
+	 * access after the facilitator role already existed — maybe_add_facilitator_caps()
+	 * only sets get_facilitator_caps() on the role at *creation*, so an
+	 * existing facilitator role needs its own backfill check here.
+	 *
+	 * @since 0.7.0
+	 */
+	private static function maybe_add_facilitator_context_caps(): void {
+		$facilitator = get_role( 'leaderspath_facilitator' );
+
+		if ( ! $facilitator || $facilitator->has_cap( 'edit_leaderspath_context' ) ) {
+			return;
+		}
+
+		foreach ( self::get_facilitator_caps() as $cap => $grant ) {
+			$facilitator->add_cap( $cap, $grant );
+		}
+	}
+
+	/**
+	 * Add the new `leaderspath_cohort` CPT capabilities if missing.
+	 *
+	 * Handles upgrades where the Cohort CPT (purchase-time instance — see
+	 * Post_Types::register_cohort()) was added after admin/editor roles
+	 * already existed on the install. Full grant for admin, full operational
+	 * access for editor — see get_editor_caps()'s comment for why cohorts
+	 * join the full-access list rather than the read-only one.
+	 *
+	 * @since 0.7.0
+	 */
+	private static function maybe_add_cohort_cpt_caps(): void {
+		$admin = get_role( 'administrator' );
+
+		if ( $admin && ! $admin->has_cap( 'edit_leaderspath_cohort' ) ) {
+			foreach ( self::get_cpt_caps( 'leaderspath_cohort', 'leaderspath_cohorts' ) as $cap ) {
+				$admin->add_cap( $cap, true );
+			}
+		}
+
+		$editor = get_role( 'editor' );
+
+		if ( $editor && ! $editor->has_cap( 'edit_leaderspath_cohort' ) ) {
+			foreach ( self::get_cpt_caps( 'leaderspath_cohort', 'leaderspath_cohorts' ) as $cap ) {
+				$editor->add_cap( $cap, true );
+			}
+		}
+	}
+
+	/**
 	 * Remove legacy capabilities from prior naming conventions.
 	 *
 	 * Handles migrations:
 	 * - leaderspath_lesson → leaderspath_activity (v0.2.0)
 	 * - leaderspath_cohort removed, old leaderspath_course → leaderspath_lesson (v0.3.0)
+	 *
+	 * NOTE (0.7.0): `leaderspath_cohort` exists again as of this version, as a
+	 * genuinely new CPT with a different meaning — a purchase-time cohort
+	 * instance (facilitator/dates/roster), not the old v0.3.0-era post type
+	 * this method's cleanup refers to. The capability *names* collide
+	 * (`edit_leaderspath_cohort`, etc.) but this method only ever runs once,
+	 * gated on an admin missing `edit_leaderspath_activity` — already false
+	 * on every real install past v0.3.0 — so it can't strip the new CPT's
+	 * caps. Left as historical record, not a live conflict.
 	 *
 	 * @since 0.2.0
 	 */
@@ -165,6 +233,7 @@ class Capabilities {
 		'leaderspath_activity' => 'leaderspath_activities',
 		'leaderspath_lesson'   => 'leaderspath_lessons',
 		'leaderspath_course'   => 'leaderspath_courses',
+		'leaderspath_cohort'   => 'leaderspath_cohorts',
 		'leaderspath_context'  => 'leaderspath_contexts',
 		'leaderspath_skill'    => 'leaderspath_skills',
 	];
@@ -253,10 +322,16 @@ class Capabilities {
 	public static function get_editor_caps(): array {
 		$caps = [];
 
-		// Full access to Activities and Lessons.
+		// Full access to Activities, Lessons, and Cohorts. Cohorts join this
+		// list (not the read-only curriculum-content list below) because
+		// editors already hold leaderspath_manage_cohorts for the WC product
+		// side of cohort operations — this extends that same operational
+		// role to the cohort instance itself (facilitator assignment, dates,
+		// roster), not curriculum content editors merely oversee.
 		$editor_full_access = [
 			'leaderspath_activity' => 'leaderspath_activities',
 			'leaderspath_lesson'   => 'leaderspath_lessons',
+			'leaderspath_cohort'   => 'leaderspath_cohorts',
 		];
 		foreach ( $editor_full_access as $cap_base => $plural ) {
 			foreach ( self::get_cpt_caps( $cap_base, $plural ) as $cap ) {
@@ -305,6 +380,17 @@ class Capabilities {
 	 *
 	 * Facilitators have all student capabilities plus access to facilitator-only content.
 	 *
+	 * Context File access is deliberately narrower than a full CPT grant: it
+	 * excludes edit_others_/delete_others_/read_private_leaderspath_contexts.
+	 * WordPress's own primitive-cap check would otherwise let a facilitator
+	 * open *any* context file — including another cohort's confidential
+	 * material — by post ID alone. Cross-cohort access to a file they didn't
+	 * author (e.g. an admin-seeded starter module for their own cohort) is
+	 * instead granted per-post by the map_meta_cap filter below, which checks
+	 * actual cohort ownership rather than a blanket capability. The
+	 * acf/validate_value gate in ACF_Fields is what stops them writing an
+	 * unscoped or another-cohort's value even if they do reach the editor.
+	 *
 	 * @since 0.1.0
 	 *
 	 * @return array<string, bool> Capabilities with true values.
@@ -314,8 +400,85 @@ class Capabilities {
 			self::get_student_caps(),
 			[
 				'leaderspath_view_facilitator_content' => true,
+				'edit_leaderspath_context'             => true,
+				'edit_leaderspath_contexts'            => true,
+				'publish_leaderspath_contexts'         => true,
+				'delete_leaderspath_context'           => true,
+				'read_leaderspath_context'             => true,
 			]
 		);
+	}
+
+	/**
+	 * Grant a facilitator edit/delete access to a specific context file they
+	 * didn't author, when it's scoped to a cohort they facilitate.
+	 *
+	 * Without edit_others_leaderspath_contexts (deliberately withheld — see
+	 * get_facilitator_caps()), WordPress's own meta-cap mapping already
+	 * blocks a facilitator from opening a context file authored by someone
+	 * else. This filter is the narrow, per-post exception: an admin-seeded
+	 * starter module or a co-facilitator's file for a cohort this user
+	 * actually runs. Anything outside that stays blocked with no extra code.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param array<string> $caps    Required primitive capabilities.
+	 * @param string        $cap     Requested meta capability.
+	 * @param int           $user_id User being checked.
+	 * @param array<int>    $args    [0] => post ID being checked, for meta caps.
+	 * @return array<string> Modified required capabilities.
+	 */
+	public static function grant_facilitator_own_cohort_context( array $caps, string $cap, int $user_id, array $args ): array {
+		if ( ! in_array( $cap, [ 'edit_post', 'delete_post', 'read_post' ], true ) || empty( $args[0] ) ) {
+			return $caps;
+		}
+
+		$post = get_post( (int) $args[0] );
+
+		if ( ! $post || 'leaderspath_context' !== $post->post_type ) {
+			return $caps;
+		}
+
+		$user = get_userdata( $user_id );
+		if ( ! $user || ! in_array( 'leaderspath_facilitator', (array) $user->roles, true ) ) {
+			return $caps;
+		}
+
+		// Own post — WordPress's own mapping (edit_leaderspath_context, etc.)
+		// already covers this correctly; nothing to add or override.
+		if ( (int) $post->post_author === $user_id ) {
+			return $caps;
+		}
+
+		// From here on this filter is authoritative for facilitators: it must
+		// both grant (their own cohort's files, authored by someone else —
+		// an admin-seeded starter module, a co-facilitator's edit) and deny —
+		// because WordPress's default read_post mapping falls back to the
+		// generic "read" capability for any published, non-private post of a
+		// publicly-queryable CPT (this one is, for ACF relationship search),
+		// which every logged-in user holds. Left alone, that default would
+		// let a facilitator read another cohort's confidential file by post
+		// ID alone. An impossible capability forces a hard deny instead of
+		// silently falling through to that default.
+		$deny = [ 'do_not_allow' ];
+
+		$file_cohort = get_field( 'context_cohort', $post->ID );
+		if ( empty( $file_cohort ) ) {
+			// Unscoped/public file — a facilitator has no standing access to
+			// it (they can't create public files either; see get_facilitator_caps()).
+			return $deny;
+		}
+
+		$facilitator_cohorts = Enrollment::get_facilitator_cohorts( $user_id );
+
+		if ( in_array( (int) $file_cohort, $facilitator_cohorts, true ) ) {
+			// Their cohort — grant via a capability every logged-in user
+			// holds, standing in for whichever primitive cap WP core's own
+			// author-based branching would otherwise require.
+			return [ 'exist' ];
+		}
+
+		return $deny;
 	}
 
 	/**

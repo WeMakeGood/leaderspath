@@ -17,7 +17,7 @@
 
 declare(strict_types=1);
 
-use LeadersPath\Includes\WooCommerce;
+use LeadersPath\Includes\Enrollment;
 use LeadersPath\Renderers\Post_Id_Helper;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -33,15 +33,16 @@ if ( ! function_exists( 'lp_user_is_enrolled' ) ) {
 	 * non-cohort post. Does NOT fall back to a sample post (unlike display
 	 * helpers) — a security check must never guess its subject.
 	 *
-	 * @param int|null $cohort_id Cohort product ID. Null → resolve the current
-	 *                            queried object, which must be a cohort product.
+	 * Not gated on WooCommerce being active — Enrollment/leaderspath_cohort
+	 * are commerce-agnostic by design (see class-enrollment.php), so cohort
+	 * access works regardless of which commerce backend, if any, created the
+	 * cohort instance.
+	 *
+	 * @param int|null $cohort_id leaderspath_cohort post ID. Null → resolve the
+	 *                            current queried object, which must be a cohort.
 	 * @return bool
 	 */
 	function lp_user_is_enrolled( ?int $cohort_id = null ): bool {
-		if ( ! class_exists( WooCommerce::class ) ) {
-			return false;
-		}
-
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
 			return false;
@@ -51,12 +52,12 @@ if ( ! function_exists( 'lp_user_is_enrolled' ) ) {
 			$cohort_id = (int) get_queried_object_id();
 		}
 
-		// Must be an actual cohort product — no sample fallback for gating.
-		if ( $cohort_id <= 0 || ! WooCommerce::is_cohort_product( $cohort_id ) ) {
+		// Must be an actual cohort instance — no sample fallback for gating.
+		if ( $cohort_id <= 0 || 'leaderspath_cohort' !== get_post_type( $cohort_id ) ) {
 			return false;
 		}
 
-		return WooCommerce::is_user_enrolled( $user_id, $cohort_id );
+		return Enrollment::is_user_enrolled( $user_id, $cohort_id );
 	}
 }
 
@@ -70,19 +71,15 @@ if ( ! function_exists( 'lp_enrolled_cohorts' ) ) {
 	 * that need the list for a query should call the PHP function directly.
 	 *
 	 * @param string $phase '' (all), 'active', 'upcoming', or 'completed'.
-	 * @return array<int> Cohort product IDs.
+	 * @return array<int> leaderspath_cohort post IDs.
 	 */
 	function lp_enrolled_cohorts( string $phase = '' ): array {
-		if ( ! class_exists( WooCommerce::class ) ) {
-			return [];
-		}
-
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
 			return [];
 		}
 
-		$cohorts = WooCommerce::get_user_enrollments( $user_id );
+		$cohorts = Enrollment::get_user_enrollments( $user_id );
 		if ( empty( $cohorts ) ) {
 			return [];
 		}
@@ -95,7 +92,7 @@ if ( ! function_exists( 'lp_enrolled_cohorts' ) ) {
 		$filtered = [];
 		foreach ( $cohorts as $cohort_id ) {
 			$cohort_id = (int) $cohort_id;
-			if ( WooCommerce::get_cohort_phase( $cohort_id ) === $phase ) {
+			if ( Enrollment::get_cohort_phase( $cohort_id ) === $phase ) {
 				$filtered[] = $cohort_id;
 			}
 		}

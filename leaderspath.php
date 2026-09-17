@@ -44,10 +44,19 @@ require LEADERSPATH_PATH . 'includes/class-post-types.php';
 require LEADERSPATH_PATH . 'includes/class-taxonomies.php';
 require LEADERSPATH_PATH . 'includes/class-capabilities.php';
 require LEADERSPATH_PATH . 'includes/class-acf-fields.php';
+// Enrollment is commerce-agnostic (see class-enrollment.php) and loaded
+// unconditionally — cohort access/roster logic must not depend on
+// WooCommerce being active. Required before class-woocommerce.php, which
+// calls into it, and before class-cohort-rewrite.php, which does too.
+require LEADERSPATH_PATH . 'includes/class-enrollment.php';
+require LEADERSPATH_PATH . 'includes/class-cohort-rewrite.php';
+// CLI_Commands self-guards on WP_CLI and self-registers; no `new` needed.
+require LEADERSPATH_PATH . 'includes/class-cli-commands.php';
 require LEADERSPATH_PATH . 'admin/class-admin-menu.php';
 require LEADERSPATH_PATH . 'admin/class-settings.php';
 require LEADERSPATH_PATH . 'admin/class-admin-columns.php';
 require LEADERSPATH_PATH . 'admin/class-context-uploader.php';
+require LEADERSPATH_PATH . 'admin/class-cohort-roster.php';
 require LEADERSPATH_PATH . 'admin/class-md-drop.php';
 require LEADERSPATH_PATH . 'includes/class-claude-api.php';
 require LEADERSPATH_PATH . 'includes/class-rest-api.php';
@@ -79,9 +88,11 @@ new LeadersPath\Includes\Post_Types();
 new LeadersPath\Includes\Taxonomies();
 new LeadersPath\Includes\Capabilities();
 new LeadersPath\Includes\ACF_Fields();
+new LeadersPath\Includes\Cohort_Rewrite();
 new LeadersPath\Admin\Settings();
 new LeadersPath\Admin\Admin_Columns();
 new LeadersPath\Admin\Context_Uploader();
+new LeadersPath\Admin\Cohort_Roster();
 new LeadersPath\Admin\MD_Drop();
 new LeadersPath\Includes\REST_API();
 new LeadersPath\Includes\Skill_Processor();

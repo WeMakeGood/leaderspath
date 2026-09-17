@@ -45,19 +45,26 @@ class Admin_Columns {
 		add_filter( 'manage_leaderspath_context_posts_columns', [ $this, 'context_columns' ] );
 		add_action( 'manage_leaderspath_context_posts_custom_column', [ $this, 'context_column_content' ], 10, 2 );
 		add_filter( 'manage_edit-leaderspath_context_sortable_columns', [ $this, 'context_sortable_columns' ] );
+		add_action( 'restrict_manage_posts', [ $this, 'context_cohort_filter_dropdown' ] );
+		add_action( 'pre_get_posts', [ $this, 'filter_context_files_by_cohort' ] );
 
 		// Skill columns.
 		add_filter( 'manage_leaderspath_skill_posts_columns', [ $this, 'skill_columns' ] );
 		add_action( 'manage_leaderspath_skill_posts_custom_column', [ $this, 'skill_column_content' ], 10, 2 );
 		add_filter( 'manage_edit-leaderspath_skill_sortable_columns', [ $this, 'skill_sortable_columns' ] );
 
-		// Cohort product columns — deferred because WC may not be loaded yet.
-		add_action( 'plugins_loaded', function (): void {
-			if ( class_exists( 'WooCommerce' ) ) {
-				add_filter( 'manage_product_posts_columns', [ $this, 'cohort_product_columns' ] );
-				add_action( 'manage_product_posts_custom_column', [ $this, 'cohort_product_column_content' ], 10, 2 );
-			}
-		} );
+		// Cohort (purchase-time instance) columns. Not gated on WooCommerce
+		// being active — a leaderspath_cohort instance can exist regardless
+		// of which commerce backend, if any, created it. This replaced the
+		// old cohort-product columns on the WC product list (0.7.0): those
+		// stopped making sense once a product became a reusable catalog
+		// offering that many organizations can purchase — a single "Phase"
+		// or "Enrollees" column on one product row can't represent multiple
+		// cohort instances under it. See docs/TASKS.md Phase 14, "Cohort is
+		// a purchase-time instance, not the product."
+		add_filter( 'manage_leaderspath_cohort_posts_columns', [ $this, 'cohort_columns' ] );
+		add_action( 'manage_leaderspath_cohort_posts_custom_column', [ $this, 'cohort_column_content' ], 10, 2 );
+		add_filter( 'manage_edit-leaderspath_cohort_sortable_columns', [ $this, 'cohort_sortable_columns' ] );
 
 		// Handle sorting.
 		add_action( 'pre_get_posts', [ $this, 'handle_sorting' ] );
@@ -303,6 +310,10 @@ class Admin_Columns {
 			}
 		}
 
+		// Cohort goes at the end — it's the field editors scan for when
+		// auditing which files are public versus organization-scoped.
+		$new_columns['leaderspath_context_cohort'] = __( 'Cohort', 'leaderspath' );
+
 		return $new_columns;
 	}
 
@@ -315,8 +326,14 @@ class Admin_Columns {
 	 * @param int    $post_id Post ID.
 	 */
 	public function context_column_content( string $column, int $post_id ): void {
-		if ( 'leaderspath_slug' === $column ) {
-			$this->render_slug( $post_id );
+		switch ( $column ) {
+			case 'leaderspath_slug':
+				$this->render_slug( $post_id );
+				break;
+
+			case 'leaderspath_context_cohort':
+				$this->render_context_cohort( $post_id );
+				break;
 		}
 	}
 
@@ -329,8 +346,151 @@ class Admin_Columns {
 	 * @return array<string, string> Modified sortable columns.
 	 */
 	public function context_sortable_columns( array $columns ): array {
-		$columns['leaderspath_slug'] = 'leaderspath_slug';
+		$columns['leaderspath_slug']           = 'leaderspath_slug';
+		$columns['leaderspath_context_cohort'] = 'leaderspath_context_cohort';
 		return $columns;
+	}
+
+	/**
+	 * Render the cohort a context file is scoped to, linked to its edit screen.
+	 *
+	 * Empty means shared/public curriculum content — shown as a dash, not
+	 * blank, so it reads as a deliberate state rather than a missing value.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param int $post_id Context file post ID.
+	 */
+	private function render_context_cohort( int $post_id ): void {
+		$cohort_id = get_field( 'context_cohort', $post_id );
+
+		if ( empty( $cohort_id ) ) {
+			echo '<span class="dashicons dashicons-admin-site-alt3" aria-hidden="true" title="' . esc_attr__( 'Public — shared across all cohorts', 'leaderspath' ) . '"></span>';
+			echo '<span class="screen-reader-text">' . esc_html__( 'Public', 'leaderspath' ) . '</span>';
+			return;
+		}
+
+		printf(
+			'<a href="%s">%s</a>',
+			esc_url( (string) get_edit_post_link( (int) $cohort_id ) ),
+			esc_html( get_the_title( (int) $cohort_id ) )
+		);
+	}
+
+	/**
+	 * Render the "Filter by cohort" dropdown above the Context Files list.
+	 *
+	 * Facilitators only see their own cohort(s) in the dropdown — matching
+	 * what filter_context_files_by_cohort() will actually let them query.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param string $post_type Current screen's post type.
+	 */
+	public function context_cohort_filter_dropdown( string $post_type ): void {
+		if ( 'leaderspath_context' !== $post_type ) {
+			return;
+		}
+
+		$is_privileged = current_user_can( 'manage_options' ) || current_user_can( 'edit_others_posts' );
+
+		$cohort_ids = $is_privileged
+			? get_posts( [
+				'post_type'      => 'leaderspath_cohort',
+				'posts_per_page' => -1,
+				'post_status'    => 'any',
+				'fields'         => 'ids',
+			] )
+			: ( class_exists( 'LeadersPath\Includes\WooCommerce' )
+				? \LeadersPath\Includes\Enrollment::get_facilitator_cohorts( get_current_user_id() )
+				: [] );
+
+		if ( empty( $cohort_ids ) ) {
+			return;
+		}
+
+		$selected = isset( $_GET['leaderspath_context_cohort'] ) ? sanitize_text_field( wp_unslash( $_GET['leaderspath_context_cohort'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only list filter, no state change.
+
+		echo '<select name="leaderspath_context_cohort">';
+		echo '<option value="">' . esc_html__( 'All cohorts', 'leaderspath' ) . '</option>';
+		echo '<option value="public"' . selected( $selected, 'public', false ) . '>' . esc_html__( 'Public only', 'leaderspath' ) . '</option>';
+
+		foreach ( $cohort_ids as $cohort_id ) {
+			printf(
+				'<option value="%d"%s>%s</option>',
+				(int) $cohort_id,
+				selected( $selected, (string) $cohort_id, false ),
+				esc_html( get_the_title( (int) $cohort_id ) )
+			);
+		}
+
+		echo '</select>';
+	}
+
+	/**
+	 * Apply the cohort filter dropdown's selection to the Context Files query.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param \WP_Query $query The query object.
+	 */
+	public function filter_context_files_by_cohort( \WP_Query $query ): void {
+		if ( ! is_admin() || ! $query->is_main_query() || 'leaderspath_context' !== $query->get( 'post_type' ) ) {
+			return;
+		}
+
+		$selected = isset( $_GET['leaderspath_context_cohort'] ) ? sanitize_text_field( wp_unslash( $_GET['leaderspath_context_cohort'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only list filter, no state change.
+
+		if ( '' !== $selected ) {
+			if ( 'public' === $selected ) {
+				$query->set( 'meta_query', [
+					[
+						'key'     => 'context_cohort',
+						'compare' => 'NOT EXISTS',
+					],
+				] );
+			} elseif ( is_numeric( $selected ) ) {
+				$query->set( 'meta_query', [
+					[
+						'key'   => 'context_cohort',
+						'value' => (int) $selected,
+					],
+				] );
+			}
+		}
+
+		// Facilitators (non-admin/editor): restrict to their own cohort(s) plus
+		// public content, regardless of the dropdown — this is the actual
+		// security boundary, the dropdown above is just convenience for staff.
+		if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_others_posts' ) ) {
+			return;
+		}
+
+		if ( ! class_exists( 'LeadersPath\Includes\WooCommerce' ) ) {
+			return;
+		}
+
+		$facilitator_cohorts = \LeadersPath\Includes\Enrollment::get_facilitator_cohorts( get_current_user_id() );
+
+		$scope_query = [ 'relation' => 'OR' ];
+		if ( ! empty( $facilitator_cohorts ) ) {
+			$scope_query[] = [
+				'key'     => 'context_cohort',
+				'value'   => $facilitator_cohorts,
+				'compare' => 'IN',
+			];
+		}
+		$scope_query[] = [
+			'key'     => 'context_cohort',
+			'compare' => 'NOT EXISTS',
+		];
+
+		$existing_meta_query = $query->get( 'meta_query' );
+		$query->set( 'meta_query', [
+			'relation' => 'AND',
+			$scope_query,
+			$existing_meta_query ?: [],
+		] );
 	}
 
 	// -------------------------------------------------------------------------
@@ -417,6 +577,11 @@ class Admin_Columns {
 		// For now, we'll sort by the stored total_duration instead.
 		if ( 'leaderspath_activity_count' === $orderby ) {
 			$query->set( 'meta_key', 'lesson_total_duration' );
+			$query->set( 'orderby', 'meta_value_num' );
+		}
+
+		if ( 'leaderspath_context_cohort' === $orderby ) {
+			$query->set( 'meta_key', 'context_cohort' );
 			$query->set( 'orderby', 'meta_value_num' );
 		}
 	}
@@ -711,29 +876,31 @@ JS;
 	}
 
 	// -------------------------------------------------------------------------
-	// Cohort Product Columns (WooCommerce)
+	// Cohort Columns (purchase-time instance — leaderspath_cohort CPT)
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Add custom columns for cohort products in the WooCommerce product list.
+	 * Add custom columns for the Cohort admin list.
 	 *
-	 * @since 0.4.0
+	 * @since 0.7.0
 	 *
 	 * @param array<string, string> $columns Existing columns.
 	 * @return array<string, string> Modified columns.
 	 */
-	public function cohort_product_columns( array $columns ): array {
+	public function cohort_columns( array $columns ): array {
 		$new_columns = [];
 
 		foreach ( $columns as $key => $value ) {
 			$new_columns[ $key ] = $value;
 
-			// Insert cohort columns after the product name column.
-			if ( 'name' === $key ) {
-				$new_columns['leaderspath_cohort_courses']   = __( 'Courses', 'leaderspath' );
-				$new_columns['leaderspath_cohort_phase']     = __( 'Phase', 'leaderspath' );
-				$new_columns['leaderspath_cohort_enrollees'] = __( 'Enrollees', 'leaderspath' );
-				$new_columns['leaderspath_cohort_dates']     = __( 'Dates', 'leaderspath' );
+			// Insert cohort columns after the title column.
+			if ( 'title' === $key ) {
+				$new_columns['leaderspath_cohort_courses']        = __( 'Courses', 'leaderspath' );
+				$new_columns['leaderspath_cohort_phase']          = __( 'Phase', 'leaderspath' );
+				$new_columns['leaderspath_cohort_enrollees']      = __( 'Enrollees', 'leaderspath' );
+				$new_columns['leaderspath_cohort_dates']          = __( 'Dates', 'leaderspath' );
+				$new_columns['leaderspath_cohort_owner']          = __( 'Owner', 'leaderspath' );
+				$new_columns['leaderspath_cohort_payment_status'] = __( 'Payment', 'leaderspath' );
 			}
 		}
 
@@ -741,19 +908,14 @@ JS;
 	}
 
 	/**
-	 * Render content for custom cohort product columns.
+	 * Render content for custom Cohort columns.
 	 *
-	 * @since 0.4.0
+	 * @since 0.7.0
 	 *
 	 * @param string $column  Column name.
 	 * @param int    $post_id Post ID.
 	 */
-	public function cohort_product_column_content( string $column, int $post_id ): void {
-		// Only render for cohort products.
-		if ( ! \LeadersPath\Includes\WooCommerce::is_cohort_product( $post_id ) ) {
-			return;
-		}
-
+	public function cohort_column_content( string $column, int $post_id ): void {
 		switch ( $column ) {
 			case 'leaderspath_cohort_courses':
 				$this->render_cohort_courses( $post_id );
@@ -770,7 +932,28 @@ JS;
 			case 'leaderspath_cohort_dates':
 				$this->render_cohort_dates( $post_id );
 				break;
+
+			case 'leaderspath_cohort_owner':
+				$this->render_cohort_owner( $post_id );
+				break;
+
+			case 'leaderspath_cohort_payment_status':
+				$this->render_cohort_payment_status( $post_id );
+				break;
 		}
+	}
+
+	/**
+	 * Define sortable columns for Cohorts.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param array<string, string> $columns Sortable columns.
+	 * @return array<string, string> Modified sortable columns.
+	 */
+	public function cohort_sortable_columns( array $columns ): array {
+		$columns['leaderspath_cohort_payment_status'] = 'leaderspath_cohort_payment_status';
+		return $columns;
 	}
 
 	/**
@@ -778,7 +961,7 @@ JS;
 	 *
 	 * @since 0.4.0
 	 *
-	 * @param int $post_id Product post ID.
+	 * @param int $post_id Cohort post ID.
 	 */
 	private function render_cohort_courses( int $post_id ): void {
 		$courses = get_field( 'cohort_courses', $post_id );
@@ -801,14 +984,17 @@ JS;
 	}
 
 	/**
-	 * Render the phase for a cohort product.
+	 * Render the pedagogical phase for a cohort.
+	 *
+	 * Distinct from the Payment column — this is the curriculum timeline
+	 * (upcoming/active/completed from dates), not commitment/billing state.
 	 *
 	 * @since 0.4.0
 	 *
-	 * @param int $post_id Product post ID.
+	 * @param int $post_id Cohort post ID.
 	 */
 	private function render_cohort_phase( int $post_id ): void {
-		$phase = \LeadersPath\Includes\WooCommerce::get_cohort_phase( $post_id );
+		$phase = \LeadersPath\Includes\Enrollment::get_cohort_phase( $post_id );
 
 		$labels = [
 			'upcoming'  => __( 'Upcoming', 'leaderspath' ),
@@ -830,28 +1016,24 @@ JS;
 	}
 
 	/**
-	 * Render the enrollee count for a cohort.
+	 * Render the enrollee count for a cohort, against its purchased seat count.
+	 *
+	 * Reads `cohort_seats` (set at creation from the purchased
+	 * product/variation — see Enrollment::create_cohort()) rather than WC
+	 * stock, since a cohort instance may exist independent of any WC product
+	 * at all.
 	 *
 	 * @since 0.4.0
 	 *
-	 * @param int $post_id Product post ID.
+	 * @param int $post_id Cohort post ID.
 	 */
 	private function render_cohort_enrollees( int $post_id ): void {
-		if ( ! class_exists( 'LeadersPath\Includes\WooCommerce' ) ) {
-			echo '0';
-			return;
-		}
-
-		$enrollees = \LeadersPath\Includes\WooCommerce::get_cohort_enrollees( $post_id );
+		$enrollees = \LeadersPath\Includes\Enrollment::get_cohort_enrollees( $post_id );
 		$count     = count( $enrollees );
-		$product   = wc_get_product( $post_id );
+		$seats     = (int) get_field( 'cohort_seats', $post_id );
 
-		if ( $product && $product->managing_stock() && $product->get_stock_quantity() > 0 ) {
-			printf(
-				'%d / %d',
-				$count,
-				$product->get_stock_quantity()
-			);
+		if ( $seats > 0 ) {
+			printf( '%d / %d', $count, $seats );
 		} else {
 			echo esc_html( (string) $count );
 		}
@@ -862,7 +1044,7 @@ JS;
 	 *
 	 * @since 0.4.0
 	 *
-	 * @param int $post_id Product post ID.
+	 * @param int $post_id Cohort post ID.
 	 */
 	private function render_cohort_dates( int $post_id ): void {
 		$start = get_field( 'cohort_start_date', $post_id );
@@ -879,5 +1061,62 @@ JS;
 		$end_display   = $end ? date_i18n( $format, strtotime( $end ) ) : '—';
 
 		printf( '%s – %s', esc_html( $start_display ), esc_html( $end_display ) );
+	}
+
+	/**
+	 * Render the cohort's owner (roster-management authority).
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param int $post_id Cohort post ID.
+	 */
+	private function render_cohort_owner( int $post_id ): void {
+		$owner_id = (int) get_field( 'cohort_owner', $post_id );
+
+		if ( ! $owner_id ) {
+			echo '<span class="dashicons dashicons-minus" aria-hidden="true"></span>';
+			return;
+		}
+
+		$user = get_userdata( $owner_id );
+		echo esc_html( $user ? $user->display_name : sprintf( '#%d', $owner_id ) );
+	}
+
+	/**
+	 * Render the cohort's payment status.
+	 *
+	 * Distinct from the Phase column — this is commitment/billing state
+	 * (see docs/TASKS.md Phase 14, "Creation trigger and payment status"),
+	 * not the curriculum timeline.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param int $post_id Cohort post ID.
+	 */
+	private function render_cohort_payment_status( int $post_id ): void {
+		$status = get_field( 'cohort_payment_status', $post_id ) ?: 'pending_payment';
+
+		$labels = [
+			'pending_payment' => __( 'Pending Payment', 'leaderspath' ),
+			'paid'            => __( 'Paid', 'leaderspath' ),
+		];
+
+		$colors = [
+			'pending_payment' => '#dba617',
+			'paid'            => '#2271b1',
+		];
+
+		printf(
+			'<span style="color: %s; font-weight: 500;">%s</span>',
+			esc_attr( $colors[ $status ] ?? '#666' ),
+			esc_html( $labels[ $status ] ?? $status )
+		);
+
+		if ( get_field( 'cohort_access_closed', $post_id ) ) {
+			printf(
+				' <span class="dashicons dashicons-lock" style="color: #d63638;" title="%s"></span>',
+				esc_attr__( 'Access manually closed', 'leaderspath' )
+			);
+		}
 	}
 }

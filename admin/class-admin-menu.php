@@ -35,14 +35,15 @@ class Admin_Menu {
 	 */
 	private const SUBMENU_ORDER = [
 		'leaderspath'                                                                 => 0,  // Dashboard.
-		'edit.php?post_type=leaderspath_course'                                       => 1,  // Courses.
-		'edit.php?post_type=leaderspath_lesson'                                       => 2,  // Lessons.
-		'edit.php?post_type=leaderspath_activity'                                     => 3,  // Activities.
-		'edit-tags.php?taxonomy=leaderspath_topic&post_type=leaderspath_activity'      => 4,  // Topics.
-		'edit.php?post_type=leaderspath_context'                                      => 5,  // Context Files.
-		'edit-tags.php?taxonomy=leaderspath_context_cat&post_type=leaderspath_context' => 6,  // Context Categories.
-		'edit.php?post_type=leaderspath_skill'                                        => 7,  // Skills.
-		'edit-tags.php?taxonomy=leaderspath_skill_cat&post_type=leaderspath_skill'     => 8,  // Skill Categories.
+		'edit.php?post_type=leaderspath_cohort'                                       => 1,  // Cohorts.
+		'edit.php?post_type=leaderspath_course'                                       => 2,  // Courses.
+		'edit.php?post_type=leaderspath_lesson'                                       => 3,  // Lessons.
+		'edit.php?post_type=leaderspath_activity'                                     => 4,  // Activities.
+		'edit-tags.php?taxonomy=leaderspath_topic&post_type=leaderspath_activity'      => 5,  // Topics.
+		'edit.php?post_type=leaderspath_context'                                      => 6,  // Context Files.
+		'edit-tags.php?taxonomy=leaderspath_context_cat&post_type=leaderspath_context' => 7,  // Context Categories.
+		'edit.php?post_type=leaderspath_skill'                                        => 8,  // Skills.
+		'edit-tags.php?taxonomy=leaderspath_skill_cat&post_type=leaderspath_skill'     => 9,  // Skill Categories.
 		'leaderspath-settings'                                                        => 99, // Settings (always last).
 	];
 
@@ -137,16 +138,20 @@ class Admin_Menu {
 					<table class="widefat striped">
 						<tbody>
 							<tr>
+								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_cohort' ) ); ?>"><?php esc_html_e( 'Cohorts', 'leaderspath' ); ?></a></td>
+								<td><?php echo esc_html( (string) $counts['cohorts'] ); ?></td>
+							</tr>
+							<tr>
+								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_course' ) ); ?>"><?php esc_html_e( 'Courses', 'leaderspath' ); ?></a></td>
+								<td><?php echo esc_html( (string) $counts['courses'] ); ?></td>
+							</tr>
+							<tr>
 								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_lesson' ) ); ?>"><?php esc_html_e( 'Lessons', 'leaderspath' ); ?></a></td>
 								<td><?php echo esc_html( (string) $counts['lessons'] ); ?></td>
 							</tr>
 							<tr>
 								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_activity' ) ); ?>"><?php esc_html_e( 'Activities', 'leaderspath' ); ?></a></td>
 								<td><?php echo esc_html( (string) $counts['activities'] ); ?></td>
-							</tr>
-							<tr>
-								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_course' ) ); ?>"><?php esc_html_e( 'Courses', 'leaderspath' ); ?></a></td>
-								<td><?php echo esc_html( (string) $counts['courses'] ); ?></td>
 							</tr>
 							<tr>
 								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_context' ) ); ?>"><?php esc_html_e( 'Context Files', 'leaderspath' ); ?></a></td>
@@ -156,12 +161,6 @@ class Admin_Menu {
 								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=leaderspath_skill' ) ); ?>"><?php esc_html_e( 'Skills', 'leaderspath' ); ?></a></td>
 								<td><?php echo esc_html( (string) $counts['skills'] ); ?></td>
 							</tr>
-							<?php if ( class_exists( 'WooCommerce' ) ) : ?>
-							<tr>
-								<td><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=product' ) ); ?>"><?php esc_html_e( 'Cohorts', 'leaderspath' ); ?></a></td>
-								<td><?php echo esc_html( (string) $counts['cohorts'] ); ?></td>
-							</tr>
-							<?php endif; ?>
 						</tbody>
 					</table>
 				</div>
@@ -169,11 +168,13 @@ class Admin_Menu {
 				<div class="leaderspath-dashboard__quick-actions">
 					<h3><?php esc_html_e( 'Quick Actions', 'leaderspath' ); ?></h3>
 					<p>
-						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_lesson' ) ); ?>" class="button button-primary"><?php esc_html_e( 'New Lesson', 'leaderspath' ); ?></a>
+						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_cohort' ) ); ?>" class="button button-primary"><?php esc_html_e( 'New Cohort', 'leaderspath' ); ?></a>
+						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_course' ) ); ?>" class="button"><?php esc_html_e( 'New Course', 'leaderspath' ); ?></a>
+						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_lesson' ) ); ?>" class="button"><?php esc_html_e( 'New Lesson', 'leaderspath' ); ?></a>
 						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_activity' ) ); ?>" class="button"><?php esc_html_e( 'New Activity', 'leaderspath' ); ?></a>
 						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=leaderspath_context' ) ); ?>" class="button"><?php esc_html_e( 'New Context File', 'leaderspath' ); ?></a>
 						<?php if ( class_exists( 'WooCommerce' ) ) : ?>
-						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=product' ) ); ?>" class="button"><?php esc_html_e( 'New Cohort', 'leaderspath' ); ?></a>
+						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=product' ) ); ?>" class="button"><?php esc_html_e( 'New Cohort Package (Product)', 'leaderspath' ); ?></a>
 						<?php endif; ?>
 						<a href="<?php echo esc_url( admin_url( 'admin.php?page=leaderspath-settings' ) ); ?>" class="button"><?php esc_html_e( 'Settings', 'leaderspath' ); ?></a>
 					</p>
@@ -225,32 +226,14 @@ class Admin_Menu {
 	 * @return array<string, int> Content counts.
 	 */
 	private function get_content_counts(): array {
-		$counts = [
+		return [
+			'cohorts'       => (int) wp_count_posts( 'leaderspath_cohort' )->publish,
+			'courses'       => (int) wp_count_posts( 'leaderspath_course' )->publish,
 			'lessons'       => (int) wp_count_posts( 'leaderspath_lesson' )->publish,
 			'activities'    => (int) wp_count_posts( 'leaderspath_activity' )->publish,
-			'courses'       => (int) wp_count_posts( 'leaderspath_course' )->publish,
 			'context_files' => (int) wp_count_posts( 'leaderspath_context' )->publish,
 			'skills'        => (int) wp_count_posts( 'leaderspath_skill' )->publish,
-			'cohorts'       => 0,
 		];
-
-		if ( class_exists( 'WooCommerce' ) ) {
-			$cohort_query = new \WP_Query( [
-				'post_type'      => 'product',
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-				'fields'         => 'ids',
-				'meta_query'     => [
-					[
-						'key'   => \LeadersPath\Includes\WooCommerce::COHORT_META_KEY,
-						'value' => 'yes',
-					],
-				],
-			] );
-			$counts['cohorts'] = $cohort_query->found_posts;
-		}
-
-		return $counts;
 	}
 
 	/**

@@ -230,16 +230,16 @@ class REST_API {
 			);
 		}
 
-		// Enrollment check — only when WooCommerce is active, skip for admins/editors.
-		if ( class_exists( 'LeadersPath\Includes\WooCommerce' )
-			&& ! current_user_can( 'manage_options' )
-			&& ! current_user_can( 'edit_others_posts' )
-		) {
+		// Enrollment check — skip for admins/editors. Not gated on WooCommerce
+		// being active: Enrollment/leaderspath_cohort are commerce-agnostic
+		// (see class-enrollment.php), so this applies regardless of which
+		// commerce backend, if any, created the cohort.
+		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_others_posts' ) ) {
 			$activity_id = $request->get_param( 'activity_id' );
 			$lesson_id   = $request->get_param( 'lesson_id' );
 
 			if ( ! empty( $activity_id )
-				&& ! WooCommerce::can_user_access_activity( get_current_user_id(), (int) $activity_id )
+				&& ! Enrollment::can_user_access_activity( get_current_user_id(), (int) $activity_id )
 			) {
 				return new WP_Error(
 					'rest_forbidden',
@@ -249,7 +249,7 @@ class REST_API {
 			}
 
 			if ( ! empty( $lesson_id )
-				&& ! WooCommerce::can_user_access_lesson( get_current_user_id(), (int) $lesson_id )
+				&& ! Enrollment::can_user_access_lesson( get_current_user_id(), (int) $lesson_id )
 			) {
 				return new WP_Error(
 					'rest_forbidden',
@@ -265,6 +265,12 @@ class REST_API {
 	/**
 	 * Check permission for read endpoints.
 	 *
+	 * Mirrors check_chat_permission(): logged in, capable, and — when
+	 * WooCommerce is active — enrolled in a cohort that includes the
+	 * activity or lesson this context file or skill is attached to.
+	 * Context files and skills have no owning cohort of their own; access
+	 * is resolved by walking up the same chain the chatbot uses.
+	 *
 	 * @since 0.1.0
 	 *
 	 * @param WP_REST_Request $request Request object.
@@ -278,6 +284,38 @@ class REST_API {
 				__( 'You must be logged in to access this content.', 'leaderspath' ),
 				[ 'status' => 401 ]
 			);
+		}
+
+		// Check capability — same gate as the chatbot itself.
+		if ( ! current_user_can( 'leaderspath_access_chatbot' ) ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'You do not have permission to access this content.', 'leaderspath' ),
+				[ 'status' => 403 ]
+			);
+		}
+
+		// Enrollment check — skip for admins/editors. Not gated on WooCommerce
+		// being active; see check_chat_permission()'s equivalent note.
+		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_others_posts' ) ) {
+			$route     = $request->get_route();
+			$id        = (int) $request->get_param( 'id' );
+			$user_id   = get_current_user_id();
+			$permitted = true;
+
+			if ( false !== strpos( $route, '/context/' ) ) {
+				$permitted = Enrollment::can_user_access_context( $user_id, $id );
+			} elseif ( false !== strpos( $route, '/skills/' ) ) {
+				$permitted = Enrollment::can_user_access_skill( $user_id, $id );
+			}
+
+			if ( ! $permitted ) {
+				return new WP_Error(
+					'rest_forbidden',
+					__( 'You are not enrolled in a cohort that includes this content.', 'leaderspath' ),
+					[ 'status' => 403 ]
+				);
+			}
 		}
 
 		return true;

@@ -29,11 +29,11 @@
 LeadersPath is a WordPress plugin developed by WeMakeGood that powers a facilitated cohort learning experience. Facilitators present concepts while learners experiment with AI sandboxes (Activities) to experience specific AI behaviors. The plugin demonstrates the difference between raw LLM interactions and context-enhanced AI implementations.
 
 **Plugin Scope:**
-- Schema and content management — 5 CPTs, 3 taxonomies, ACF Pro field groups, roles & capabilities
+- Schema and content management — 6 CPTs, 3 taxonomies, ACF Pro field groups, roles & capabilities
 - Claude API integration — Container API, code execution, skills, SSE streaming, automatic retry
 - REST endpoints — `/chat`, `/chat/stream`, `/context/{id}/download`, `/skills/{id}/download`
 - Chatbot widget — vanilla-JS frontend + `[leaderspath_chatbot]` shortcode
-- WooCommerce cohort integration — enrollment management, access chain, cohort phases
+- Cohort enrollment & access — commerce-agnostic `Enrollment` class (roster, access chain, cohort phases); WooCommerce is one caller of it, not the cohort's data model (see `docs/TASKS.md` Phase 14)
 - Admin tooling — settings, columns, Context File drag-drop import, Markdown drop for TinyMCE editors
 
 **Out of scope (handled by the page builder):**
@@ -453,12 +453,12 @@ apply_filters('leaderspath_activity_context_files', $files, $activity_id);
 
 ## Completed Work
 
-- **Data Layer:** 5 CPTs, 3 taxonomies, ACF field groups, roles & capabilities
-- **Admin Interface:** Settings page, custom columns, Context File drag-drop import, Markdown drop for TinyMCE
+- **Data Layer:** 6 CPTs, 3 taxonomies, ACF field groups, roles & capabilities
+- **Admin Interface:** Settings page, custom columns, Context File drag-drop import, Markdown drop for TinyMCE, cohort roster metabox
 - **Claude API:** Container API with code execution + skills, SSE streaming, automatic retry
 - **REST API:** `/chat`, `/chat/stream`, `/context/{id}/download`, `/skills/{id}/download`
 - **Chatbot widget:** `[leaderspath_chatbot]` shortcode + vanilla-JS frontend
-- **WooCommerce cohorts:** Enrollment management, access chain, cohort phases
+- **Cohort enrollment & roster:** `Enrollment` class (commerce-agnostic — access chain, cohort phases, seat invites); `WooCommerce` translates order events into `Enrollment::create_cohort()` calls, one caller among others (see `docs/TASKS.md` Phase 14)
 
 ## Current Status
 
