@@ -680,7 +680,57 @@ class REST_API {
 			return $result;
 		}
 
+		$this->record_upload_ownership( $result['id'], get_current_user_id(), $activity_id );
+
 		return new WP_REST_Response( [ 'file_id' => $result['id'] ], 200 );
+	}
+
+	/**
+	 * Record who a chat-uploaded file_id belongs to, so a later /chat or
+	 * /chat/stream request can't replay someone else's file_id.
+	 *
+	 * Anthropic's Files API is workspace-scoped, not user- or
+	 * conversation-scoped — its own docs warn explicitly against accepting
+	 * a client-supplied file_id without an application-level ownership
+	 * check, since any file_id is otherwise readable by any request that
+	 * names it. This transient is that check: a short-lived (1 hour, well
+	 * beyond a single chat session but not meant to persist) mapping from
+	 * file_id to the user/activity it was actually issued to.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param string $file_id     Anthropic file ID.
+	 * @param int    $user_id     WordPress user ID that uploaded it.
+	 * @param int    $activity_id Activity it was uploaded for.
+	 */
+	private function record_upload_ownership( string $file_id, int $user_id, int $activity_id ): void {
+		set_transient(
+			'leaderspath_upload_' . $file_id,
+			[
+				'user_id'     => $user_id,
+				'activity_id' => $activity_id,
+			],
+			HOUR_IN_SECONDS
+		);
+	}
+
+	/**
+	 * Verify the current user/activity actually owns an attached_file_id
+	 * before letting a /chat or /chat/stream request use it.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param string $file_id     Anthropic file ID from the request.
+	 * @param int    $user_id     Current user ID.
+	 * @param int    $activity_id Activity ID the chat request targets.
+	 * @return bool True if this user uploaded this file_id for this activity.
+	 */
+	private function verify_upload_ownership( string $file_id, int $user_id, int $activity_id ): bool {
+		$owner = get_transient( 'leaderspath_upload_' . $file_id );
+
+		return is_array( $owner )
+			&& (int) ( $owner['user_id'] ?? 0 ) === $user_id
+			&& (int) ( $owner['activity_id'] ?? 0 ) === $activity_id;
 	}
 
 	/**
@@ -748,6 +798,19 @@ class REST_API {
 			);
 		}
 
+		// Reject a replayed/foreign file_id before it ever reaches Anthropic.
+		// See record_upload_ownership()/verify_upload_ownership() — Anthropic's
+		// Files API is workspace-scoped, not per-user, so this application-level
+		// check is the only thing stopping one learner's uploaded file from
+		// being read via another learner's (or another activity's) chat.
+		if ( $attached_file_id && ! $this->verify_upload_ownership( $attached_file_id, get_current_user_id(), $activity_id ) ) {
+			return new WP_Error(
+				'file_ownership_mismatch',
+				__( 'This file was not uploaded by you for this activity.', 'leaderspath' ),
+				[ 'status' => 403 ]
+			);
+		}
+
 		// Determine model to use.
 		if ( empty( $model ) ) {
 			$model = get_field( 'chatbot_model', $activity_id ) ?: \LeadersPath\Admin\Settings::get_default_model();
@@ -764,6 +827,15 @@ class REST_API {
 
 		// Send message (activity mode).
 		$response = $claude->send_message( $activity_id, $message, $history, $model, null, $attached_file_id );
+
+		// Delete the file from Anthropic right after its one legitimate use —
+		// shrinks retention from their standard "up to 30 days" down to
+		// effectively one request. Best-effort/fire-and-forget: a delete
+		// failure shouldn't fail the chat response the learner is waiting on.
+		if ( $attached_file_id ) {
+			$claude->delete_file( $attached_file_id );
+			delete_transient( 'leaderspath_upload_' . $attached_file_id );
+		}
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -868,10 +940,30 @@ class REST_API {
 			$container_id     = $request->get_param( 'container_id' );
 			$attached_file_id = $request->get_param( 'attached_file_id' ) ?: null;
 
+			// Reject a replayed/foreign file_id before SSE output starts (once
+			// it does, this can only surface as an in-stream error event, not
+			// a normal REST error response). See handle_activity_chat()'s
+			// identical check for why this is needed at all: Anthropic's
+			// Files API is workspace-scoped, not per-user.
+			if ( $attached_file_id && ! $this->verify_upload_ownership( $attached_file_id, get_current_user_id(), (int) $activity_id ) ) {
+				return new WP_Error(
+					'file_ownership_mismatch',
+					__( 'This file was not uploaded by you for this activity.', 'leaderspath' ),
+					[ 'status' => 403 ]
+				);
+			}
+
 			$this->start_sse_output();
 
 			$claude = new Claude_API();
 			$result = $claude->stream_message( (int) $activity_id, $message, $history, $model, $container_id, $attached_file_id );
+
+			// Delete the file right after its one legitimate use — see
+			// handle_activity_chat()'s identical cleanup. Fire-and-forget.
+			if ( $attached_file_id ) {
+				$claude->delete_file( $attached_file_id );
+				delete_transient( 'leaderspath_upload_' . $attached_file_id );
+			}
 		}
 
 		// If stream_message returned a WP_Error, it means streaming never started.

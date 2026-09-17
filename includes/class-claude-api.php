@@ -2012,4 +2012,45 @@ class Claude_API {
 
 		return [ 'id' => $data['id'] ];
 	}
+
+	/**
+	 * Delete a file from Anthropic's Files API.
+	 *
+	 * Called right after a chat-uploaded file's one legitimate use (see
+	 * REST_API::handle_activity_chat()/handle_stream_chat()) to shrink its
+	 * retention window from Anthropic's standard "up to 30 days" down to
+	 * effectively one request. Best-effort/fire-and-forget by design: a
+	 * failed delete here shouldn't fail (or even be visible in) the chat
+	 * response the learner is waiting on — the file simply falls back to
+	 * expiring on Anthropic's normal schedule.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param string $file_id Anthropic file ID to delete.
+	 */
+	public function delete_file( string $file_id ): void {
+		$api_key = \LeadersPath\Admin\Settings::get_api_key();
+		if ( empty( $api_key ) || empty( $file_id ) ) {
+			return;
+		}
+
+		$response = wp_remote_request(
+			self::API_URL . '/files/' . rawurlencode( $file_id ),
+			[
+				'method'  => 'DELETE',
+				'timeout' => 10,
+				'headers' => [
+					'x-api-key'         => $api_key,
+					'anthropic-version' => self::API_VERSION,
+				],
+			]
+		);
+
+		$this->maybe_log(
+			'Delete File',
+			is_wp_error( $response )
+				? [ 'file_id' => $file_id, 'error' => $response->get_error_message() ]
+				: [ 'file_id' => $file_id, 'status' => wp_remote_retrieve_response_code( $response ) ]
+		);
+	}
 }

@@ -1160,6 +1160,29 @@ Per the user's explicit request, `CLAUDE.md`'s "Claude API Architecture" section
 
 ---
 
+## Security fix: cross-user/cross-activity file_id replay in chat uploads (2026-09-17)
+
+**Trigger:** user directly asked, after the file-upload feature (Story 4) shipped, whether uploaded files could be accessible across different users' chats — a genuinely good question that surfaced a real gap the original build missed.
+
+**The gap:** Anthropic's Files API is workspace-scoped, not per-user or per-conversation — their own docs state this explicitly and warn against the exact mistake this plugin made: *"Never accept file_id values from end users or other untrusted sources: a user-supplied file_id would let one user of your application read content that another user uploaded."* `/chat/upload` returned a bare `file_id` to the client with nothing recording who it belonged to, and `/chat`/`/chat/stream`'s `attached_file_id` param accepted any string and passed it straight to `container_upload` with zero ownership check. Any authenticated learner who obtained another learner's `file_id` (browser devtools, a shared machine, a captured network request) could replay it into their own chat request — including against a *different* activity — and Claude would read that other learner's file content. This wasn't a theoretical concern; it was confirmed as a real, working exploit path before the fix (see verification below).
+
+**Fixed, both parts confirmed together as the user's explicit choice, not independently:**
+
+1. **Server-side ownership map.** `REST_API::record_upload_ownership()` sets a `leaderspath_upload_{file_id}` transient (`{user_id, activity_id}`, 1 hour TTL) on successful upload. `verify_upload_ownership()` checks it before `attached_file_id` is ever passed to `Claude_API::send_message()`/`stream_message()` — rejects with `403 file_ownership_mismatch` on any mismatch (wrong user, wrong activity, or no record at all, e.g. after expiry or a previous use). Wired into both `handle_activity_chat()` (sync) and `handle_stream_chat()` (SSE — the check runs *before* `start_sse_output()`, since a REST error response isn't possible once SSE headers are sent).
+2. **Delete-after-use.** New `Claude_API::delete_file()` (`DELETE /v1/files/{file_id}`, best-effort/fire-and-forget) is called immediately after a successful attached-file chat turn, alongside clearing the now-spent ownership transient. Shrinks the file's real retention window from Anthropic's standard "up to 30 days" down to effectively one request — a meaningfully better privacy posture than relying on their default expiry alone.
+
+**Verified end-to-end against the real API and real users, not just read for correctness:**
+- Uploaded a file as user 1 for activity 157; confirmed the ownership transient recorded `{user_id: 1, activity_id: 157}`.
+- **Real attack simulated and blocked:** a second real user (17, "dana.lee" — confirmed via `Enrollment::can_user_access_activity()` and the `leaderspath_access_chatbot` capability to *legitimately* pass every other permission gate on activity 157) attempted to use user 1's `file_id` → `403 file_ownership_mismatch`. This confirms the block is the new ownership check specifically, not a false positive from an unrelated permission failure.
+- **Cross-activity replay also blocked:** user 1 attempting to reuse their own `file_id` against a *different* skills-enabled activity (140) → same `403`.
+- **Legitimate path still works:** correct user + correct activity → `200`, Claude correctly read the real uploaded content back.
+- **Delete-after-use confirmed against Anthropic directly:** a file-metadata GET for the same `file_id` immediately after its legitimate use returned `404` — genuinely deleted from Anthropic's infrastructure, not just forgotten locally. The ownership transient was also confirmed cleared (`false`).
+- **Second line of defense:** attempting to replay the same `file_id` again after deletion is rejected by the (already-cleared) ownership check before ever reaching Anthropic's now-irrelevant 404 — defense in depth, not reliance on a single check.
+
+**Files touched:** `includes/class-rest-api.php` (`record_upload_ownership()`/`verify_upload_ownership()`, ownership check + delete-after-use wired into both `handle_activity_chat()` and `handle_stream_chat()`), `includes/class-claude-api.php` (new `delete_file()`).
+
+---
+
 ## Quick Reference
 
 ### Test Data
