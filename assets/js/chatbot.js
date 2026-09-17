@@ -32,10 +32,10 @@
 	var canStream = restStreamUrl && typeof ReadableStream !== 'undefined';
 
 	// Client-side mirror of the server-side allowlist/cap in class-rest-api.php
-	// (ALLOWED_UPLOAD_MIME_TYPES / MAX_UPLOAD_BYTES). This check is purely for
-	// fast UX (instant rejection message) — the server remains authoritative
-	// and re-validates every upload regardless of what the client allowed
-	// through.
+	// (ALLOWED_UPLOAD_MIME_TYPES / Settings::get_chat_upload_max_bytes()). This
+	// check is purely for fast UX (instant rejection message) — the server
+	// remains authoritative and re-validates every upload regardless of what
+	// the client allowed through.
 	var ALLOWED_UPLOAD_MIME_TYPES = [
 		'text/plain',
 		'text/markdown',
@@ -50,9 +50,9 @@
 		'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 		'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 	];
-	// 30MB app-level cap (not Anthropic's own 500MB Files API limit) — must match
-	// REST_API::MAX_UPLOAD_BYTES.
-	var MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+	// Admin-configurable (Settings > Chat Upload Size Limit); 30MB is only the
+	// fallback if the localized config is somehow missing.
+	var MAX_UPLOAD_BYTES = config.maxUploadBytes || ( 30 * 1024 * 1024 );
 
 	/**
 	 * Initialize a single chatbot instance.
@@ -981,7 +981,7 @@
 		 */
 		function validateFileForUpload( file ) {
 			if ( file.size > MAX_UPLOAD_BYTES ) {
-				return 'That file is too large. The maximum size is 30MB.';
+				return 'That file is too large. The maximum size is ' + Math.round( MAX_UPLOAD_BYTES / ( 1024 * 1024 ) ) + 'MB.';
 			}
 			if ( file.type && ALLOWED_UPLOAD_MIME_TYPES.indexOf( file.type ) === -1 ) {
 				return 'This file type is not supported.';

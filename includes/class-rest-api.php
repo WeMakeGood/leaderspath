@@ -53,20 +53,6 @@ class REST_API {
 		'application/vnd.openxmlformats-officedocument.presentationml.presentation' => [ 'pptx' ],
 	];
 
-	/**
-	 * Maximum upload size in bytes for chat file uploads.
-	 *
-	 * A deliberate app-level ceiling, not Anthropic's own limit — the Files
-	 * API itself allows up to 500MB per file (confirmed against
-	 * platform.claude.com/docs/en/build-with-claude/files, 2026-09-17). 30MB
-	 * keeps a single learner upload from tying up a synchronous
-	 * wp_remote_post() call/PHP memory for an unreasonably long time; raise
-	 * it deliberately if a real activity needs larger files, not as a
-	 * pass-through of Anthropic's ceiling.
-	 *
-	 * @var int
-	 */
-	private const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
 
 	/**
 	 * Initialize the class.
@@ -661,10 +647,15 @@ class REST_API {
 			);
 		}
 
-		if ( (int) $file['size'] > self::MAX_UPLOAD_BYTES ) {
+		$max_upload_bytes = \LeadersPath\Admin\Settings::get_chat_upload_max_bytes();
+		if ( (int) $file['size'] > $max_upload_bytes ) {
 			return new WP_Error(
 				'file_too_large',
-				__( 'The file is too large. The maximum size is 30MB.', 'leaderspath' ),
+				sprintf(
+					/* translators: %d: maximum file size in megabytes */
+					__( 'The file is too large. The maximum size is %dMB.', 'leaderspath' ),
+					(int) round( $max_upload_bytes / ( 1024 * 1024 ) )
+				),
 				[ 'status' => 400 ]
 			);
 		}

@@ -167,11 +167,12 @@ class Shortcodes {
 				'leaderspath-chatbot',
 				'LeadersPathChatbot',
 				[
-					'restUrl'       => rest_url( 'leaderspath/v1/chat' ),
-					'restStreamUrl' => rest_url( 'leaderspath/v1/chat/stream' ),
-					'restWarmUrl'   => rest_url( 'leaderspath/v1/chat/warm' ),
-					'restUploadUrl' => rest_url( 'leaderspath/v1/chat/upload' ),
-					'nonce'         => wp_create_nonce( 'wp_rest' ),
+					'restUrl'        => rest_url( 'leaderspath/v1/chat' ),
+					'restStreamUrl'  => rest_url( 'leaderspath/v1/chat/stream' ),
+					'restWarmUrl'    => rest_url( 'leaderspath/v1/chat/warm' ),
+					'restUploadUrl'  => rest_url( 'leaderspath/v1/chat/upload' ),
+					'maxUploadBytes' => \LeadersPath\Admin\Settings::get_chat_upload_max_bytes(),
+					'nonce'          => wp_create_nonce( 'wp_rest' ),
 				]
 			);
 		}

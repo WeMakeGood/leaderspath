@@ -114,6 +114,14 @@ class Settings {
 			'leaderspath_api_section'
 		);
 
+		add_settings_field(
+			'chat_upload_max_mb',
+			__( 'Chat Upload Size Limit', 'leaderspath' ),
+			[ $this, 'render_chat_upload_max_mb_field' ],
+			self::PAGE_SLUG,
+			'leaderspath_api_section'
+		);
+
 		// API Versions Section (Advanced).
 		add_settings_section(
 			'leaderspath_api_versions_section',
@@ -206,6 +214,7 @@ class Settings {
 		return [
 			'api_key'                   => '',
 			'default_model'             => 'sonnet',
+			'chat_upload_max_mb'        => 30,
 			'debug_mode'                => false,
 			// Beta header versions (configurable for API updates).
 			'beta_code_execution'       => 'code-execution-2025-08-25',
@@ -364,6 +373,13 @@ class Settings {
 		} else {
 			$sanitized['default_model'] = 'sonnet';
 		}
+
+		// Chat upload size limit — clamped to 1-500MB (Anthropic's own Files
+		// API ceiling is 500MB; a value above that would never be reachable).
+		$default_max_mb                  = $this->get_defaults()['chat_upload_max_mb'];
+		$sanitized['chat_upload_max_mb'] = isset( $input['chat_upload_max_mb'] )
+			? max( 1, min( 500, (int) $input['chat_upload_max_mb'] ) )
+			: $default_max_mb;
 
 		// Debug mode.
 		$sanitized['debug_mode'] = ! empty( $input['debug_mode'] );
@@ -545,6 +561,37 @@ class Settings {
 		</select>
 		<p class="description">
 			<?php esc_html_e( 'Default Claude model for new lessons. Can be overridden per lesson.', 'leaderspath' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render the chat file upload size limit field.
+	 *
+	 * @since 0.13.0
+	 */
+	public function render_chat_upload_max_mb_field(): void {
+		$options   = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$max_mb    = $options['chat_upload_max_mb'] ?? $this->get_defaults()['chat_upload_max_mb'];
+
+		?>
+		<input
+			type="number"
+			id="leaderspath_chat_upload_max_mb"
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[chat_upload_max_mb]"
+			value="<?php echo esc_attr( (string) $max_mb ); ?>"
+			min="1"
+			max="500"
+			step="1"
+			class="small-text"
+		/> <?php esc_html_e( 'MB', 'leaderspath' ); ?>
+		<p class="description">
+			<?php
+			esc_html_e(
+				'Maximum size for a file a learner attaches to a skills-enabled activity chat. Files upload to Anthropic\'s Files API — this caps request time/memory on our server, not a pass-through of Anthropic\'s own 500MB Files API limit; a larger value here bills more input tokens per attached file.',
+				'leaderspath'
+			);
+			?>
 		</p>
 		<?php
 	}
@@ -856,6 +903,19 @@ class Settings {
 	public static function get_default_model(): string {
 		$options = get_option( self::OPTION_NAME, [] );
 		return $options['default_model'] ?? 'sonnet';
+	}
+
+	/**
+	 * Get the configured max chat upload size, in bytes.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @return int Maximum upload size in bytes.
+	 */
+	public static function get_chat_upload_max_bytes(): int {
+		$options = get_option( self::OPTION_NAME, [] );
+		$max_mb  = $options['chat_upload_max_mb'] ?? 30;
+		return (int) $max_mb * 1024 * 1024;
 	}
 
 	/**
