@@ -116,6 +116,24 @@ add_action( 'plugins_loaded', function (): void {
 } );
 
 /**
+ * WS Form cohort-purchase integration (deferred to plugins_loaded).
+ *
+ * WS Form Pro's `wsf_field_get_objects()`/`wsf_submit_get_value()` helpers
+ * only exist once WS Form Pro itself has loaded; class-ws-form-integration.php
+ * also self-guards with the same function_exists() check, but requiring it
+ * unconditionally at top-level would still define the class body eagerly.
+ * Same deferral pattern as the WooCommerce integration above.
+ */
+add_action( 'plugins_loaded', function (): void {
+	if ( ! function_exists( 'wsf_field_get_objects' ) ) {
+		return;
+	}
+
+	require_once LEADERSPATH_PATH . 'includes/class-ws-form-integration.php';
+	new LeadersPath\Includes\WS_Form_Integration();
+} );
+
+/**
  * Plugin activation hook.
  *
  * @since 0.1.0

@@ -35,6 +35,7 @@ class Taxonomies {
 		$this->register_topic();
 		$this->register_context_category();
 		$this->register_skill_category();
+		$this->register_cohort_type();
 	}
 
 	/**
@@ -197,6 +198,75 @@ class Taxonomies {
 			[ 'leaderspath_skill' ],
 			$args
 		);
+	}
+
+	/**
+	 * Register the Cohort Type taxonomy.
+	 *
+	 * Applies to Cohorts. Two flat, mutually-exclusive terms — Organization
+	 * (a whole cohort purchased for one org, created via `create_cohort()`
+	 * from the org-purchase form) and Mixed Group (a standing cohort that
+	 * individual buyers join one at a time, via the not-yet-built
+	 * `add_to_cohort()`) — not a category tree, so non-hierarchical like tags.
+	 * `Enrollment::create_cohort()` always sets this term itself (currently
+	 * always 'Organization' — it's the only path that creates a cohort from
+	 * a purchase); see docs/TASKS.md Phase 14.
+	 *
+	 * @since 0.7.0
+	 */
+	private function register_cohort_type(): void {
+		$labels = [
+			'name'                       => _x( 'Cohort Types', 'Taxonomy general name', 'leaderspath' ),
+			'singular_name'              => _x( 'Cohort Type', 'Taxonomy singular name', 'leaderspath' ),
+			'search_items'               => __( 'Search Cohort Types', 'leaderspath' ),
+			'popular_items'              => __( 'Popular Cohort Types', 'leaderspath' ),
+			'all_items'                  => __( 'All Cohort Types', 'leaderspath' ),
+			'edit_item'                  => __( 'Edit Cohort Type', 'leaderspath' ),
+			'view_item'                  => __( 'View Cohort Type', 'leaderspath' ),
+			'update_item'                => __( 'Update Cohort Type', 'leaderspath' ),
+			'add_new_item'               => __( 'Add New Cohort Type', 'leaderspath' ),
+			'new_item_name'              => __( 'New Cohort Type Name', 'leaderspath' ),
+			'separate_items_with_commas' => __( 'Separate cohort types with commas', 'leaderspath' ),
+			'add_or_remove_items'        => __( 'Add or remove cohort types', 'leaderspath' ),
+			'choose_from_most_used'      => __( 'Choose from the most used cohort types', 'leaderspath' ),
+			'not_found'                  => __( 'No cohort types found.', 'leaderspath' ),
+			'no_terms'                   => __( 'No cohort type', 'leaderspath' ),
+			'menu_name'                  => __( 'Cohort Types', 'leaderspath' ),
+			'items_list_navigation'      => __( 'Cohort types list navigation', 'leaderspath' ),
+			'items_list'                 => __( 'Cohort types list', 'leaderspath' ),
+			'back_to_items'              => __( '&larr; Back to Cohort Types', 'leaderspath' ),
+		];
+
+		$args = [
+			'labels'             => $labels,
+			'public'             => false,
+			'publicly_queryable' => false,
+			'show_ui'            => true,
+			'show_in_menu'       => true,
+			'show_in_nav_menus'  => false,
+			'show_in_rest'       => true,
+			'rest_base'          => 'cohort-types',
+			'rest_namespace'     => 'wp/v2',
+			'hierarchical'       => false,
+			'rewrite'            => false,
+			'show_admin_column'  => true,
+		];
+
+		register_taxonomy(
+			'leaderspath_cohort_type',
+			[ 'leaderspath_cohort' ],
+			$args
+		);
+
+		// Fixed, code-depended-on vocabulary (Enrollment::create_cohort()
+		// assigns by slug) — seeded here rather than left to an editor to
+		// create, and guarded so re-running (e.g. plugin already active
+		// when this shipped) doesn't error on a duplicate term.
+		foreach ( [ 'organization' => __( 'Organization', 'leaderspath' ), 'mixed-group' => __( 'Mixed Group', 'leaderspath' ) ] as $slug => $name ) {
+			if ( ! term_exists( $slug, 'leaderspath_cohort_type' ) ) {
+				wp_insert_term( $name, 'leaderspath_cohort_type', [ 'slug' => $slug ] );
+			}
+		}
 	}
 
 }
