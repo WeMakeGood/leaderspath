@@ -44,18 +44,36 @@ class Shortcodes {
 			LEADERSPATH_VERSION
 		);
 
+		// Handle 'marked' (not 'leaderspath-marked') so this registration is
+		// shared with MD_Drop's admin-side enqueue of the same file, rather
+		// than the asset being registered twice under two handles.
 		wp_register_script(
-			'leaderspath-marked',
+			'marked',
 			LEADERSPATH_URL . 'assets/js/vendor/marked.umd.js',
 			[],
 			'17.0.2',
 			true
 		);
 
+		// DOMPurify sanitizes marked.js's output before it's ever set as
+		// innerHTML — marked.js itself has no `sanitize` option in this
+		// version (removed upstream in v5+) and passes raw HTML straight
+		// through unchanged. Required for both the streaming assistant text
+		// and the learner's own pasted message (chatbot.js's only two
+		// markdownToHtml() callers) — neither has a server-side sanitization
+		// pass to fall back on.
+		wp_register_script(
+			'dompurify',
+			LEADERSPATH_URL . 'assets/js/vendor/purify.min.js',
+			[],
+			'3.4.15',
+			true
+		);
+
 		wp_register_script(
 			'leaderspath-chatbot',
 			LEADERSPATH_URL . 'assets/js/chatbot.js',
-			[ 'leaderspath-marked' ],
+			[ 'marked', 'dompurify' ],
 			LEADERSPATH_VERSION,
 			true
 		);

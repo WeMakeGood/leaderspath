@@ -1,7 +1,7 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-05-16
-**Current Phase:** Plugin scope reduced to data + chatbot; Bricks Builder handles all CPT display
+**Last Updated:** 2026-09-17
+**Current Phase:** Phase 15 — Cohort-Scoped Context Files (design complete, build not started). WS Form cohort-purchase integration (Phase 14) fully closed out and verified end-to-end. WooCommerce cohort-purchase path deprecated.
 
 ---
 
@@ -796,7 +796,29 @@ Three real gaps the user identified directly from cohort #345/#346's actual data
 
 **Verified against real data before considering this done:** loaded form 7 and submission 3 via WS Form's own `WS_Form_Form`/`WS_Form_Submit::db_read()` (bypassing the capability check, since WP-CLI has no current user) and re-ran the corrected field-reading logic directly — confirmed it now resolves Seats: 5, Course: 326, Email/Org Name/Payment Method/Start Date all correct, matching cohort #346's actual data.
 
-**Not yet done:** update form 7's `action_hook_hook` from `"name_of_hook"` to `leaderspath_ws_form_cohort_submitted` (still the literal placeholder — plugin side is done, form side isn't updated); no live end-to-end test of the *fully corrected* handler has been run yet (the verification above re-ran the logic directly against stored data, not by triggering a new real submission); `add_to_cohort()`, the mixed-cohort form, and its listing mechanism remain unbuilt.
+**Closed out 2026-09-17 — form updated, live end-to-end test run and verified.** Form 7's `action_hook_hook` was updated in the WS Form UI from the placeholder to `leaderspath_ws_form_cohort_submitted`. A real new submission was run through the actual hook (not a re-run of stored data) — submission #4, producing cohort #348. Verified directly by comparing the submission's raw field data against the created post:
+
+| Field (submission #4) | Value | Cohort #348 ACF value | Match |
+|---|---|---|---|
+| Organization Name (283) | Make Good | `cohort_org_name` | Make Good — match |
+| Cohort Package seats (291) | `"7"` | `cohort_seats` | 7 — match |
+| Course (331) | `"326"` | `cohort_courses` | `[326]` — match |
+| Requested Start Date (292) | 09/26/2026 | `cohort_start_date` | 09/26/2026 — match |
+| Payment Method (321) | Credit or Debit Card | — | — |
+| `ecommerce_status` | completed | `cohort_payment_status` | paid — match |
+| — | (purchaser: Christopher Frazier) | `cohort_owner` | 1 — match |
+| — | submission #4 | `cohort_source_record_id` / `cohort_source_url` | 4 / links to submission #4 — match |
+
+Every field the corrected handler reads resolved correctly against a brand-new live submission. **The WS Form → `Enrollment::create_cohort()` integration is fully done and verified — not a remaining task.**
+
+`add_to_cohort()`, the mixed-cohort form, and its listing mechanism remain unbuilt — still future work, unchanged from before (see "Discovered Tasks" below).
+
+### WooCommerce cohort-purchase path deprecated (2026-09-17)
+
+**Decided directly by the user, not a design inference:** "Based on what we've built, the WC path is completely deprecated. If we were to implement WC in the future it would need to follow the WSForm approach." This closes the open question from "WooCommerce dropped as the purchase mechanism" above — `class-woocommerce.php` is not removed (no reason to delete working code that's architecturally harmless per the multi-caller design), but it is dormant/deprecated: no new cohort purchases are expected to flow through it, and any future WC integration would need to be rebuilt as a thin `Enrollment::create_cohort()` caller matching the `WS_Form_Integration` pattern, not resume from the old `handle_order_commitment()`/`handle_order_status_changed()` design as-is.
+
+- [ ] **Not yet done:** mark `class-woocommerce.php` as deprecated in its own docblock/header comment, so a future reader doesn't assume it's the live path.
+- [ ] **Not yet decided:** whether to leave the one real WC product (329, "Core Cohort Package") and its test cohorts in place as historical/dormant data, or clean them up. Not urgent — flagging so it isn't silently forgotten.
 
 ### Source record rendered as a button, not a raw URL field (2026-09-17)
 
@@ -808,12 +830,133 @@ User feedback on the raw `cohort_source_url` field: "Rather than showing the lin
 
 - [ ] Handle file outputs from code execution (deferred — not critical for MVP)
 - [ ] Handle skill deletion (delete from Anthropic when trashed?)
-- [ ] Wire `Cohort_Rewrite` into `leaderspath.php` bootstrap, flush rewrites, verify against real Bricks template rendering (see Phase 14)
-- [ ] Merge cohort-scoped context files into `build_system_prompt()` alongside the activity's own `chatbot_context_files` (see Phase 14) — the actual point of everything else in that phase
+- [x] ~~Wire `Cohort_Rewrite` into `leaderspath.php` bootstrap~~ — confirmed already wired (`leaderspath.php:91`), verified by code survey 2026-09-17. Flush-rewrites/real-Bricks-template verification still not separately confirmed this session.
+- [ ] Merge cohort-scoped context files into `build_system_prompt()` alongside the activity's own `chatbot_context_files` — **superseded by Phase 15 below**, which designs this properly (cohort scoping, the never-load-context override, and the upload/access-control requirements from the Build Requirements doc) rather than doing a bare merge
 - [ ] Build the cohort roster / seat-invite system (see Phase 14 design) — WC My Account endpoint, email invite flow, seat cap enforcement
 - [ ] `docs/bricks-integration.md` documents `[lp_activity_chatbot]` as a real shortcode alias (line 285); it isn't registered anywhere in code. Either register the alias or correct the doc
 - [ ] Verify `can_user_access_skill()`'s "unattached = admin only" behavior is actually correct, or give it the same public/cohort treatment `can_user_access_context()` got
-- [!] **Bug in currently-shipped code, found this session:** `WooCommerce::handle_order_refunded()`/`handle_order_cancelled()` auto-unenroll the whole cohort on any refund/cancellation, for any reason. Fix: remove the auto-unenroll, add a manual `cohort_access_closed` toggle on the future `leaderspath_cohort` CPT instead (see Phase 14). Blocked on that CPT existing — can't build the replacement toggle before its home exists, but the dangerous automatic behavior could be *disabled* now, independently, if a refund is anticipated before the CPT work lands
+- [!] **Bug in currently-shipped code, found 2026-09-16:** `WooCommerce::handle_order_refunded()`/`handle_order_cancelled()` auto-unenroll the whole cohort on any refund/cancellation, for any reason. Fix: remove the auto-unenroll — `cohort_access_closed` (the manual toggle) already exists on `leaderspath_cohort` now, so the replacement is unblocked. **Not yet done** — the dangerous automatic behavior is still live in `class-woocommerce.php` as of this writing, though the WC path is now deprecated (see above) which lowers real-world exposure but doesn't fix the bug in the code itself.
+
+---
+
+## Phase 15: Cohort-Scoped Context Files (design, not yet built) — 2026-09-17
+
+Requested directly by the user as the next body of work, alongside two source documents not previously read into this file: the wireframes at `LP2605001 Platform Development/Design/Wireframes/` (`cohort-page.html`, `lesson-page.html`, `globals.html`) and `MG2609001 Ethical AI Market Analysis/Research/LeadersPath Cohort Build Requirements.md` (a plugin-audit-and-requirements doc, prepared by a different session against this same codebase, v0.7.0). The Build Requirements doc's findings are treated as authoritative background for this phase, not re-derived — cited by section below rather than repeated in full.
+
+### The five user stories (as given, verbatim intent preserved)
+
+1. Facilitator can add context files to a cohort.
+2. Once a cohort context file is added, it's included in the context payload for an activity — active in activity work for learners in that cohort.
+3. Facilitator/course designer can mark an activity to **never** load any context files, even cohort ones — for baseline/control comparisons (this is the session-1 "blindfolded" exercise in `LeadersPath Core Cohort Curriculum Design.md` §7 — the with/without-context comparison is a real curriculum mechanic, not a hypothetical).
+4. Learner can drag-and-drop a file (text first; DOCX/PDF/other Claude-readable formats later) into a chat, included in that one instanced conversation only, never saved server-side (privacy).
+5. Learner can see which context files and skills are active for an activity, gated to what they have access to via cohort enrollment or public access — surfaced either in the chat UI or an embeddable context UI.
+
+### What already exists vs. what's genuinely new (confirmed by code survey, not assumed)
+
+**Already built (Phase 14):**
+- `context_cohort` ACF field (`field_context_cohort`) on the Context CPT — a context file can already be scoped to exactly one `leaderspath_cohort` post. Facilitator-picker filtering (`filter_context_cohort_choices()`) and save-time validation (`validate_context_cohort()`) both real and working — `includes/class-acf-fields.php`.
+- `can_user_access_context()` in `WooCommerce`/`Enrollment` — the enrollment-chain access check already exists for gating who can read a cohort-owned context file.
+- The lesson-page wireframe already designs the UI surface story 5 needs: the Activity Marker's `[f] context` / `[s] skills` toggle buttons expand a panel listing context files and skills for the current activity (`lesson-page.html`, `.marker-panel`/`#panel-context`/`#panel-skills`) — this is query-driven off "context files linked to this activity," not yet cohort-aware in the wireframe's own annotations, but it's the existing intended surface, not a new one to design from scratch.
+
+**Genuinely not built (confirmed by direct code read, not inference):**
+- `build_system_prompt()` (`includes/class-claude-api.php:1294`) only reads the activity's own `chatbot_context_files` — **zero cohort-scoping logic anywhere in the method.** `Cohort_Rewrite::get_current_cohort_id()` has exactly one call site in the whole plugin (its own definition) — nothing consumes it. This is story 2, fully unbuilt.
+- No ACF field or code path resembling "never load context for this activity" exists anywhere — grepped clean. This is story 3, fully unbuilt.
+- No file upload handling exists anywhere in the plugin (`includes/`/`admin/`) — confirmed absence, not an assumption, and independently confirmed by the Build Requirements doc's own code read. This is story 4, fully unbuilt, and per that doc it's also a **real, live security gap once org material is involved**: `/context/{id}/download` uses `check_read_permission()`, which today checks only `is_user_logged_in()` — any logged-in user, from any cohort, can already download any context file by ID. That's harmless while all context is shared curriculum material, but becomes a cross-org data leak the moment a cohort-owned file exists — **which it already can, today, since `context_cohort` is built and live.** This predates story 4 and should be treated as a standing exposure to close, not something to defer alongside the new upload feature.
+- Story 5's data layer (which context files/skills are actually active for a given activity+cohort combination, filtered to what the current learner may see) doesn't exist yet either — the wireframe designs the panel, but nothing computes cohort-aware, access-filtered contents for it to query.
+
+### Sequencing, informed by the Build Requirements doc's own sequencing (§7) and this session's scope
+
+The Build Requirements doc's own priority order (§7) puts "fix `check_read_permission`" first, ahead of the upload feature, specifically because it's small and is the one item that's already a live gap rather than a future one. Recommended order for this phase, not yet started:
+
+1. **Fix `check_read_permission()` for cohort-owned context files** — small, closes a real gap that exists right now independent of anything else in this phase. Mirror `check_chat_permission()`'s enrollment-chain check, same pattern already used elsewhere in Phase 14.
+2. **Wire cohort-scoped context into `build_system_prompt()`** (story 2) — resolve `Cohort_Rewrite::get_current_cohort_id()` (or pass cohort ID through the REST request explicitly; `/chat`/`/chat/stream` currently carry no `cohort_id` param at all, confirmed by code survey — decide which mechanism is authoritative before building) and merge cohort `context_cohort`-scoped files alongside the activity's own `chatbot_context_files`.
+3. **The never-load-context override** (story 3) — new ACF toggle on Activity, checked before step 2's merge logic runs at all.
+4. **Story 5's UI wiring** — make the lesson-page wireframe's context/skills panel actually cohort-aware and access-filtered, once steps 2–3 exist to query against.
+5. **Story 4 (drag-and-drop upload)** — the Build Requirements doc treats this as its own workstream (§3) with real requirements beyond "add a file input": non-web-root or hardened storage (not `/wp-content/uploads/` as-is), server-side type/size validation, cohort scoping, and an explicit lifecycle decision (retention on cohort completion/refund, deletion policy) — genuinely more scope than the other four stories combined. Sequenced last here since it's the newest, least-designed piece, not because it matters least.
+
+### Explicitly out of scope for this phase (per the Build Requirements doc, not re-litigated here)
+
+Session-record pipeline (transcripts → addenda), the starter context module skill, and the cohort-library pre-processing workflow (Build Requirements §§1, 2, 4) are adjacent but separate workstreams — content/process work and a new Skill, not plugin schema/code. Not part of this phase's task list.
+
+### `context_cohort` field placement corrected (2026-09-17)
+
+**User feedback, direct:** the Phase 14 design put `context_cohort` (the cohort-scoping relationship) on the *Context File* screen only — a facilitator has to leave the cohort they're managing, go create/find a Context File, and pick the right cohort from a `post_object` dropdown with no disambiguation if two cohorts share a similar name. "I expected to see the context files for the cohort in the cohort admin page somewhere" — the interaction direction was backward, same shape of problem the roster metabox (`Cohort_Roster`) already solved for enrollment by living on the Cohort screen instead of requiring a trip through the Users list.
+
+**Decided:** add a new admin class mirroring `Cohort_Roster`'s pattern — a metabox on the `leaderspath_cohort` edit screen listing attached context files, plus a drag-and-drop `.md`/`.txt` dropzone (reusing `Context_Uploader`'s client-side file-read logic, not duplicating it) that creates a new `leaderspath_context` post and sets `context_cohort` to the current cohort automatically — no picker, no ambiguity, since the cohort ID comes from the screen you're already on.
+
+- `context_cohort` stays editable from the Context File's own edit screen too (not made read-only) — the cohort-side dropzone becomes the primary/easy path; the original field remains a fallback for reassignment/admin cleanup, not removed.
+- The "remove" action in the new metabox **detaches only** (clears `context_cohort` back to empty) — does not trash the post, same non-destructive posture as the roster's "Remove" (unenroll, not delete-the-account).
+- **Known gap this creates, flagged by the user, not yet solved:** detaching leaves an orphaned, non-public Context File with no easy discovery path in the admin list today (it's not publicly queryable, so it won't surface in normal browsing). A workflow for finding and trashing unattached/nonpublic context files is needed at some point — not designed yet, tracked as its own follow-on task below, not bundled into this build.
+
+- [x] **Built 2026-09-17:** `admin/class-cohort-context.php` → `Cohort_Context` class. Metabox on `leaderspath_cohort` (`add_meta_boxes_leaderspath_cohort`) listing context files via `WP_Query` on `meta_key = context_cohort` / `meta_value = $cohort_id`; drag-and-drop `.txt`/`.md` zone reads the file client-side into hidden fields (title from filename, content), then a real form POST creates the `leaderspath_context` post server-side via `wp_insert_post()` + `update_field('context_cohort', $cohort_id, $context_id)` — not a client-side-only trick, since (unlike `Context_Uploader`) this has to create a brand-new post, not populate an existing one's editor. "Detach" clears `context_cohort` back to empty (does not trash the post), matching the decided-non-destructive posture. Authority check reuses `Cohort_Roster::can_manage_roster()` directly (owner/facilitator/admin) rather than reimplementing it — confirmed via code survey this was the only such check in the codebase, so this is not a duplicate. Wired into `leaderspath.php` bootstrap alongside `Context_Uploader`/`Cohort_Roster`.
+- [x] **Drag-and-drop unification, built 2026-09-17** (superseding the "not worth it yet" note originally here): user asked for an audit of every admin drag-and-drop implementation for consistency. Found three total: `Context_Uploader`, the new `Cohort_Context`, and `MD_Drop` (drag `.md` onto any TinyMCE editor/ACF WYSIWYG field). `Context_Uploader` and `Cohort_Context` were unified — `MD_Drop` was deliberately left separate, since it hooks TinyMCE/`EditorUploader` directly rather than rendering its own dropzone element, a structurally different mechanism, not an oversight or inconsistency to fix.
+  - New `assets/js/admin/dropzone.js` (real enqueued asset, matching `MD_Drop`'s convention rather than the old `wp_register_script('', '', ...)` + inline-heredoc trick both classes used before) — one `window.LeadersPathDropzone.init({dropzone, fileInput, onFileRead})` call wires drag/drop/select/size-limit/status-message behavior; each caller supplies only its own `onFileRead(content, file, showStatus)` callback. `Context_Uploader`'s callback writes into the existing post's `#content` textarea; `Cohort_Context`'s stages hidden fields ahead of a form submit — the two targets are still genuinely different, but the shared wiring around them no longer is.
+  - New `admin/trait-dropzone-markup.php` → `Dropzone_Markup` trait, `render_dropzone_styles()` — one shared CSS block (`leaderspath-dropzone`, `--active`, `__status--success/error`) both classes now emit, replacing two near-identical parallel class-name sets (`leaderspath-context-dropzone*` vs `leaderspath-cohort-context-dropzone*`).
+  - Both classes re-verified end-to-end after the refactor (`wp eval` against real cohort 348: create → `context_cohort` set → detach → cleared) — behavior unchanged, only the rendering/enqueue mechanism moved.
+  - `MD_Drop`'s own 1MB limit, lack of a `dragleave` handler, and TinyMCE-notification-based feedback (vs. a DOM status element) were confirmed as accepted, deliberate differences from the shared dropzone pattern, not bugs — not changed.
+- [x] **Verified end-to-end against real data (2026-09-17):** simulated the metabox's server-side logic via `wp eval` against real cohort 348 — created a context post, confirmed `context_cohort` set to 348, confirmed the metabox's list query (`WP_Query` on `meta_key = context_cohort`) finds it, confirmed detach clears the field back to empty. Re-run again after the drag-and-drop unification refactor with the same result. **Not yet tested through an actual browser drag-and-drop interaction** — the server-side create/list/detach logic is verified; the client-side dropzone JS itself (file read, hidden-field staging, form submit) has not been clicked through in a real browser session.
+- [ ] **Follow-on, not part of this build:** a way to find and manage orphaned (detached, non-public) Context Files from the admin list — e.g. an admin-column filter or dedicated view for "no cohort, not public." Needed once detach is in regular use; not designed yet.
+
+### Markdown/HTML conversion audit + real XSS fix (2026-09-17)
+
+User asked to audit the admin's markdown/HTML-into-WYSIWYG handling for consistency, alongside the drag-and-drop audit above. Found three genuinely separate implementations — `MD_Drop` (drag `.md` onto TinyMCE/ACF-WYSIWYG, client-side `marked.js`), server-side `class-rest-api.php::markdown_to_html()` (`league/commonmark`, chat responses only), and `chatbot.js`'s own client-side `marked.js` use (chat message rendering). Investigated whether the third was redundant with the second before touching anything — it is not: confirmed directly in `includes/class-claude-api.php:908-917` that the streaming `done` SSE event carries only `content_raw` (no `content`/HTML key at all — `markdown_to_html()` is never called anywhere in the streaming code path), so `chatbot.js`'s client-side conversion is the *only* markdown→HTML conversion happening for streamed responses, not wasted duplication. All three implementations left in place as legitimate, non-overlapping jobs.
+
+**A real, exploitable XSS gap was found in the course of this audit, not something being fixed on spec.** `chatbot.js`'s `markdownToHtml()` (called for both the streaming assistant text and, separately, the learner's own typed/pasted message) passes text through `marked.parse()` with no sanitization — confirmed directly, in a real browser, that the vendored `marked.js` build (v17.0.2, which removed the `sanitize` option upstream in v5+) passes raw HTML straight through unchanged: `marked.parse('<img src=x onerror="alert(1)">')` returns the tag untouched. Server-side `markdown_to_html()` has real defense in depth here (`html_input: strip` + `wp_kses_post()`); the client-side path had none. Since this fires on the learner's own message (`chatbot.js:741`), pasting `<img src=x onerror="...">` into the chat box would execute it immediately in the learner's own browser on send.
+
+- [x] **Fixed 2026-09-17.** First attempt (escape raw text before `marked.parse()`) worked but double-escaped fenced-code-block contents (a pasted `<script>` inside a \`\`\`html block would render as the literal string `&lt;script&gt;` instead of `<script>` as visible text) — caught before shipping, not left as a known issue, since code-snippet pasting is a realistic case for this curriculum. Corrected approach: **sanitize marked.js's output HTML afterward**, mirroring the server's own parse-then-sanitize shape, using a newly-vendored **DOMPurify v3.4.15** (`assets/js/vendor/purify.min.js`, downloaded from cdnjs and verified against its published SRI hash before vendoring — a hand-rolled sanitizer was considered and rejected, since bespoke HTML sanitizers are a well-known source of bypassable XSS fixes). `markdownToHtml()` in `assets/js/chatbot.js` now calls `marked.parse()` then `DOMPurify.sanitize()`; falls back to plain-escaped text (never unsanitized `marked.parse()` output) if DOMPurify fails to load.
+- [x] **Verified in a real browser (headless Chrome, not just Node), against the actual final vendored files and the actual final `chatbot.js` logic** — not simulated separately. Confirmed: `<img onerror>` → handler stripped, tag inert; `javascript:` link href → stripped to a plain inert `<a>`; fenced code-block contents → single-escaped, readable as literal text (cosmetic bug from the first attempt resolved); bold/links/lists → render correctly, unaffected.
+- [x] **Also fixed, smaller finding from the same audit:** `marked.umd.js` was registered under two different script handles pointing at the identical file (`marked` in `MD_Drop`, `leaderspath-marked` in `class-shortcodes.php`) — harmless but duplicative. Both now register under the single shared handle `marked`.
+- [x] **Enqueue wiring verified against the real WP install** — fired `wp_enqueue_scripts` via `wp eval` and confirmed `marked`/`dompurify`/`leaderspath-chatbot` all register with correct URLs, versions, and dependency chain (`leaderspath-chatbot` depends on both `marked` and `dompurify`, so WP loads them in the right order), and that all three files exist on disk at the paths WordPress resolves. **Not yet done:** an actual authenticated click-through of the live chatbot widget in a real browser session (login, open a real activity, paste an XSS payload into the chat box, confirm it renders inert) — the sanitization logic itself is verified (headless-Chrome test against the real vendored files) and the server-side wiring is verified (this check), but the two haven't been exercised together through a live authenticated session yet.
+- [ ] **Worth a follow-up look, not investigated this session:** whether any other frontend surface renders unsanitized user-supplied or AI-supplied markdown/HTML via `innerHTML` outside of `chatbot.js` — this audit was scoped to the markdown/WYSIWYG question the user asked, not a full XSS sweep of the plugin.
+
+### Story 4 (drag-and-drop file into chat) — Anthropic API research, real privacy-requirement conflict found (2026-09-17)
+
+Before designing anything, researched how the Claude API actually accepts document/file content, since story 4's stated requirement ("included in that instanced chat but not saved on the server") needs to be checked against what's actually possible — confirmed against `platform.claude.com`'s live Code Execution Tool docs, not assumed from training data.
+
+**Two real mechanisms exist, and neither cleanly satisfies the original ask as stated:**
+
+1. **Inline base64 `document` content block** (`{"type": "document", "source": {"type": "base64", ...}}`, sent directly in the request) — genuinely not persisted anywhere beyond normal request handling, no separate upload step. **But:** PDF only (no `.txt`/`.md`/other types via this path), and it is a plain Messages API feature — **it does not work inside the code-execution/container tool this plugin already uses for skills.** An activity with skills enabled couldn't have Claude actually read/analyze a file uploaded this way.
+2. **Files API upload + `container_upload` content block** — the only way to get a file into the sandboxed container skills run in, supports far more types (CSV, Excel, images, text, etc.). **But Anthropic's own docs state plainly: "Container data, including execution artifacts, uploaded files, and outputs, is retained for up to 30 days."** The file is not deleted after the request — it persists server-side on Anthropic's infrastructure regardless of the plugin's own stateless-conversation design.
+
+**Decided 2026-09-17:** build against option 2 (Files API upload), since it's the only path that actually works with the container/skills flow every other activity already relies on. This is a genuine, material change from the story as originally phrased ("not saved on the server") — **the privacy language for this feature needs to say "not saved on our WordPress server; uploaded to Anthropic and retained there up to 30 days per their standard container/Files API retention," not "never saved."** This mirrors exactly the same distinction the Build Requirements doc already flagged for org file uploads generally (`docs/TASKS.md` Phase 15, "Story 4... §3 storage/lifecycle requirements") — this session's research confirms it applies to *this* story specifically, not just the admin-side cohort-file-upload path.
+
+- [x] **Sign-off question resolved 2026-09-17:** user decided to proceed with implementation now; privacy-copy disclosure is a separate, non-blocking task to handle apart from the code.
+- [x] **Gating decision made 2026-09-17:** `container_upload` only works on activities that already have code execution active — there is no sandbox container at all for a skill-less activity or plain lesson Q&A (confirmed: `container`/`tools` in `class-claude-api.php`'s `send_message()`/`stream_message()` are only added when `get_skills_for_api($activity_id)` returns non-empty, `class-claude-api.php:178`). **Decided: this feature is skills-enabled-activities-only** — the drag-and-drop upload UI in the chat widget only appears/works when the current activity has `chatbot_skills` configured. Rejected alternative: falling back to plain-text injection for skill-less activities — would create two divergent code paths behind one button; not worth the complexity for what the user gets today for free anyway (pasting text directly into the chat message already works with zero new code).
+- [ ] **Not yet designed/built — this is the actual next-session task.** See the code-survey findings immediately below for exactly where each piece attaches in the existing codebase.
+
+#### Code survey for the build (2026-09-17, confirmed by direct file reads — not assumed)
+
+**1. Where the request body/messages get built (`includes/class-claude-api.php`):**
+- `send_message()` (lines 139-280) calls `build_messages()` (lines 1476-1496) to construct the `messages` array. The **current user turn is pushed as a plain string**, not a content-block array: `$messages[] = [ 'role' => 'user', 'content' => $message ];` (~line 1490-1493). **This is the exact line that needs to change** — `content` needs to become an array of blocks (`[['type'=>'text','text'=>$message], ['type'=>'container_upload','file_id'=>$file_id]]`) when a file is attached, per the Anthropic docs shape confirmed in this session's research.
+- `container`/`tools` are only added (lines 177-188) when `get_skills_for_api($activity_id)` (line 167) is non-empty — this is the exact condition to reuse for gating the whole feature, both server-side (reject an upload attempt against a skill-less activity) and to decide what to tell the frontend.
+- The identical pattern (container/tools construction, plain-string user content) repeats in `stream_message()` and in the pause-turn continuation path — **any fix must be applied in all these places**, not just `send_message()`. Exact line ranges given by the code-survey subagent this session: container references around lines 563/572 (`stream_message()`) and 895/1575 (pause-turn continuation, ~890-996 and ~1548-1620).
+
+**2. Multipart upload — a working pattern already exists, just not in `Claude_API`:**
+- `Claude_API` itself is JSON-only everywhere (`wp_remote_post`/`wp_remote_get` with `wp_json_encode($body)`, one raw-curl streaming call also JSON) — no multipart code in this class today.
+- **`includes/class-skill-processor.php`'s `create_skill()`/`create_skill_version()` (lines 463-536) already do a hand-built multipart upload** to Anthropic (`build_multipart_body()`, lines 549-568 — manual boundary via `wp_generate_password(24, false)`, manual `Content-Disposition` concatenation, sent via `wp_remote_post` with `Content-Type: multipart/form-data; boundary=...`). **Reuse/adapt this exact pattern for the new Files API upload** rather than inventing a second multipart implementation.
+- No shared header-building helper exists anywhere — every call site repeats `x-api-key` (via `Settings::get_api_key()`) and `anthropic-version` inline. Follow the same inline convention rather than introducing a new abstraction for this alone.
+
+**3. REST route convention (`includes/class-rest-api.php`):**
+- Existing routes registered in `register_routes()` (lines 47-125) under namespace `leaderspath/v1`. `/chat` and `/chat/stream` both use `WP_REST_Server::CREATABLE` + `check_chat_permission()` (the full gate: login, `leaderspath_access_chatbot` capability, `X-WP-Nonce`, `Enrollment::can_user_access_activity()`). **A new `/chat/upload` (or similar) endpoint should reuse `check_chat_permission()` exactly** — same authorization posture as sending a chat message, not the lighter `check_read_permission()` used by the download endpoints.
+
+**4. `chatbot.js` fetch convention:**
+- `buildHeaders()` (lines 271-279) sets `Content-Type: application/json` + `X-WP-Nonce`; both existing POST calls (`/chat/stream` ~415-421, `/chat` ~660-664) follow `{method: 'POST', headers: buildHeaders(), body: JSON.stringify(body)}`. **A new upload call must NOT set `Content-Type`** (must let the browser set the multipart boundary automatically) and must send a `FormData` body instead of `JSON.stringify(...)` — this is a real divergence from the existing pattern, not an oversight to fix.
+
+**5. Skills/code-execution detection — no dedicated flag exists:**
+- There is no boolean "has code execution" field anywhere in ACF. Detection is always indirect: `chatbot_skills` (relationship field, `class-acf-fields.php:408-430`) non-empty, filtered through `get_skills_for_api($activity_id)` (`class-claude-api.php:1508`) which only returns skills successfully synced to Anthropic. **The frontend needs this same signal surfaced** (e.g. via `wp_localize_script` alongside the existing chatbot config) so `chatbot.js` knows whether to render the upload UI at all for the current activity — not yet designed which specific mechanism carries that boolean to the frontend.
+
+#### Remaining open design questions for next session (not yet decided)
+
+- Exact new REST route name/shape (`/chat/upload`? something else?) and whether it returns just a `file_id` for the client to hold and pass on the *next* `/chat` or `/chat/stream` call, or whether it's combined into a single multipart chat-plus-file request. The two existing endpoints are JSON-only, so a combined endpoint would be a bigger departure from convention than a separate upload-then-reference flow.
+- File type/size validation policy (client-side pre-check vs. server-side enforcement vs. both) — no policy decided yet, only that server-side validation is required per this plugin's existing security conventions (CLAUDE.md: "Never trust user input").
+- Exact UI treatment in `chatbot.js` / the Activity Marker area (per the lesson-page wireframe reviewed earlier this Phase) — where the drop target lives, what it looks like when an activity has no skills (hidden entirely vs. visible-but-disabled with an explanation).
+- The learner-facing privacy copy update itself (tracked as separate from the code, per the sign-off decision above, but still needs to actually get written and placed somewhere before this ships) — not started.
+
+### Open questions carried into this phase, not yet resolved
+
+- Where does cohort-ID resolution for `/chat`/`/chat/stream` actually come from — `Cohort_Rewrite`'s query var (requires the learner to be on a `/learn/{cohort}/...` URL) or an explicit `cohort_id` param on the chat request itself? These aren't equivalent: the rewrite only resolves cohort for the lesson-page URL, not necessarily for every context a chatbot shortcode might render in.
+- Storage location for story 4's server-side note (even though the file itself is never persisted, per the privacy requirement) — is there any server-side trace at all, or is this genuinely request-scoped and gone after the response? Needs an explicit decision before building, not an assumption either way.
+- Token budget ceiling for cohort context + activity context + (eventually) session addenda stacking — the Build Requirements doc flags this as a real, undecided ceiling against the existing ~28K cached tokens per activity, not yet revisited here.
 
 ---
 

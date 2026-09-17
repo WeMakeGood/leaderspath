@@ -279,18 +279,44 @@
 		}
 
 		/**
-		 * Convert markdown to HTML using marked.js.
+		 * Escape HTML special characters (used only in the no-libraries
+		 * fallback path below, where nothing parses markdown at all).
+		 */
+		function escapeHtml( text ) {
+			var div = document.createElement( 'div' );
+			div.textContent = text;
+			return div.innerHTML;
+		}
+
+		/**
+		 * Convert markdown to HTML using marked.js, then sanitize the
+		 * result with DOMPurify.
 		 *
-		 * Falls back to basic HTML escaping if marked is unavailable.
+		 * marked.js (this vendored build has no `sanitize` option — removed
+		 * upstream in v5+) passes raw HTML straight through unchanged, e.g.
+		 * marked.parse('<img src=x onerror="...">') returns the tag
+		 * untouched. This function has no server-side equivalent of
+		 * markdown_to_html()'s `html_input: strip` + wp_kses_post()
+		 * defense-in-depth, so it holds that line itself — for both the
+		 * streaming assistant text and the learner's own message (the only
+		 * two callers, chatbot.js:356 and :741).
+		 *
+		 * Sanitizing marked's *output* (rather than escaping the raw input
+		 * before parsing) is deliberate: escaping first double-escapes
+		 * anything marked.js already escapes itself, like code block
+		 * contents, so a pasted `<script>` inside a fenced code block would
+		 * render as the literal string "&lt;script&gt;" instead of
+		 * "<script>". Sanitizing afterward avoids that.
 		 */
 		function markdownToHtml( text ) {
 			if ( typeof marked !== 'undefined' && marked.parse ) {
-				return marked.parse( text );
+				var html = marked.parse( text );
+				return ( typeof DOMPurify !== 'undefined' )
+					? DOMPurify.sanitize( html )
+					: escapeHtml( text ).replace( /\n/g, '<br>' );
 			}
 			// Fallback: escape HTML and convert newlines.
-			var div = document.createElement( 'div' );
-			div.textContent = text;
-			return div.innerHTML.replace( /\n/g, '<br>' );
+			return escapeHtml( text ).replace( /\n/g, '<br>' );
 		}
 
 		/**

@@ -7,6 +7,12 @@
  * WordPress editor (post_content) and the post slug is set from the filename
  * if not already set.
  *
+ * Drag/drop wiring comes from the shared `LeadersPathDropzone` JS module
+ * (assets/js/admin/dropzone.js) and `Dropzone_Markup` trait — see
+ * docs/TASKS.md Phase 15, "drag-and-drop unification" — so this and
+ * Cohort_Context share one interaction pattern instead of two hand-copied
+ * near-duplicates.
+ *
  * @package LeadersPath
  * @since   0.7.0
  */
@@ -21,6 +27,8 @@ namespace LeadersPath\Admin;
  * @since 0.7.0
  */
 class Context_Uploader {
+
+	use Dropzone_Markup;
 
 	/**
 	 * Initialize the class.
@@ -83,11 +91,11 @@ class Context_Uploader {
 	 */
 	public function render_metabox( \WP_Post $post ): void {
 		?>
-		<div id="leaderspath-context-dropzone" class="leaderspath-context-dropzone">
-			<p class="leaderspath-context-dropzone__label">
+		<div id="leaderspath-context-dropzone" class="leaderspath-dropzone">
+			<p class="leaderspath-dropzone__label">
 				<?php esc_html_e( 'Drop a file here or', 'leaderspath' ); ?>
 			</p>
-			<label class="button leaderspath-context-dropzone__button">
+			<label class="button leaderspath-dropzone__button">
 				<?php esc_html_e( 'Select File', 'leaderspath' ); ?>
 				<input
 					type="file"
@@ -96,44 +104,12 @@ class Context_Uploader {
 					style="display: none;"
 				/>
 			</label>
-			<p class="leaderspath-context-dropzone__hint">
+			<p class="leaderspath-dropzone__hint">
 				<?php esc_html_e( 'Text files only. Content will replace the editor.', 'leaderspath' ); ?>
 			</p>
 		</div>
-		<style>
-			.leaderspath-context-dropzone {
-				border: 2px dashed #c3c4c7;
-				border-radius: 4px;
-				padding: 16px;
-				text-align: center;
-				transition: border-color 0.2s, background-color 0.2s;
-			}
-			.leaderspath-context-dropzone--active {
-				border-color: #2271b1;
-				background-color: #f0f6fc;
-			}
-			.leaderspath-context-dropzone__label {
-				margin: 0 0 8px;
-				color: #50575e;
-			}
-			.leaderspath-context-dropzone__hint {
-				margin: 8px 0 0;
-				font-size: 12px;
-				color: #787c82;
-			}
-			.leaderspath-context-dropzone__status {
-				margin: 8px 0 0;
-				font-size: 12px;
-				font-weight: 600;
-			}
-			.leaderspath-context-dropzone__status--success {
-				color: #00a32a;
-			}
-			.leaderspath-context-dropzone__status--error {
-				color: #d63638;
-			}
-		</style>
 		<?php
+		$this->render_dropzone_styles();
 	}
 
 	/**
@@ -153,6 +129,14 @@ class Context_Uploader {
 			return;
 		}
 
+		wp_enqueue_script(
+			'leaderspath-dropzone',
+			LEADERSPATH_URL . 'assets/js/admin/dropzone.js',
+			[],
+			LEADERSPATH_VERSION,
+			true
+		);
+
 		$script = <<<'JS'
 (function() {
 	'use strict';
@@ -161,7 +145,7 @@ class Context_Uploader {
 		var dropzone = document.getElementById('leaderspath-context-dropzone');
 		var fileInput = document.getElementById('leaderspath-context-file-input');
 
-		if (!dropzone || !fileInput) {
+		if (!dropzone || !fileInput || !window.LeadersPathDropzone) {
 			return;
 		}
 
@@ -175,7 +159,6 @@ class Context_Uploader {
 			var textarea = document.getElementById('content');
 			if (textarea) {
 				textarea.value = content;
-				// Trigger change so WordPress marks the post as dirty.
 				var event = new Event('input', { bubbles: true });
 				textarea.dispatchEvent(event);
 				return true;
@@ -191,14 +174,7 @@ class Context_Uploader {
 		 */
 		function setSlugFromFilename(filename) {
 			var slugInput = document.getElementById('post_name');
-			var editSlugBox = document.getElementById('edit-slug-box');
-
-			// Only set slug if it's empty or we're on a new post.
-			// Check the actual slug input or the URL sample.
-			var currentSlug = '';
-			if (slugInput) {
-				currentSlug = slugInput.value;
-			}
+			var currentSlug = slugInput ? slugInput.value : '';
 
 			// On new posts, the slug field is empty.
 			// On existing posts, it has a value — don't overwrite.
@@ -206,124 +182,51 @@ class Context_Uploader {
 				return;
 			}
 
-			// Remove extension and sanitize for slug.
 			var slug = filename
-				.replace(/\.[^/.]+$/, '') // Remove extension.
+				.replace(/\.[^/.]+$/, '')
 				.toLowerCase()
-				.replace(/[^a-z0-9-]/g, '-') // Non-alphanumeric to hyphens.
-				.replace(/-+/g, '-')          // Collapse consecutive hyphens.
-				.replace(/^-|-$/g, '');       // Trim leading/trailing hyphens.
+				.replace(/[^a-z0-9-]/g, '-')
+				.replace(/-+/g, '-')
+				.replace(/^-|-$/g, '');
 
 			if (!slug) {
 				return;
 			}
 
-			// Set the title if empty (new post).
 			var titleInput = document.getElementById('title');
 			if (titleInput && !titleInput.value) {
-				// Use filename without extension as title, preserving original casing.
 				var title = filename.replace(/\.[^/.]+$/, '');
 				titleInput.value = title;
-				// Trigger change for the permalink generator.
 				var titleEvent = new Event('input', { bubbles: true });
 				titleInput.dispatchEvent(titleEvent);
 			}
 
-			// Set the slug directly if the input exists.
 			if (slugInput) {
 				slugInput.value = slug;
 			}
 
-			// Also try the new-post-slug input (appears on unsaved posts).
 			var newSlugInput = document.getElementById('new-post-slug');
 			if (newSlugInput) {
 				newSlugInput.value = slug;
 			}
 		}
 
-		/**
-		 * Show status message in the dropzone.
-		 */
-		function showStatus(message, isError) {
-			// Remove any existing status.
-			var existing = dropzone.querySelector('.leaderspath-context-dropzone__status');
-			if (existing) {
-				existing.remove();
-			}
-
-			var status = document.createElement('p');
-			status.className = 'leaderspath-context-dropzone__status';
-			status.className += isError
-				? ' leaderspath-context-dropzone__status--error'
-				: ' leaderspath-context-dropzone__status--success';
-			status.textContent = message;
-			dropzone.appendChild(status);
-		}
-
-		/**
-		 * Process the selected/dropped file.
-		 */
-		function processFile(file) {
-			// Basic size limit: 1 MB.
-			if (file.size > 1024 * 1024) {
-				showStatus('File too large. Maximum size is 1 MB.', true);
-				return;
-			}
-
-			var reader = new FileReader();
-			reader.onload = function(e) {
-				var content = e.target.result;
-
+		window.LeadersPathDropzone.init({
+			dropzone: dropzone,
+			fileInput: fileInput,
+			onFileRead: function(content, file, showStatus) {
 				if (setEditorContent(content)) {
 					setSlugFromFilename(file.name);
 					showStatus('Imported: ' + file.name, false);
 				} else {
 					showStatus('Could not find the editor. Try switching to Text mode.', true);
 				}
-			};
-			reader.onerror = function() {
-				showStatus('Error reading file.', true);
-			};
-			reader.readAsText(file);
-		}
-
-		// File input change handler.
-		fileInput.addEventListener('change', function(e) {
-			if (e.target.files && e.target.files[0]) {
-				processFile(e.target.files[0]);
-				// Reset input so the same file can be selected again.
-				e.target.value = '';
-			}
-		});
-
-		// Drag and drop handlers.
-		dropzone.addEventListener('dragover', function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-			dropzone.classList.add('leaderspath-context-dropzone--active');
-		});
-
-		dropzone.addEventListener('dragleave', function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-			dropzone.classList.remove('leaderspath-context-dropzone--active');
-		});
-
-		dropzone.addEventListener('drop', function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-			dropzone.classList.remove('leaderspath-context-dropzone--active');
-
-			if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-				processFile(e.dataTransfer.files[0]);
-			}
+			},
 		});
 	});
 })();
 JS;
 
-		wp_register_script( 'leaderspath-context-uploader', '', [], LEADERSPATH_VERSION, true );
-		wp_enqueue_script( 'leaderspath-context-uploader' );
-		wp_add_inline_script( 'leaderspath-context-uploader', $script );
+		wp_add_inline_script( 'leaderspath-dropzone', $script );
 	}
 }

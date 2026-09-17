@@ -58,6 +58,9 @@ class MD_Drop {
 			return;
 		}
 
+		// Handle 'marked' is shared with the frontend chatbot's own
+		// registration (Shortcodes::register_assets()) — same file, one
+		// handle, not two independent registrations of the identical asset.
 		wp_enqueue_script(
 			'marked',
 			LEADERSPATH_URL . 'assets/js/vendor/marked.umd.js',

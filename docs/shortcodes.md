@@ -33,7 +33,7 @@ The renderer auto-resolves the post ID:
 
 ### Asset loading
 
-CSS (`assets/css/leaderspath.css`) and JS (`assets/js/chatbot.js` + `assets/js/vendor/marked.umd.js`) register on `wp_enqueue_scripts` but only enqueue when the shortcode actually renders.
+CSS (`assets/css/leaderspath.css`) and JS (`assets/js/chatbot.js` + `assets/js/vendor/marked.umd.js` + `assets/js/vendor/purify.min.js`) register on `wp_enqueue_scripts` but only enqueue when the shortcode actually renders. DOMPurify sanitizes marked.js's output before it's set as `innerHTML` — marked.js itself has no HTML-sanitization option in this version and will pass raw `<script>`/event-handler markup straight through otherwise (see `docs/TASKS.md` Phase 15, "Markdown/HTML conversion audit").
 
 ---
 
