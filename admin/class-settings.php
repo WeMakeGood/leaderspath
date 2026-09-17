@@ -55,6 +55,7 @@ class Settings {
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'admin_notices', [ $this, 'display_api_key_notice' ] );
 		add_action( 'wp_ajax_leaderspath_test_connection', [ $this, 'ajax_test_connection' ] );
+		add_action( 'wp_ajax_leaderspath_test_api_versions', [ $this, 'ajax_test_api_versions' ] );
 	}
 
 	/**
@@ -215,6 +216,121 @@ class Settings {
 			'tool_web_search'           => 'web_search_20260209',
 			'tool_web_fetch'            => 'web_fetch_20260209',
 		];
+	}
+
+	/**
+	 * Known-valid values for each API-version select field.
+	 *
+	 * Curated from this plugin's own history (values that were once the
+	 * current default, per `git log` on this file) plus the current
+	 * default — not a live-fetched list, since Anthropic has no discovery
+	 * endpoint for valid beta-header/tool-type strings. See CLAUDE.md's
+	 * "API Version Configuration" section for the review cadence and
+	 * lookup URLs used to keep this list and the current defaults current.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @var array<string, array<string, string>>
+	 */
+	private const KNOWN_VERSION_VALUES = [
+		'beta_code_execution' => [
+			'code-execution-2025-08-25' => 'code-execution-2025-08-25 (current)',
+		],
+		'beta_skills'         => [
+			'skills-2025-10-02' => 'skills-2025-10-02 (current)',
+		],
+		'beta_files'          => [
+			'files-api-2025-04-14' => 'files-api-2025-04-14 (current)',
+		],
+		'beta_web_tools'      => [
+			'code-execution-web-tools-2026-02-09' => 'code-execution-web-tools-2026-02-09 (current)',
+		],
+		'tool_code_execution' => [
+			'code_execution_20260521' => 'code_execution_20260521 (current)',
+			'code_execution_20250825' => 'code_execution_20250825 (prior)',
+		],
+		'tool_web_search'     => [
+			'web_search_20260209' => 'web_search_20260209 (current)',
+			'web_search_20250305' => 'web_search_20250305 (prior)',
+		],
+		'tool_web_fetch'      => [
+			'web_fetch_20260209' => 'web_fetch_20260209 (current)',
+			'web_fetch_20250910' => 'web_fetch_20250910 (prior)',
+		],
+	];
+
+	/**
+	 * Sentinel option value meaning "use the Custom text input below."
+	 *
+	 * @var string
+	 */
+	private const CUSTOM_VALUE = '__custom__';
+
+	/**
+	 * Render a known-values select + "Custom" text-input fallback for one
+	 * API-version field.
+	 *
+	 * Replaces a plain text input with a `<select>` of curated known-valid
+	 * values (see `KNOWN_VERSION_VALUES`) plus a "Custom…" option that
+	 * reveals a text input — covers the common case with a real dropdown
+	 * (per user request: "make this a select, not a text field") while
+	 * still allowing an arbitrary value if Anthropic ships something newer
+	 * before this list is updated (see CLAUDE.md).
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param string $field       Option key (e.g. 'beta_code_execution').
+	 * @param string $description Field description/format hint.
+	 */
+	private function render_version_select_field( string $field, string $description ): void {
+		$options       = get_option( self::OPTION_NAME, $this->get_defaults() );
+		$value         = $options[ $field ] ?? $this->get_defaults()[ $field ];
+		$known_values  = self::KNOWN_VERSION_VALUES[ $field ] ?? [];
+		$is_known      = isset( $known_values[ $value ] );
+		$select_id     = 'leaderspath_' . $field;
+		$custom_id     = $select_id . '_custom';
+		$name          = esc_attr( self::OPTION_NAME ) . '[' . esc_attr( $field ) . ']';
+
+		?>
+		<select
+			id="<?php echo esc_attr( $select_id ); ?>"
+			class="leaderspath-version-select"
+			data-custom-input="<?php echo esc_attr( $custom_id ); ?>"
+		>
+			<?php foreach ( $known_values as $known_value => $label ) : ?>
+				<option value="<?php echo esc_attr( $known_value ); ?>" <?php selected( $value, $known_value ); ?>>
+					<?php echo esc_html( $label ); ?>
+				</option>
+			<?php endforeach; ?>
+			<option value="<?php echo esc_attr( self::CUSTOM_VALUE ); ?>" <?php selected( ! $is_known ); ?>>
+				<?php esc_html_e( 'Custom…', 'leaderspath' ); ?>
+			</option>
+		</select>
+		<input
+			type="text"
+			id="<?php echo esc_attr( $custom_id ); ?>"
+			name="<?php echo $name; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped above. ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+			class="regular-text"
+			style="<?php echo $is_known ? 'display:none;' : ''; ?>"
+		/>
+		<p class="description"><?php echo esc_html( $description ); ?></p>
+		<script>
+		(function() {
+			var select = document.getElementById( <?php echo wp_json_encode( $select_id ); ?> );
+			var custom = document.getElementById( <?php echo wp_json_encode( $custom_id ); ?> );
+			if ( ! select || ! custom ) { return; }
+			select.addEventListener( 'change', function() {
+				if ( select.value === <?php echo wp_json_encode( self::CUSTOM_VALUE ); ?> ) {
+					custom.style.display = '';
+				} else {
+					custom.style.display = 'none';
+					custom.value = select.value;
+				}
+			} );
+		})();
+		</script>
+		<?php
 	}
 
 	/**
@@ -483,6 +599,44 @@ class Settings {
 				<?php esc_html_e( 'View Anthropic Beta Headers Documentation', 'leaderspath' ); ?>
 			</a>
 		</p>
+		<p>
+			<button type="button" id="leaderspath-test-api-versions" class="button button-secondary">
+				<?php esc_html_e( 'Test Code Execution / Web Tools Settings', 'leaderspath' ); ?>
+			</button>
+			<span id="leaderspath-api-versions-status"></span>
+			<br />
+			<span class="description">
+				<?php esc_html_e( 'Confirms the tool types and beta headers below still work — not whether they\'re the newest available. Covers Code Execution and Web Tools only; Skills/Files can\'t be tested without a real skill.', 'leaderspath' ); ?>
+			</span>
+		</p>
+		<script>
+		jQuery(document).ready(function($) {
+			$('#leaderspath-test-api-versions').on('click', function() {
+				var $button = $(this);
+				var $status = $('#leaderspath-api-versions-status');
+				var originalText = $button.text();
+
+				$button.prop('disabled', true).text('<?php echo esc_js( __( 'Testing...', 'leaderspath' ) ); ?>');
+				$status.html('');
+
+				$.post(ajaxurl, {
+					action: 'leaderspath_test_api_versions',
+					nonce: '<?php echo esc_js( wp_create_nonce( 'leaderspath_test_api_versions' ) ); ?>'
+				}, function(response) {
+					$button.prop('disabled', false).text(originalText);
+
+					if (response.success) {
+						$status.html('<span style="color: #46b450; margin-left: 10px;"><span class="dashicons dashicons-yes-alt"></span> ' + response.data.message + '</span>');
+					} else {
+						$status.html('<span style="color: #dc3232; margin-left: 10px;"><span class="dashicons dashicons-warning"></span> ' + response.data.message + '</span>');
+					}
+				}).fail(function() {
+					$button.prop('disabled', false).text(originalText);
+					$status.html('<span style="color: #dc3232; margin-left: 10px;"><span class="dashicons dashicons-warning"></span> <?php echo esc_js( __( 'Request failed', 'leaderspath' ) ); ?></span>');
+				});
+			});
+		});
+		</script>
 		<?php
 	}
 
@@ -492,21 +646,10 @@ class Settings {
 	 * @since 0.1.0
 	 */
 	public function render_beta_code_execution_field(): void {
-		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$value   = $options['beta_code_execution'] ?? $this->get_defaults()['beta_code_execution'];
-
-		?>
-		<input
-			type="text"
-			id="leaderspath_beta_code_execution"
-			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[beta_code_execution]"
-			value="<?php echo esc_attr( $value ); ?>"
-			class="regular-text"
-		/>
-		<p class="description">
-			<?php esc_html_e( 'Beta header for code execution. Format: code-execution-YYYY-MM-DD', 'leaderspath' ); ?>
-		</p>
-		<?php
+		$this->render_version_select_field(
+			'beta_code_execution',
+			__( 'Beta header for code execution. Format: code-execution-YYYY-MM-DD', 'leaderspath' )
+		);
 	}
 
 	/**
@@ -515,21 +658,10 @@ class Settings {
 	 * @since 0.1.0
 	 */
 	public function render_beta_skills_field(): void {
-		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$value   = $options['beta_skills'] ?? $this->get_defaults()['beta_skills'];
-
-		?>
-		<input
-			type="text"
-			id="leaderspath_beta_skills"
-			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[beta_skills]"
-			value="<?php echo esc_attr( $value ); ?>"
-			class="regular-text"
-		/>
-		<p class="description">
-			<?php esc_html_e( 'Beta header for skills API. Format: skills-YYYY-MM-DD', 'leaderspath' ); ?>
-		</p>
-		<?php
+		$this->render_version_select_field(
+			'beta_skills',
+			__( 'Beta header for skills API. Format: skills-YYYY-MM-DD', 'leaderspath' )
+		);
 	}
 
 	/**
@@ -538,21 +670,10 @@ class Settings {
 	 * @since 0.1.0
 	 */
 	public function render_beta_files_field(): void {
-		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$value   = $options['beta_files'] ?? $this->get_defaults()['beta_files'];
-
-		?>
-		<input
-			type="text"
-			id="leaderspath_beta_files"
-			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[beta_files]"
-			value="<?php echo esc_attr( $value ); ?>"
-			class="regular-text"
-		/>
-		<p class="description">
-			<?php esc_html_e( 'Beta header for files API. Format: files-api-YYYY-MM-DD', 'leaderspath' ); ?>
-		</p>
-		<?php
+		$this->render_version_select_field(
+			'beta_files',
+			__( 'Beta header for files API. Format: files-api-YYYY-MM-DD', 'leaderspath' )
+		);
 	}
 
 	/**
@@ -561,21 +682,10 @@ class Settings {
 	 * @since 0.1.0
 	 */
 	public function render_tool_code_execution_field(): void {
-		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$value   = $options['tool_code_execution'] ?? $this->get_defaults()['tool_code_execution'];
-
-		?>
-		<input
-			type="text"
-			id="leaderspath_tool_code_execution"
-			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[tool_code_execution]"
-			value="<?php echo esc_attr( $value ); ?>"
-			class="regular-text"
-		/>
-		<p class="description">
-			<?php esc_html_e( 'Tool type for code execution. Format: code_execution_YYYYMMDD', 'leaderspath' ); ?>
-		</p>
-		<?php
+		$this->render_version_select_field(
+			'tool_code_execution',
+			__( 'Tool type for code execution. Format: code_execution_YYYYMMDD', 'leaderspath' )
+		);
 	}
 
 	/**
@@ -833,21 +943,10 @@ class Settings {
 	 * @since 0.11.0
 	 */
 	public function render_beta_web_tools_field(): void {
-		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$value   = $options['beta_web_tools'] ?? $this->get_defaults()['beta_web_tools'];
-
-		?>
-		<input
-			type="text"
-			id="leaderspath_beta_web_tools"
-			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[beta_web_tools]"
-			value="<?php echo esc_attr( $value ); ?>"
-			class="regular-text"
-		/>
-		<p class="description">
-			<?php esc_html_e( 'Beta header for web search/fetch with dynamic filtering. Format: code-execution-web-tools-YYYY-MM-DD', 'leaderspath' ); ?>
-		</p>
-		<?php
+		$this->render_version_select_field(
+			'beta_web_tools',
+			__( 'Beta header for web search/fetch with dynamic filtering. Format: code-execution-web-tools-YYYY-MM-DD', 'leaderspath' )
+		);
 	}
 
 	/**
@@ -856,21 +955,10 @@ class Settings {
 	 * @since 0.11.0
 	 */
 	public function render_tool_web_search_field(): void {
-		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$value   = $options['tool_web_search'] ?? $this->get_defaults()['tool_web_search'];
-
-		?>
-		<input
-			type="text"
-			id="leaderspath_tool_web_search"
-			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[tool_web_search]"
-			value="<?php echo esc_attr( $value ); ?>"
-			class="regular-text"
-		/>
-		<p class="description">
-			<?php esc_html_e( 'Tool type for web search. Format: web_search_YYYYMMDD', 'leaderspath' ); ?>
-		</p>
-		<?php
+		$this->render_version_select_field(
+			'tool_web_search',
+			__( 'Tool type for web search. Format: web_search_YYYYMMDD', 'leaderspath' )
+		);
 	}
 
 	/**
@@ -879,21 +967,10 @@ class Settings {
 	 * @since 0.11.0
 	 */
 	public function render_tool_web_fetch_field(): void {
-		$options = get_option( self::OPTION_NAME, $this->get_defaults() );
-		$value   = $options['tool_web_fetch'] ?? $this->get_defaults()['tool_web_fetch'];
-
-		?>
-		<input
-			type="text"
-			id="leaderspath_tool_web_fetch"
-			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[tool_web_fetch]"
-			value="<?php echo esc_attr( $value ); ?>"
-			class="regular-text"
-		/>
-		<p class="description">
-			<?php esc_html_e( 'Tool type for web fetch. Format: web_fetch_YYYYMMDD', 'leaderspath' ); ?>
-		</p>
-		<?php
+		$this->render_version_select_field(
+			'tool_web_fetch',
+			__( 'Tool type for web fetch. Format: web_fetch_YYYYMMDD', 'leaderspath' )
+		);
 	}
 
 	/**
@@ -934,6 +1011,35 @@ class Settings {
 				$model_count
 			),
 			'models'  => $result['models'] ?? [],
+		] );
+	}
+
+	/**
+	 * AJAX handler for testing the configured Code Execution / Web Tools
+	 * beta headers and tool types against a real (zero-cost) API request.
+	 *
+	 * @since 0.7.0
+	 */
+	public function ajax_test_api_versions(): void {
+		// Verify nonce.
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'leaderspath_test_api_versions' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid security token.', 'leaderspath' ) ] );
+		}
+
+		// Check capability.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'leaderspath' ) ] );
+		}
+
+		$claude = new \LeadersPath\Includes\Claude_API();
+		$result = $claude->test_api_versions();
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+		}
+
+		wp_send_json_success( [
+			'message' => __( 'Code Execution and Web Tools settings are valid.', 'leaderspath' ),
 		] );
 	}
 }

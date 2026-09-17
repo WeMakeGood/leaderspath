@@ -109,6 +109,20 @@ class Claude_API {
 	private const RETRYABLE_CURL_ERRORS = [ 7, 28, 35, 56 ];
 
 	/**
+	 * Model ID prefixes that don't support programmatic tool calling for
+	 * web_search/web_fetch.
+	 *
+	 * Discovered directly against the real API (2026-09-17, while building
+	 * the Settings "Test API Versions" check): Haiku 4.5 rejects a request
+	 * with these tools with `"does not support programmatic tool calling"`.
+	 * Sonnet 5 was confirmed to accept the identical request. See
+	 * docs/claude-api-integration.md.
+	 *
+	 * @var array<int, string>
+	 */
+	private const NO_PROGRAMMATIC_TOOL_CALLING_PREFIXES = [ 'claude-haiku' ];
+
+	/**
 	 * Send a message to Claude.
 	 *
 	 * Uses Container API with Skills and Code Execution when skills are configured.
@@ -170,24 +184,7 @@ class Claude_API {
 			}
 
 			$body['container'] = $container;
-
-			// Add code execution + web tools when skills are present.
-			$tool_type = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
-			$web_tools = \LeadersPath\Admin\Settings::get_web_tool_types();
-			$body['tools'] = [
-				[
-					'type' => $tool_type,
-					'name' => 'code_execution',
-				],
-				[
-					'type' => $web_tools['web_search'],
-					'name' => 'web_search',
-				],
-				[
-					'type' => $web_tools['web_fetch'],
-					'name' => 'web_fetch',
-				],
-			];
+			$body['tools']     = $this->build_skills_tools( $model_id );
 		}
 
 		// Log request if debug mode is enabled.
@@ -341,14 +338,7 @@ class Claude_API {
 
 		if ( ! empty( $skills ) ) {
 			$body['container'] = [ 'skills' => $skills ];
-
-			$tool_type     = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
-			$web_tools     = \LeadersPath\Admin\Settings::get_web_tool_types();
-			$body['tools'] = [
-				[ 'type' => $tool_type, 'name' => 'code_execution' ],
-				[ 'type' => $web_tools['web_search'], 'name' => 'web_search' ],
-				[ 'type' => $web_tools['web_fetch'], 'name' => 'web_fetch' ],
-			];
+			$body['tools']     = $this->build_skills_tools( $model_id );
 
 			$headers['anthropic-beta'] = \LeadersPath\Admin\Settings::get_beta_headers( [ 'code_execution', 'skills', 'web_tools' ] );
 		}
@@ -579,23 +569,7 @@ class Claude_API {
 				$container_id ? "reusing {$container_id} (warm)" : 'provisioning fresh (cold start — expected on first message)'
 			);
 
-			// Add code execution + web tools when skills are present.
-			$tool_type     = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
-			$web_tools     = \LeadersPath\Admin\Settings::get_web_tool_types();
-			$body['tools'] = [
-				[
-					'type' => $tool_type,
-					'name' => 'code_execution',
-				],
-				[
-					'type' => $web_tools['web_search'],
-					'name' => 'web_search',
-				],
-				[
-					'type' => $web_tools['web_fetch'],
-					'name' => 'web_fetch',
-				],
-			];
+			$body['tools'] = $this->build_skills_tools( $model_id );
 		}
 
 		$this->maybe_log( 'Stream Request', $body );
@@ -1100,6 +1074,44 @@ class Claude_API {
 	 */
 	private function send_sse_error( string $message ): void {
 		$this->send_sse_event( 'error', wp_json_encode( [ 'message' => $message ] ) );
+	}
+
+	/**
+	 * Build the `tools` array for a skills-enabled request.
+	 *
+	 * Always includes `code_execution`. Excludes `web_search`/`web_fetch`
+	 * when the resolved model doesn't support programmatic tool calling
+	 * for them (see `NO_PROGRAMMATIC_TOOL_CALLING_PREFIXES`) — Anthropic
+	 * rejects the entire request otherwise, not just the unsupported
+	 * tools. No shipped activity configures Haiku with skills today, but
+	 * `chatbot_model` allows any facilitator to pick Haiku for any
+	 * activity, skills included, so this guards a real, reachable
+	 * misconfiguration rather than a hypothetical one.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @param string $model_id Resolved model ID (e.g. 'claude-sonnet-5').
+	 * @return array<int, array<string, string>> Tools array for the request body.
+	 */
+	private function build_skills_tools( string $model_id ): array {
+		$tool_type = \LeadersPath\Admin\Settings::get_code_execution_tool_type();
+
+		$tools = [
+			[ 'type' => $tool_type, 'name' => 'code_execution' ],
+		];
+
+		foreach ( self::NO_PROGRAMMATIC_TOOL_CALLING_PREFIXES as $prefix ) {
+			if ( 0 === strpos( $model_id, $prefix ) ) {
+				return $tools;
+			}
+		}
+
+		$web_tools = \LeadersPath\Admin\Settings::get_web_tool_types();
+
+		$tools[] = [ 'type' => $web_tools['web_search'], 'name' => 'web_search' ];
+		$tools[] = [ 'type' => $web_tools['web_fetch'], 'name' => 'web_fetch' ];
+
+		return $tools;
 	}
 
 	/**
@@ -1768,6 +1780,104 @@ class Claude_API {
 			'model_count'  => count( $models ),
 			'models'       => $models,
 		];
+	}
+
+	/**
+	 * Test the configured code-execution/web-tools API version settings.
+	 *
+	 * A `max_tokens: 0` request (prefill only — no generation, no container
+	 * provisioned, zero output tokens billed; same pattern as
+	 * `warm_cache()`) exercising the `code_execution` tool plus
+	 * `web_search`/`web_fetch` tool types and the `beta_code_execution`/
+	 * `beta_web_tools` beta headers together, using whatever the admin has
+	 * currently configured in Settings. A rejected tool type or beta header
+	 * surfaces as a real `invalid_request_error` from Anthropic — this is
+	 * a genuine test of "does this still work," not a guess.
+	 *
+	 * Deliberately does **not** cover `beta_skills`/`beta_files` — those
+	 * only apply once a real skill_id is referenced in a `container`, and
+	 * there's no cheap, side-effect-free way to exercise them without
+	 * uploading/referencing a real skill. See docs/claude-api-integration.md
+	 * and CLAUDE.md's "API Version Configuration" section: catching that
+	 * those two have gone *stale* (still valid, but superseded by something
+	 * newer/better-supported) isn't something any connectivity test can
+	 * catch anyway — it takes checking Anthropic's changelog directly.
+	 *
+	 * @since 0.7.0
+	 *
+	 * @return array|WP_Error Array with 'status' on success, WP_Error with
+	 *                        the raw Anthropic error message on failure.
+	 */
+	public function test_api_versions() {
+		$api_key = \LeadersPath\Admin\Settings::get_api_key();
+
+		if ( empty( $api_key ) ) {
+			return new WP_Error(
+				'api_key_missing',
+				__( 'Claude API key is not configured.', 'leaderspath' )
+			);
+		}
+
+		// Sonnet, not Haiku: Haiku 4.5 rejects web_search/web_fetch with
+		// "does not support programmatic tool calling" — a real constraint
+		// discovered while building this check (see docs/TASKS.md Phase 14
+		// and the new "Model tool-calling support" note in
+		// docs/claude-api-integration.md). No shipped activity currently
+		// configures Haiku with skills enabled, so this is latent, not
+		// active, but the test itself must use a model that's actually
+		// expected to support these tools.
+		$model_id = $this->resolve_model_id( 'sonnet' );
+
+		if ( is_wp_error( $model_id ) ) {
+			return $model_id;
+		}
+
+		$body = [
+			'model'      => $model_id,
+			'max_tokens' => 0,
+			'messages'   => [ [ 'role' => 'user', 'content' => 'test' ] ],
+			'tools'      => $this->build_skills_tools( $model_id ),
+		];
+
+		$headers = [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => $api_key,
+			'anthropic-version' => self::API_VERSION,
+			'anthropic-beta'    => \LeadersPath\Admin\Settings::get_beta_headers( [ 'code_execution', 'web_tools' ] ),
+		];
+
+		$response = wp_remote_post(
+			self::API_URL . '/messages',
+			[
+				'timeout' => 30,
+				'headers' => $headers,
+				'body'    => wp_json_encode( $body ),
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error(
+				'api_request_failed',
+				__( 'Failed to connect to Claude API.', 'leaderspath' )
+			);
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$data        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( $status_code >= 400 ) {
+			// Surface Anthropic's raw message directly (not the generic
+			// handle_api_error() mapping) — an admin diagnosing a stale
+			// tool type/beta header needs the actual rejection reason.
+			$message = is_array( $data ) ? ( $data['error']['message'] ?? '' ) : '';
+
+			return new WP_Error(
+				'api_version_invalid',
+				$message ?: __( 'The API rejected the configured tool types or beta headers.', 'leaderspath' )
+			);
+		}
+
+		return [ 'status' => 'valid' ];
 	}
 
 	/**

@@ -494,14 +494,16 @@ Display of CPT data (Lessons, Activities, Courses, Context Library, Skills List)
 
 ### Required API Features
 
+The actual current values live in Settings (`admin/class-settings.php`, `KNOWN_VERSION_VALUES`/`get_defaults()`), not here — this block is a snapshot and **will drift**; don't treat it as authoritative. See "API Version Configuration" below for the real values and how to keep them current.
+
 ```
 Beta Headers:
-- code-execution-2025-08-25
-- skills-2025-10-02
-- files-api-2025-04-14 (for file handling)
+- code-execution (now GA — header optional; a beta value is still a valid opt-in)
+- skills-YYYY-MM-DD
+- files-api-YYYY-MM-DD (for file handling)
 
 Tools:
-- code_execution_20250825
+- code_execution_YYYYMMDD
 
 Container:
 - skills: [{type, skill_id, version}, ...]
@@ -515,6 +517,20 @@ Container:
 3. **WordPress stores** → `skill_anthropic_id`, `skill_anthropic_version`
 4. **Chat request** → skill_id included in `container.skills` array
 5. **Update** → New ZIP creates version via `POST /v1/skills/{id}/versions`
+
+### API Version Configuration — maintenance cadence
+
+Seven values (`beta_code_execution`, `beta_skills`, `beta_files`, `beta_web_tools`, `tool_code_execution`, `tool_web_search`, `tool_web_fetch`) drive every Claude API request's beta headers/tool types. They're configured as `<select>` fields on the Settings page (Settings → API Version Configuration), each offering the known-valid values curated in `Settings::KNOWN_VERSION_VALUES` plus a "Custom…" text-input fallback — not free text with no guidance.
+
+**These values can go stale silently** — a beta header that still works isn't necessarily the current/best-supported one, and nothing in the running plugin can detect that on its own (the Settings page's "Test Code Execution / Web Tools Settings" button only confirms the *configured* values still work, not that they're the newest available). Claude Code sessions working in this repo should check the values against Anthropic's own documentation periodically (not just when something breaks) and update `KNOWN_VERSION_VALUES`/`get_defaults()` in `admin/class-settings.php` when a newer version supersedes the current default:
+
+- https://platform.claude.com/docs/en/api/beta-headers
+- https://platform.claude.com/docs/en/agents-and-tools/tool-use/code-execution-tool
+- https://platform.claude.com/docs/en/build-with-claude/skills-guide
+- https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool
+- https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-fetch-tool
+
+**Not every model supports every tool** — Claude Haiku 4.5 rejects `web_search`/`web_fetch` outright (confirmed 2026-09-17 against the real API). `Claude_API::build_skills_tools()` already guards this; if Anthropic changes which models support programmatic tool calling, update `Claude_API::NO_PROGRAMMATIC_TOOL_CALLING_PREFIXES` accordingly. See `docs/claude-api-integration.md`, "Model tool-calling support."
 
 ## Key Files
 

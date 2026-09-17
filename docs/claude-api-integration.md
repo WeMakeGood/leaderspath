@@ -93,6 +93,12 @@ The Anthropic API documentation should be checked periodically:
 - https://platform.claude.com/docs/en/agents-and-tools/tool-use/code-execution-tool
 - https://platform.claude.com/docs/en/build-with-claude/skills-guide
 
+**Settings UI (2026-09-17):** these seven values are configured on the Settings page under "API Version Configuration" as `<select>` fields (a curated list of known-valid values from this plugin's own history — see `Settings::KNOWN_VERSION_VALUES` — plus a "Custom…" option), not plain text fields. A "Test Code Execution / Web Tools Settings" button on that page (`Claude_API::test_api_versions()`) makes a real, zero-cost (`max_tokens: 0`) request confirming `beta_code_execution`/`beta_web_tools`/the three tool types still work — it does **not** confirm they're the *newest* available; catching that a value has gone stale (still valid, but superseded) requires actually checking the URLs above. `beta_skills`/`beta_files` aren't covered by the test at all — exercising them requires a real skill_id in a `container`, which isn't something a cheap connectivity check can do. See CLAUDE.md's "API Version Configuration" section for the maintenance cadence.
+
+### Model tool-calling support
+
+**Not every model supports every tool.** Discovered directly against the real API (2026-09-17, building the check above): **Claude Haiku 4.5 rejects `web_search`/`web_fetch` with `"does not support programmatic tool calling"`** — the whole request fails, not just those tools. Claude Sonnet 5 was confirmed to accept the identical request. `Claude_API::build_skills_tools( $model_id )` is the single place all four request-building call sites (`send_message()`, `stream_message()`, `warm_cache()`, `test_api_versions()`) get their `tools` array from — it omits `web_search`/`web_fetch` when the resolved model ID starts with a prefix in `NO_PROGRAMMATIC_TOOL_CALLING_PREFIXES` (currently just `claude-haiku`), keeping only `code_execution`. No shipped activity configures Haiku with skills today (`chatbot_model` allows any facilitator to pick Haiku for any activity, skills or not — this was a real, reachable misconfiguration, not hypothetical), but if Anthropic changes which models support programmatic tool calling, update that constant.
+
 ---
 
 ## Request Structure
