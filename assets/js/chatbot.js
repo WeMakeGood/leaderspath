@@ -103,8 +103,16 @@
 
 		/**
 		 * Create a message element.
+		 *
+		 * @param {string}  role     'user' or 'assistant'.
+		 * @param {string}  content  Rendered content (HTML or plain text per isHtml).
+		 * @param {boolean} isHtml   True if content is pre-rendered HTML.
+		 * @param {string}  [rawText] Plain-text/markdown source to copy, if it
+		 *   differs from content (e.g. content is rendered HTML). Stored on the
+		 *   element so the copy button always copies the original text, never
+		 *   the rendered markup. Falls back to content when omitted.
 		 */
-		function createMessage( role, content, isHtml ) {
+		function createMessage( role, content, isHtml, rawText ) {
 			var messageEl = document.createElement( 'div' );
 			messageEl.className = 'leaderspath_chatbot__message leaderspath_chatbot__message--' + role;
 
@@ -117,8 +125,88 @@
 				contentEl.textContent = content;
 			}
 
+			// Stashed on the element (not a data-attribute — copy text can be
+			// long/contain characters awkward to round-trip through an HTML
+			// attribute) so setRawText()/the copy button always read the
+			// current source text, including after a streaming update.
+			messageEl._lpRawText = ( typeof rawText === 'string' ) ? rawText : content;
+
 			messageEl.appendChild( contentEl );
+			messageEl.appendChild( createCopyButton( messageEl ) );
 			return messageEl;
+		}
+
+		/**
+		 * Create a copy-to-clipboard button for a message element. Reads
+		 * messageEl._lpRawText at click time (not a closed-over value), so it
+		 * stays correct even if the message's text is updated after creation
+		 * (streaming).
+		 */
+		function createCopyButton( messageEl ) {
+			var btn = document.createElement( 'button' );
+			btn.type = 'button';
+			btn.className = 'leaderspath_chatbot__copy';
+			btn.setAttribute( 'aria-label', 'Copy message' );
+			btn.innerHTML =
+				'<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+			btn.addEventListener( 'click', function () {
+				copyText( messageEl._lpRawText || '', btn );
+			} );
+
+			return btn;
+		}
+
+		/**
+		 * Copy text to the clipboard, preferring the async Clipboard API and
+		 * falling back to execCommand('copy') for non-secure contexts or
+		 * older browsers where navigator.clipboard is unavailable. Briefly
+		 * swaps the button to a checkmark/"Copied" state either way.
+		 */
+		function copyText( text, btn ) {
+			function showCopied() {
+				var original = btn.innerHTML;
+				btn.innerHTML =
+					'<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+				btn.classList.add( 'leaderspath_chatbot__copy--done' );
+				btn.setAttribute( 'aria-label', 'Copied' );
+				setTimeout( function () {
+					btn.innerHTML = original;
+					btn.classList.remove( 'leaderspath_chatbot__copy--done' );
+					btn.setAttribute( 'aria-label', 'Copy message' );
+				}, 1500 );
+			}
+
+			if ( navigator.clipboard && navigator.clipboard.writeText ) {
+				navigator.clipboard.writeText( text ).then( showCopied, function () {
+					fallbackCopy( text, showCopied );
+				} );
+			} else {
+				fallbackCopy( text, showCopied );
+			}
+		}
+
+		/**
+		 * execCommand-based copy fallback (non-secure contexts, older
+		 * browsers without navigator.clipboard). Silently no-ops on failure —
+		 * copy is a convenience, not critical functionality.
+		 */
+		function fallbackCopy( text, onSuccess ) {
+			var textarea = document.createElement( 'textarea' );
+			textarea.value = text;
+			textarea.style.position = 'fixed';
+			textarea.style.opacity = '0';
+			document.body.appendChild( textarea );
+			textarea.focus();
+			textarea.select();
+			try {
+				if ( document.execCommand( 'copy' ) ) {
+					onSuccess();
+				}
+			} catch ( e ) {
+				// No-op — copy is a convenience, not critical functionality.
+			}
+			document.body.removeChild( textarea );
 		}
 
 		/**
@@ -413,8 +501,11 @@
 		function sendMessageStream( message, body, typing ) {
 			abortController = new AbortController();
 
-			// Create assistant message element for incremental display.
+			// Create assistant message element for incremental display. The
+			// copy button stays hidden (--streaming) until the stream finishes
+			// — copying partial, still-arriving text isn't useful.
 			var assistantEl = createMessage( 'assistant', '', true );
+			assistantEl.classList.add( 'leaderspath_chatbot__message--streaming' );
 			var contentEl = assistantEl.querySelector( '.leaderspath_chatbot__message__content' );
 			var accumulatedText = '';
 
@@ -427,6 +518,7 @@
 				renderScheduled = false;
 				if ( accumulatedText ) {
 					contentEl.innerHTML = markdownToHtml( accumulatedText );
+					assistantEl._lpRawText = accumulatedText;
 					scrollToBottom();
 				}
 			}
@@ -614,7 +706,9 @@
 					return readChunk();
 				} )
 				.then( function () {
-					// Stream complete.
+					// Stream complete. Reveal the copy button now that the text
+					// is final.
+					assistantEl.classList.remove( 'leaderspath_chatbot__message--streaming' );
 					if ( stopBtn.parentNode ) {
 						stopBtn.parentNode.removeChild( stopBtn );
 					}
@@ -653,7 +747,10 @@
 						typing.parentNode.removeChild( typing );
 					}
 
-					// Remove stop button.
+					// Remove stop button. Also reveal the copy button (below,
+					// on whatever partial text survives) — an interrupted
+					// stream still stops being "in progress".
+					assistantEl.classList.remove( 'leaderspath_chatbot__message--streaming' );
 					if ( stopBtn.parentNode ) {
 						stopBtn.parentNode.removeChild( stopBtn );
 					}
@@ -766,9 +863,9 @@
 							content: data.content_raw || data.content,
 						} );
 
-						// Display HTML response.
+						// Display HTML response (copy button reads the raw markdown).
 						messagesEl.appendChild(
-							createMessage( 'assistant', data.content, true )
+							createMessage( 'assistant', data.content, true, data.content_raw || data.content )
 						);
 						scrollToBottom();
 
@@ -810,8 +907,9 @@
 				emptyState.style.display = 'none';
 			}
 
-			// Show user message.
-			messagesEl.appendChild( createMessage( 'user', markdownToHtml( message ), true ) );
+			// Show user message (copy button reads the original text, not the
+			// markdown-rendered HTML).
+			messagesEl.appendChild( createMessage( 'user', markdownToHtml( message ), true, message ) );
 			scrollToBottom();
 
 			// Add to history.

@@ -1142,6 +1142,24 @@ Per the user's explicit request, `CLAUDE.md`'s "Claude API Architecture" section
 
 ---
 
+## Chatbot: copy-to-clipboard on message bubbles (2026-09-17)
+
+**Trigger:** user generated a long meeting report in an activity chat and found it painful to select and copy manually. Asked for a copy icon/button on message bubbles (right-click capture was considered and rejected — overriding the native context menu is worse UX/accessibility than a discoverable button, and native right-click-to-copy already works today for anyone who prefers it).
+
+**Built:** every message bubble (`createMessage()` in `chatbot.js`, both `user` and `assistant` roles) now renders a small copy button as a flex sibling of the bubble content — not absolutely positioned overlapping text. The button copies the message's original plain-text/markdown source, not the rendered HTML, so pasting into an email or doc doesn't carry stray markup: the raw text is stashed on the message element (`_lpRawText`, read at click time, not closed over) and set from `data.content_raw` (sync assistant responses), the original `message` string (user messages, before `markdownToHtml()`), and `accumulatedText` (kept current on every streaming render pass). Copy uses `navigator.clipboard.writeText()` with an `execCommand('copy')` fallback for non-secure contexts/older browsers; either path swaps the icon to a checkmark for 1.5s as confirmation.
+
+**Streaming-specific behavior:** the copy button on an in-progress assistant message is hidden (`leaderspath_chatbot__message--streaming` modifier, added at bubble creation and removed at both stream-completion points — the normal `.then()` and the `.catch()` error/abort path) since copying partial, still-arriving text isn't useful. An aborted stream still reveals the button afterward on whatever partial text survived, matching how the rest of the UI already treats a stopped stream as "final, not broken."
+
+**Real bug found and fixed by the user's own live testing, not caught by static review:** the first CSS pass added `flex-direction: row-reverse` to `.leaderspath_chatbot__message--user` (to place the copy button left of the right-aligned user bubble, reading before it) without also flipping `justify-content` from its existing `flex-end`. Reversing the flex direction also reverses which end of the main axis `flex-end` packs against, so the combination silently broke right-alignment for user messages, pushing them to the left instead — confirmed as a real regression only because the user actually looked at it in the browser (not caught by `node --check`, class-name cross-referencing, or any other static check run beforehand). Fixed by changing `justify-content` to `flex-start` for the reversed row, then confirmed the fix in a standalone Playwright screenshot test matching the real DOM order (bubble element appended before the button element) before asking the user to re-verify — the layout only makes sense once `flex-direction` and `justify-content` are reasoned about together, not independently.
+
+**Also attempted and abandoned this session:** a full authenticated-browser Playwright check of the real `/learn/{cohort}/lesson/{slug}/` page (installing Playwright + Chromium into the scratchpad, forging real WordPress auth-cookie values via `wp_generate_auth_cookie()` for a real enrolled user). The cohort/lesson rewrite route didn't resolve to the expected Bricks-rendered lesson page in this environment (returned a bare CPT archive instead) — an existing routing/template-resolution question unrelated to this feature, not chased further. Correctly redirected to asking the user to verify directly in their own working browser session instead of continuing to debug unrelated infrastructure to manufacture an automated check.
+
+**Files touched:** `assets/js/chatbot.js` (`createMessage()` signature gained an optional `rawText` param; new `createCopyButton()`/`copyText()`/`fallbackCopy()`; three call-site updates to pass raw text; streaming-class toggle at both stream-end points), `assets/css/leaderspath.css` (`.leaderspath_chatbot__copy`/`--done`, `.leaderspath_chatbot__message--streaming`, flex layout fix on `.leaderspath_chatbot__message--user`).
+
+**User-verified in the live chat UI (not just code review):** icon placement and look, copy correctness for both user and assistant messages, the checkmark feedback, and the right-alignment fix after the flex-direction correction.
+
+---
+
 ## Quick Reference
 
 ### Test Data

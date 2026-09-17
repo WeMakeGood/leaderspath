@@ -38,14 +38,24 @@
 
 .leaderspath_chatbot__message {
 	display: flex;
+	align-items: flex-end;
+	gap: 0.35em;
 	margin-bottom: 0.75em;
 }
 
-.leaderspath_chatbot__message--user {
-	justify-content: flex-end;
+.leaderspath_chatbot__message--assistant {
+	justify-content: flex-start;
 }
 
-.leaderspath_chatbot__message--assistant {
+/* User bubbles are right-aligned, with the copy button reading before the
+   bubble (left of it) rather than after — flex-direction: row-reverse
+   swaps the visual order to put the button on the left. That also flips
+   which end of the main axis "flex-end" packs against, so justify-content
+   has to be flex-start here to keep the bubble itself pinned to the right
+   edge of the screen (not a contradiction — it's relative to the reversed
+   axis, not the screen). */
+.leaderspath_chatbot__message--user {
+	flex-direction: row-reverse;
 	justify-content: flex-start;
 }
 
@@ -67,6 +77,42 @@
 	background: #f0f2f5;
 	color: #1a1a1a;
 	border-bottom-left-radius: 4px;
+}
+
+/* Copy-to-clipboard button — sits just outside the bubble (see the flex
+   layout on .leaderspath_chatbot__message above), not overlapping text.
+   Hidden while an assistant message is still streaming in (copying partial
+   text isn't useful) — see the --streaming modifier toggled in chatbot.js. */
+.leaderspath_chatbot__copy {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75em;
+	height: 1.75em;
+	padding: 0;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: #868e96;
+	cursor: pointer;
+	opacity: 0.6;
+	transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.leaderspath_chatbot__copy:hover {
+	opacity: 1;
+	background: #e9ecef;
+	color: #495057;
+}
+
+.leaderspath_chatbot__copy--done {
+	opacity: 1;
+	color: #2f9e44;
+}
+
+.leaderspath_chatbot__message--streaming .leaderspath_chatbot__copy {
+	display: none;
 }
 
 .leaderspath_chatbot__message__content p {
