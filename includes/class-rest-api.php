@@ -31,6 +31,44 @@ class REST_API {
 	private const NAMESPACE = 'leaderspath/v1';
 
 	/**
+	 * Allowed MIME types for chat file uploads, mapped to their canonical
+	 * extension(s). Matches what Anthropic's Files API + code-execution
+	 * container actually accept: plain text, markdown, CSV, JSON, common
+	 * images, PDF, and common office documents.
+	 *
+	 * @var array<string, array<int, string>>
+	 */
+	private const ALLOWED_UPLOAD_MIME_TYPES = [
+		'text/plain'                                                               => [ 'txt' ],
+		'text/markdown'                                                            => [ 'md' ],
+		'text/csv'                                                                 => [ 'csv' ],
+		'application/json'                                                         => [ 'json' ],
+		'image/png'                                                                => [ 'png' ],
+		'image/jpeg'                                                               => [ 'jpg', 'jpeg' ],
+		'image/gif'                                                                => [ 'gif' ],
+		'image/webp'                                                               => [ 'webp' ],
+		'application/pdf'                                                          => [ 'pdf' ],
+		'application/vnd.openxmlformats-officedocument.wordprocessingml.document'  => [ 'docx' ],
+		'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'        => [ 'xlsx' ],
+		'application/vnd.openxmlformats-officedocument.presentationml.presentation' => [ 'pptx' ],
+	];
+
+	/**
+	 * Maximum upload size in bytes for chat file uploads.
+	 *
+	 * A deliberate app-level ceiling, not Anthropic's own limit — the Files
+	 * API itself allows up to 500MB per file (confirmed against
+	 * platform.claude.com/docs/en/build-with-claude/files, 2026-09-17). 30MB
+	 * keeps a single learner upload from tying up a synchronous
+	 * wp_remote_post() call/PHP memory for an unreasonably long time; raise
+	 * it deliberately if a real activity needs larger files, not as a
+	 * pass-through of Anthropic's ceiling.
+	 *
+	 * @var int
+	 */
+	private const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+
+	/**
 	 * Initialize the class.
 	 *
 	 * @since 0.1.0
@@ -81,6 +119,27 @@ class REST_API {
 				'callback'            => [ $this, 'handle_warm' ],
 				'permission_callback' => [ $this, 'check_chat_permission' ],
 				'args'                => $this->get_chat_args(),
+			]
+		);
+
+		// Chat file upload endpoint (multipart). Uploads to Anthropic's Files
+		// API and returns a file_id for the client to attach on its *next*
+		// /chat or /chat/stream call — see docs/TASKS.md Phase 15, Story 4.
+		register_rest_route(
+			self::NAMESPACE,
+			'/chat/upload',
+			[
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'handle_chat_upload' ],
+				'permission_callback' => [ $this, 'check_chat_permission' ],
+				'args'                => [
+					'activity_id' => [
+						'description'       => __( 'The activity ID this file is being uploaded for.', 'leaderspath' ),
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => [ $this, 'validate_activity_id' ],
+					],
+				],
 			]
 		);
 
@@ -186,6 +245,12 @@ class REST_API {
 			],
 			'container_id' => [
 				'description'       => __( 'Container ID for session continuity.', 'leaderspath' ),
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'sanitize_text_field',
+			],
+			'attached_file_id' => [
+				'description'       => __( 'Anthropic file ID (from /chat/upload) to attach to this turn.', 'leaderspath' ),
 				'type'              => 'string',
 				'required'          => false,
 				'sanitize_callback' => 'sanitize_text_field',
@@ -511,12 +576,14 @@ class REST_API {
 
 		// Determine which chatbot mode we're in.
 		if ( ! empty( $lesson_id ) ) {
-			// Lesson Q&A chatbot mode.
+			// Lesson Q&A chatbot mode. Lessons have no skills/container, so
+			// file attachment never applies here.
 			return $this->handle_lesson_chat( (int) $lesson_id, $message, $history, $model );
 		}
 
 		// Activity sandbox mode.
-		return $this->handle_activity_chat( (int) $activity_id, $message, $history, $model );
+		$attached_file_id = $request->get_param( 'attached_file_id' );
+		return $this->handle_activity_chat( (int) $activity_id, $message, $history, $model, $attached_file_id ?: null );
 	}
 
 	/**
@@ -547,17 +614,139 @@ class REST_API {
 	}
 
 	/**
+	 * Handle a chat file upload.
+	 *
+	 * Uploads the file to Anthropic's Files API and returns its file_id.
+	 * The client attaches that file_id on its *next* /chat or /chat/stream
+	 * call (attached_file_id param) — this endpoint never talks to the
+	 * Messages API itself. Only valid for skills-enabled activities: a
+	 * container_upload only makes sense when a code-execution container
+	 * exists, and this plugin only provisions one when skills are
+	 * configured (see Claude_API::get_skills_for_api()). A skill-less
+	 * activity_id is rejected here even if the client bypasses the UI.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Response with file_id, or error.
+	 */
+	public function handle_chat_upload( WP_REST_Request $request ) {
+		$activity_id = (int) $request->get_param( 'activity_id' );
+
+		$claude = new Claude_API();
+		if ( empty( $claude->get_skills_for_api( $activity_id ) ) ) {
+			return new WP_Error(
+				'uploads_not_supported',
+				__( 'This activity does not support file uploads.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		$files = $request->get_file_params();
+		if ( empty( $files['file'] ) || ! is_array( $files['file'] ) ) {
+			return new WP_Error(
+				'missing_file',
+				__( 'No file was uploaded.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		$file = $files['file'];
+
+		if ( UPLOAD_ERR_OK !== ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) ) {
+			return new WP_Error(
+				'upload_error',
+				__( 'The file failed to upload.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		if ( (int) $file['size'] > self::MAX_UPLOAD_BYTES ) {
+			return new WP_Error(
+				'file_too_large',
+				__( 'The file is too large. The maximum size is 30MB.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		$mime_check = $this->validate_upload_type( $file['tmp_name'], $file['name'] );
+		if ( is_wp_error( $mime_check ) ) {
+			return $mime_check;
+		}
+
+		$api_key = \LeadersPath\Admin\Settings::get_api_key();
+		if ( empty( $api_key ) ) {
+			return new WP_Error(
+				'api_key_missing',
+				__( 'Claude API key is not configured.', 'leaderspath' ),
+				[ 'status' => 500 ]
+			);
+		}
+
+		$result = $claude->upload_file( $file['tmp_name'], sanitize_file_name( $file['name'] ), $mime_check, $api_key );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return new WP_REST_Response( [ 'file_id' => $result['id'] ], 200 );
+	}
+
+	/**
+	 * Validate an uploaded file's type against the chat-upload allowlist.
+	 *
+	 * Uses wp_check_filetype_and_ext() (checks real file content against
+	 * its extension, not just the client-supplied MIME type) so this stays
+	 * authoritative even though chatbot.js does the same check client-side
+	 * for fast UX. WordPress's own default mime map doesn't recognize
+	 * .md/.json (confirmed directly: wp_check_filetype_and_ext() returns
+	 * type => false for both with no extra argument, even though they're
+	 * legitimate types this endpoint allows) — passing our own
+	 * extension-to-mime map as the third argument is the documented way to
+	 * extend recognized types without a global `upload_mimes` filter, and
+	 * keeps ALLOWED_UPLOAD_MIME_TYPES the single source of truth.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param string $tmp_path      Path to the uploaded temp file.
+	 * @param string $original_name Original client-supplied filename.
+	 * @return string|WP_Error The validated MIME type, or WP_Error if not allowed.
+	 */
+	private function validate_upload_type( string $tmp_path, string $original_name ) {
+		$extension_mimes = [];
+		foreach ( self::ALLOWED_UPLOAD_MIME_TYPES as $mime => $extensions ) {
+			foreach ( $extensions as $extension ) {
+				$extension_mimes[ $extension ] = $mime;
+			}
+		}
+
+		$checked   = wp_check_filetype_and_ext( $tmp_path, $original_name, $extension_mimes );
+		$mime_type = $checked['type'] ?: '';
+
+		if ( empty( $mime_type ) || ! isset( self::ALLOWED_UPLOAD_MIME_TYPES[ $mime_type ] ) ) {
+			return new WP_Error(
+				'invalid_file_type',
+				__( 'This file type is not supported. Allowed types: plain text, Markdown, CSV, JSON, PNG/JPG/GIF/WebP images, PDF, and common Office documents.', 'leaderspath' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		return $mime_type;
+	}
+
+	/**
 	 * Handle activity sandbox chat.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int         $activity_id Activity ID.
-	 * @param string      $message     User message.
-	 * @param array       $history     Conversation history.
-	 * @param string|null $model       Model override.
+	 * @param int         $activity_id      Activity ID.
+	 * @param string      $message          User message.
+	 * @param array       $history          Conversation history.
+	 * @param string|null $model            Model override.
+	 * @param string|null $attached_file_id Anthropic file ID (from /chat/upload) to attach to this turn.
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	private function handle_activity_chat( int $activity_id, string $message, array $history, ?string $model ) {
+	private function handle_activity_chat( int $activity_id, string $message, array $history, ?string $model, ?string $attached_file_id = null ) {
 		// Check if chatbot is enabled for this activity.
 		$chatbot_enabled = get_field( 'chatbot_enabled', $activity_id );
 		if ( ! $chatbot_enabled ) {
@@ -583,7 +772,7 @@ class REST_API {
 		$claude = new Claude_API();
 
 		// Send message (activity mode).
-		$response = $claude->send_message( $activity_id, $message, $history, $model );
+		$response = $claude->send_message( $activity_id, $message, $history, $model, null, $attached_file_id );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -684,13 +873,14 @@ class REST_API {
 			if ( is_wp_error( $error ) ) {
 				return $error;
 			}
-			$model        = $error['model'];
-			$container_id = $request->get_param( 'container_id' );
+			$model            = $error['model'];
+			$container_id     = $request->get_param( 'container_id' );
+			$attached_file_id = $request->get_param( 'attached_file_id' ) ?: null;
 
 			$this->start_sse_output();
 
 			$claude = new Claude_API();
-			$result = $claude->stream_message( (int) $activity_id, $message, $history, $model, $container_id );
+			$result = $claude->stream_message( (int) $activity_id, $message, $history, $model, $container_id, $attached_file_id );
 		}
 
 		// If stream_message returned a WP_Error, it means streaming never started.

@@ -25,10 +25,34 @@
 	var restUrl = config.restUrl || '/wp-json/leaderspath/v1/chat';
 	var restStreamUrl = config.restStreamUrl || '';
 	var restWarmUrl = config.restWarmUrl || '';
+	var restUploadUrl = config.restUploadUrl || '';
 	var nonce = config.nonce || '';
 
 	// Feature detection: streaming requires ReadableStream and a stream endpoint.
 	var canStream = restStreamUrl && typeof ReadableStream !== 'undefined';
+
+	// Client-side mirror of the server-side allowlist/cap in class-rest-api.php
+	// (ALLOWED_UPLOAD_MIME_TYPES / MAX_UPLOAD_BYTES). This check is purely for
+	// fast UX (instant rejection message) — the server remains authoritative
+	// and re-validates every upload regardless of what the client allowed
+	// through.
+	var ALLOWED_UPLOAD_MIME_TYPES = [
+		'text/plain',
+		'text/markdown',
+		'text/csv',
+		'application/json',
+		'image/png',
+		'image/jpeg',
+		'image/gif',
+		'image/webp',
+		'application/pdf',
+		'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+		'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+		'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+	];
+	// 30MB app-level cap (not Anthropic's own 500MB Files API limit) — must match
+	// REST_API::MAX_UPLOAD_BYTES.
+	var MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
 
 	/**
 	 * Initialize a single chatbot instance.
@@ -49,6 +73,13 @@
 		var modelSelect = container.querySelector( '.leaderspath_chatbot__model_select' );
 		var emptyState = container.querySelector( '.leaderspath_chatbot__empty' );
 
+		// Upload UI only exists in the DOM for skills-enabled activities (see
+		// class-chatbot-renderer.php) — these will be null otherwise, guarded
+		// below wherever they're used.
+		var hasSkills = container.dataset.hasSkills === '1';
+		var attachBtn = container.querySelector( '.leaderspath_chatbot__attach' );
+		var fileInput = container.querySelector( '.leaderspath_chatbot__file_input' );
+
 		var postId = container.dataset.postId;
 		var postType = container.dataset.postType;
 
@@ -63,6 +94,12 @@
 		var containerId = null;
 		var isSending = false;
 		var abortController = null;
+		// Single-use: one attached file per message, cleared after send. The
+		// container itself persists across turns via containerId, so a
+		// previously-uploaded file may already be reachable to Claude on later
+		// turns too — but this flag specifically signals "attach to THIS turn".
+		var attachedFileId = null;
+		var attachedFileName = '';
 
 		/**
 		 * Create a message element.
@@ -262,16 +299,26 @@
 				body.container_id = containerId;
 			}
 
+			if ( attachedFileId ) {
+				body.attached_file_id = attachedFileId;
+			}
+
 			return body;
 		}
 
 		/**
 		 * Build request headers.
+		 *
+		 * @param {boolean} [json] True (default) for the JSON chat endpoints.
+		 *   False for the multipart upload endpoint, where the browser must
+		 *   set its own Content-Type (with the multipart boundary) — setting
+		 *   it here would break the upload.
 		 */
-		function buildHeaders() {
-			var headers = {
-				'Content-Type': 'application/json',
-			};
+		function buildHeaders( json ) {
+			var headers = {};
+			if ( json !== false ) {
+				headers['Content-Type'] = 'application/json';
+			}
 			if ( nonce ) {
 				headers['X-WP-Nonce'] = nonce;
 			}
@@ -782,8 +829,14 @@
 			// Set sending state.
 			setSending( true );
 
-			// Build request body.
+			// Build request body (reads attachedFileId if set).
 			var body = buildRequestBody( message );
+
+			// Single-use: clear the attachment now that it's included in this
+			// turn's request body. Also removes the "attached" chip from the UI.
+			if ( attachedFileId ) {
+				clearAttachedFile();
+			}
 
 			// Use streaming if available, otherwise fall back to sync.
 			if ( canStream ) {
@@ -809,6 +862,12 @@
 			history = [];
 			containerId = null;
 			isSending = false;
+
+			// A fresh container means any file uploaded into the old one is no
+			// longer reachable — drop the pending attachment too.
+			if ( hasSkills ) {
+				clearAttachedFile();
+			}
 
 			// Clear all rendered messages.
 			messagesEl.innerHTML = '';
@@ -867,6 +926,150 @@
 				body: JSON.stringify( warmBody ),
 				keepalive: true,
 			} ).catch( function () {} );
+		}
+
+		/**
+		 * Remove the "file attached" chip and clear attachment state.
+		 */
+		function clearAttachedFile() {
+			attachedFileId = null;
+			attachedFileName = '';
+			var chip = container.querySelector( '.leaderspath_chatbot__attachment_chip' );
+			if ( chip && chip.parentNode ) {
+				chip.parentNode.removeChild( chip );
+			}
+			if ( fileInput ) {
+				fileInput.value = '';
+			}
+		}
+
+		/**
+		 * Show a small removable chip above the input row indicating a file
+		 * is attached and will be sent with the next message.
+		 */
+		function showAttachedFileChip( filename ) {
+			var existing = container.querySelector( '.leaderspath_chatbot__attachment_chip' );
+			if ( existing && existing.parentNode ) {
+				existing.parentNode.removeChild( existing );
+			}
+
+			var chip = document.createElement( 'div' );
+			chip.className = 'leaderspath_chatbot__attachment_chip';
+
+			var label = document.createElement( 'span' );
+			label.textContent = '📎 ' + filename + ' — will be sent with your next message';
+			chip.appendChild( label );
+
+			var removeBtn = document.createElement( 'button' );
+			removeBtn.type = 'button';
+			removeBtn.className = 'leaderspath_chatbot__attachment_chip_remove';
+			removeBtn.setAttribute( 'aria-label', 'Remove attached file' );
+			removeBtn.textContent = '×';
+			removeBtn.addEventListener( 'click', clearAttachedFile );
+			chip.appendChild( removeBtn );
+
+			var inputArea = container.querySelector( '.leaderspath_chatbot__input_area' );
+			if ( inputArea ) {
+				inputArea.insertBefore( chip, inputArea.firstChild );
+			}
+		}
+
+		/**
+		 * Validate a File client-side against the same allowlist/size cap the
+		 * server enforces. UX-only — never authoritative; the server
+		 * re-validates every upload regardless.
+		 */
+		function validateFileForUpload( file ) {
+			if ( file.size > MAX_UPLOAD_BYTES ) {
+				return 'That file is too large. The maximum size is 30MB.';
+			}
+			if ( file.type && ALLOWED_UPLOAD_MIME_TYPES.indexOf( file.type ) === -1 ) {
+				return 'This file type is not supported.';
+			}
+			return null;
+		}
+
+		/**
+		 * Upload a file to /chat/upload and, on success, store its file_id to
+		 * attach to the next message sent.
+		 */
+		function uploadFile( file ) {
+			if ( ! restUploadUrl || ! file ) {
+				return;
+			}
+
+			var validationError = validateFileForUpload( file );
+			if ( validationError ) {
+				messagesEl.appendChild( createError( validationError ) );
+				scrollToBottom();
+				return;
+			}
+
+			var formData = new FormData();
+			formData.append( 'activity_id', parseInt( postId, 10 ) );
+			formData.append( 'file', file );
+
+			fetch( restUploadUrl, {
+				method: 'POST',
+				headers: buildHeaders( false ),
+				credentials: 'same-origin',
+				body: formData,
+			} )
+				.then( function ( response ) {
+					return response.json().then( function ( data ) {
+						if ( ! response.ok ) {
+							throw new Error( data.message || 'File upload failed.' );
+						}
+						return data;
+					} );
+				} )
+				.then( function ( data ) {
+					attachedFileId = data.file_id;
+					attachedFileName = file.name;
+					showAttachedFileChip( file.name );
+				} )
+				.catch( function ( err ) {
+					messagesEl.appendChild( createError( err.message || 'File upload failed.' ) );
+					scrollToBottom();
+				} );
+		}
+
+		// File upload UI wiring — only present in the DOM for skills-enabled
+		// activities (see class-chatbot-renderer.php), so guard on both the
+		// per-instance flag and the elements actually existing (defensive, in
+		// case markup and JS ever drift).
+		if ( hasSkills && attachBtn && fileInput ) {
+			attachBtn.addEventListener( 'click', function () {
+				fileInput.click();
+			} );
+
+			fileInput.addEventListener( 'change', function ( e ) {
+				if ( e.target.files && e.target.files[ 0 ] ) {
+					uploadFile( e.target.files[ 0 ] );
+				}
+			} );
+
+			// Drag-and-drop onto the whole widget container.
+			container.addEventListener( 'dragover', function ( e ) {
+				e.preventDefault();
+				container.classList.add( 'leaderspath_chatbot--dragover' );
+			} );
+
+			container.addEventListener( 'dragleave', function ( e ) {
+				// Only clear when actually leaving the container (not entering
+				// a child element), otherwise the class flickers.
+				if ( ! container.contains( e.relatedTarget ) ) {
+					container.classList.remove( 'leaderspath_chatbot--dragover' );
+				}
+			} );
+
+			container.addEventListener( 'drop', function ( e ) {
+				e.preventDefault();
+				container.classList.remove( 'leaderspath_chatbot--dragover' );
+				if ( e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[ 0 ] ) {
+					uploadFile( e.dataTransfer.files[ 0 ] );
+				}
+			} );
 		}
 
 		// Event listeners.

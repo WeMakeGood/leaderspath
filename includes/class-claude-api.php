@@ -129,14 +129,15 @@ class Claude_API {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param int         $activity_id    Activity ID for context.
-	 * @param string      $message      User message.
-	 * @param array       $history      Previous conversation messages.
-	 * @param string      $model        Model slug (sonnet, haiku, opus).
-	 * @param string|null $container_id Container ID for session continuity.
+	 * @param int         $activity_id      Activity ID for context.
+	 * @param string      $message          User message.
+	 * @param array       $history          Previous conversation messages.
+	 * @param string      $model            Model slug (sonnet, haiku, opus).
+	 * @param string|null $container_id     Container ID for session continuity.
+	 * @param string|null $attached_file_id Anthropic file ID to attach to this turn (container_upload block), if any.
 	 * @return array|WP_Error Response data or error.
 	 */
-	public function send_message( int $activity_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null ) {
+	public function send_message( int $activity_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null, ?string $attached_file_id = null ) {
 		// Get API key.
 		$api_key = \LeadersPath\Admin\Settings::get_api_key();
 
@@ -158,7 +159,7 @@ class Claude_API {
 		$system_prompt = $this->build_system_prompt( $activity_id );
 
 		// Build messages array.
-		$messages = $this->build_messages( $message, $history );
+		$messages = $this->build_messages( $message, $history, $attached_file_id );
 
 		// Get model settings.
 		$max_tokens = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: self::DEFAULT_MAX_TOKENS );
@@ -506,14 +507,15 @@ class Claude_API {
 	 *
 	 * @since 0.9.0
 	 *
-	 * @param int         $activity_id  Activity ID for context.
-	 * @param string      $message      User message.
-	 * @param array       $history      Previous conversation messages.
-	 * @param string      $model        Model slug (sonnet, haiku, opus).
-	 * @param string|null $container_id Container ID for session continuity.
+	 * @param int         $activity_id      Activity ID for context.
+	 * @param string      $message          User message.
+	 * @param array       $history          Previous conversation messages.
+	 * @param string      $model            Model slug (sonnet, haiku, opus).
+	 * @param string|null $container_id     Container ID for session continuity.
+	 * @param string|null $attached_file_id Anthropic file ID to attach to this turn (container_upload block), if any.
 	 * @return WP_Error|null Null on success, WP_Error on pre-stream failure.
 	 */
-	public function stream_message( int $activity_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null ): ?WP_Error {
+	public function stream_message( int $activity_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null, ?string $attached_file_id = null ): ?WP_Error {
 		// Get API key.
 		$api_key = \LeadersPath\Admin\Settings::get_api_key();
 
@@ -535,7 +537,7 @@ class Claude_API {
 		$system_prompt = $this->build_system_prompt( $activity_id );
 
 		// Build messages array.
-		$messages = $this->build_messages( $message, $history );
+		$messages = $this->build_messages( $message, $history, $attached_file_id );
 
 		// Get model settings.
 		$max_tokens = (int) ( get_field( 'chatbot_max_tokens', $activity_id ) ?: self::DEFAULT_MAX_TOKENS );
@@ -1467,13 +1469,20 @@ class Claude_API {
 	/**
 	 * Build messages array for API request.
 	 *
+	 * When $attached_file_id is set, the current turn's content becomes a
+	 * content-block array (text + container_upload) instead of a plain
+	 * string, per Anthropic's Files API container-attachment contract —
+	 * this only makes sense when a container exists, i.e. skills-enabled
+	 * activities (see Claude_API::get_skills_for_api()).
+	 *
 	 * @since 0.1.0
 	 *
-	 * @param string $message User's current message.
-	 * @param array  $history Previous conversation.
-	 * @return array<int, array<string, string>> Messages array.
+	 * @param string      $message          User's current message.
+	 * @param array       $history          Previous conversation.
+	 * @param string|null $attached_file_id Anthropic file ID to attach to this turn, if any.
+	 * @return array<int, array<string, mixed>> Messages array.
 	 */
-	private function build_messages( string $message, array $history ): array {
+	private function build_messages( string $message, array $history, ?string $attached_file_id = null ): array {
 		$messages = [];
 
 		// Add history.
@@ -1487,10 +1496,26 @@ class Claude_API {
 		}
 
 		// Add current message.
-		$messages[] = [
-			'role'    => 'user',
-			'content' => $message,
-		];
+		if ( $attached_file_id ) {
+			$messages[] = [
+				'role'    => 'user',
+				'content' => [
+					[
+						'type' => 'text',
+						'text' => $message,
+					],
+					[
+						'type'    => 'container_upload',
+						'file_id' => $attached_file_id,
+					],
+				],
+			];
+		} else {
+			$messages[] = [
+				'role'    => 'user',
+				'content' => $message,
+			];
+		}
 
 		return $messages;
 	}
@@ -1500,12 +1525,16 @@ class Claude_API {
 	 *
 	 * Returns only skills that have been successfully synced to Anthropic.
 	 *
+	 * Public: also called by Chatbot_Renderer to decide whether an activity's
+	 * chat widget should render the file-upload UI (skills-enabled activities
+	 * only — see docs/TASKS.md Phase 15, Story 4).
+	 *
 	 * @since 0.1.0
 	 *
 	 * @param int $activity_id The lesson ID.
 	 * @return array<int, array<string, string>> Skills array for container.
 	 */
-	private function get_skills_for_api( int $activity_id ): array {
+	public function get_skills_for_api( int $activity_id ): array {
 		$skills = get_field( 'chatbot_skills', $activity_id ) ?: [];
 
 		if ( empty( $skills ) ) {
@@ -1887,5 +1916,100 @@ class Claude_API {
 	 */
 	public function clear_models_cache(): void {
 		delete_transient( self::MODELS_TRANSIENT );
+	}
+
+	/**
+	 * Upload a file to Anthropic's Files API for use via container_upload.
+	 *
+	 * The returned file ID is attached to the *next* chat turn's content
+	 * blocks (see build_messages()) so the code-execution container can
+	 * read it. Only meaningful for skills-enabled activities — a container
+	 * is only provisioned when skills are configured (see
+	 * get_skills_for_api()); the REST layer is responsible for rejecting
+	 * uploads against skill-less activities before this is ever called.
+	 *
+	 * Reuses the same hand-built multipart pattern as
+	 * Skill_Processor::build_multipart_body() (boundary via
+	 * wp_generate_password(), manual Content-Disposition), adapted for a
+	 * single generic file field. Anthropic's Files API expects a `file`
+	 * field (singular, not `files[]` like the Skills upload endpoint) and
+	 * returns `{"id": "file_...", "type": "file", ...}` — both confirmed
+	 * against platform.claude.com/docs/en/build-with-claude/files,
+	 * 2026-09-17.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param string $file_path        Path to the temporary uploaded file on disk.
+	 * @param string $original_filename Original client-side filename (for Content-Disposition).
+	 * @param string $mime_type        The file's MIME type (for Content-Type).
+	 * @param string $api_key          The Anthropic API key.
+	 * @return array|WP_Error {@type string $id Anthropic file ID.} or error.
+	 */
+	public function upload_file( string $file_path, string $original_filename, string $mime_type, string $api_key ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$file_content = file_get_contents( $file_path );
+
+		if ( false === $file_content ) {
+			return new WP_Error(
+				'file_read_error',
+				__( 'Could not read the uploaded file.', 'leaderspath' ),
+				[ 'status' => 500 ]
+			);
+		}
+
+		$boundary = wp_generate_password( 24, false );
+
+		$body  = "--{$boundary}\r\n";
+		$body .= "Content-Disposition: form-data; name=\"file\"; filename=\"{$original_filename}\"\r\n";
+		$body .= "Content-Type: {$mime_type}\r\n\r\n";
+		$body .= $file_content . "\r\n";
+		$body .= "--{$boundary}--\r\n";
+
+		$response = wp_remote_post(
+			self::API_URL . '/files',
+			[
+				'timeout' => 60,
+				'headers' => [
+					'Content-Type'      => 'multipart/form-data; boundary=' . $boundary,
+					'x-api-key'         => $api_key,
+					'anthropic-version' => self::API_VERSION,
+					'anthropic-beta'    => \LeadersPath\Admin\Settings::get_beta_headers( [ 'files' ] ),
+				],
+				'body'    => $body,
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error(
+				'api_request_failed',
+				/* translators: %s: error message */
+				sprintf( __( 'Failed to connect to Anthropic API: %s', 'leaderspath' ), $response->get_error_message() )
+			);
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$data        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		$this->maybe_log( 'Upload Response', [ 'status' => $status_code, 'body' => $data ] );
+
+		if ( $status_code >= 400 ) {
+			$message = is_array( $data ) ? ( $data['error']['message'] ?? '' ) : '';
+
+			return new WP_Error(
+				'file_upload_failed',
+				$message ?: __( 'The AI service rejected the file upload.', 'leaderspath' ),
+				[ 'status' => $status_code ]
+			);
+		}
+
+		if ( ! is_array( $data ) || empty( $data['id'] ) ) {
+			return new WP_Error(
+				'api_invalid_response',
+				__( 'The AI service returned an unexpected response to the file upload.', 'leaderspath' ),
+				[ 'status' => 502 ]
+			);
+		}
+
+		return [ 'id' => $data['id'] ];
 	}
 }

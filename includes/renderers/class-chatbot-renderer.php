@@ -40,7 +40,8 @@ class Chatbot_Renderer {
 	 *     post_type:string,
 	 *     allow_model_switch:bool,
 	 *     default_model:string,
-	 *     instructions:string
+	 *     instructions:string,
+	 *     has_skills:bool
 	 * }|array{}
 	 */
 	public static function get_data( int $override = 0 ): array {
@@ -59,6 +60,10 @@ class Chatbot_Renderer {
 				// Learner-facing opening instructions (WYSIWYG). Rendered as the
 				// first message in the chat; NOT sent to the AI. Empty for lessons.
 				'instructions'       => $enabled ? (string) get_field( 'activity_instructions', $activity_id ) : '',
+				// Skills-enabled activities get a container, which is what the
+				// container_upload file-attachment mechanism requires — drives
+				// whether the upload UI renders at all (see build_html()).
+				'has_skills'         => $enabled && ! empty( ( new \LeadersPath\Includes\Claude_API() )->get_skills_for_api( $activity_id ) ),
 			];
 		}
 
@@ -72,6 +77,8 @@ class Chatbot_Renderer {
 				'allow_model_switch' => false,
 				'default_model'      => $enabled ? ( (string) get_field( 'lesson_chatbot_model', $lesson_id ) ?: 'sonnet' ) : 'sonnet',
 				'instructions'       => '',
+				// Lessons have no skills/container — never eligible for uploads.
+				'has_skills'         => false,
 			];
 		}
 
@@ -144,12 +151,37 @@ class Chatbot_Renderer {
 
 		$send_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
 
+		// File upload UI: only for skills-enabled activities — a container_upload
+		// requires a code-execution container, which this plugin only provisions
+		// when skills are configured. Skill-less activities/lessons get no upload
+		// markup at all (absent from the DOM, not hidden-disabled).
+		$has_skills   = ! empty( $data['has_skills'] );
+		$attach_html  = '';
+		$privacy_html = '';
+
+		if ( $has_skills ) {
+			$attach_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>';
+
+			$attach_html = sprintf(
+				'<button type="button" class="leaderspath_chatbot__attach" aria-label="%s">%s</button><input type="file" class="leaderspath_chatbot__file_input" aria-hidden="true" hidden>',
+				esc_attr__( 'Attach a file', 'leaderspath' ),
+				$attach_icon
+			);
+
+			$privacy_html = sprintf(
+				'<p class="leaderspath_chatbot__privacy_note">%s</p>',
+				esc_html__( "Files you attach are sent to Anthropic's AI service and may be retained there for up to 30 days. Don't upload anything you wouldn't want stored briefly outside this site.", 'leaderspath' )
+			);
+		}
+
 		$input_area_parts .= sprintf(
-			'<div class="leaderspath_chatbot__input_row"><textarea class="leaderspath_chatbot__input" placeholder="%s" rows="1" aria-label="%s"></textarea><button type="button" class="leaderspath_chatbot__send" aria-label="%s">%s</button></div>',
+			'<div class="leaderspath_chatbot__input_row">%s<textarea class="leaderspath_chatbot__input" placeholder="%s" rows="1" aria-label="%s"></textarea><button type="button" class="leaderspath_chatbot__send" aria-label="%s">%s</button></div>%s',
+			$attach_html,
 			esc_attr__( 'Type your message...', 'leaderspath' ),
 			esc_attr__( 'Chat message', 'leaderspath' ),
 			esc_attr__( 'Send message', 'leaderspath' ),
-			$send_icon
+			$send_icon,
+			$privacy_html
 		);
 
 		$parts .= sprintf(
@@ -164,11 +196,17 @@ class Chatbot_Renderer {
 			? sprintf( ' data-activity-id="%d"', $data['post_id'] )
 			: '';
 
+		// data-has-skills lets chatbot.js decide, per widget instance, whether to
+		// wire up the attach button / drop zone / file input for this container
+		// (a page can host multiple chatbots with different skills configs).
+		$has_skills_attr = sprintf( ' data-has-skills="%s"', $has_skills ? '1' : '0' );
+
 		return sprintf(
-			'<div class="leaderspath_chatbot"><div class="leaderspath_chatbot__container" data-post-id="%d" data-post-type="%s"%s>%s%s</div></div>',
+			'<div class="leaderspath_chatbot"><div class="leaderspath_chatbot__container" data-post-id="%d" data-post-type="%s"%s%s>%s%s</div></div>',
 			$data['post_id'],
 			esc_attr( $data['post_type'] ),
 			$activity_id_attr,
+			$has_skills_attr,
 			$parts,
 			$instructions_template
 		);

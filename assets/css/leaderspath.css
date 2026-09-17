@@ -216,6 +216,92 @@
 	height: 1.1em;
 }
 
+/* Attach control — file upload, only rendered for skills-enabled activities
+   (see class-chatbot-renderer.php). Sized/treated like .leaderspath_chatbot__send
+   but secondary (outline, not filled) since it's not the primary action. */
+.leaderspath_chatbot__attach {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5em;
+	height: 2.5em;
+	border: 1px solid #dee2e6;
+	border-radius: 8px;
+	background: #fff;
+	color: #495057;
+	cursor: pointer;
+	padding: 0;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.leaderspath_chatbot__attach:hover {
+	background: #f0f2f5;
+	border-color: #adb5bd;
+}
+
+.leaderspath_chatbot__attach svg {
+	width: 1.1em;
+	height: 1.1em;
+}
+
+/* Drop-target highlight — toggled on the whole widget container on
+   dragenter/dragleave (see chatbot.js). Only wired up for skills-enabled
+   activities. */
+.leaderspath_chatbot--dragover {
+	outline: 2px dashed #0073aa;
+	outline-offset: -2px;
+	background: #f0f8fc;
+}
+
+/* "File attached" chip — shown above the input row after a successful
+   upload, until the message is sent (single-use) or removed manually. */
+.leaderspath_chatbot__attachment_chip {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5em;
+	padding: 0.4em 0.75em;
+	margin-bottom: 0.5em;
+	background: #f0f2f5;
+	border: 1px solid #dee2e6;
+	border-radius: 6px;
+	font-size: 0.85em;
+	color: #495057;
+}
+
+.leaderspath_chatbot__attachment_chip span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.leaderspath_chatbot__attachment_chip_remove {
+	flex: 0 0 auto;
+	background: none;
+	border: none;
+	color: #868e96;
+	font-size: 1.1em;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0 0.2em;
+}
+
+.leaderspath_chatbot__attachment_chip_remove:hover {
+	color: #c92a2a;
+}
+
+/* Privacy disclosure — required whenever the attach control is present,
+   since uploaded files are retained on Anthropic's infrastructure for up
+   to 30 days (a real change from this widget's usual "nothing saved on our
+   server" chat behavior). */
+.leaderspath_chatbot__privacy_note {
+	margin: 0.5em 0 0;
+	font-size: 0.75em;
+	line-height: 1.4;
+	color: #868e96;
+}
+
 .leaderspath_chatbot__model_select {
 	display: block;
 	width: 100%;
