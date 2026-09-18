@@ -395,7 +395,16 @@ class Post_Types {
 			'map_meta_cap'        => true,
 			'has_archive'         => false,
 			'hierarchical'        => false,
-			'supports'            => [ 'title', 'revisions', 'custom-fields' ],
+			// 'slug' does not make the CPT publicly resolvable by itself — this
+			// stays publicly_queryable=false/rewrite=false, so adding it only
+			// unlocks the native admin slug editor. Without it, post_name was
+			// still silently auto-generated from the title on save, but nobody
+			// could see or edit it — which made it impossible for a facilitator
+			// to know or construct the exact /learn/{cohort-slug}/lesson/{slug}/
+			// URL Cohort_Rewrite actually requires (found 2026-09-18: a real,
+			// practical gap in the deliberate "resolve only through the
+			// controlled rewrite lookup" design, not a reason to revisit it).
+			'supports'            => [ 'title', 'slug', 'revisions', 'custom-fields' ],
 		];
 
 		register_post_type( 'leaderspath_cohort', $args );

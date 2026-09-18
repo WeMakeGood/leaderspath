@@ -66,6 +66,16 @@ class Admin_Columns {
 		add_action( 'manage_leaderspath_cohort_posts_custom_column', [ $this, 'cohort_column_content' ], 10, 2 );
 		add_filter( 'manage_edit-leaderspath_cohort_sortable_columns', [ $this, 'cohort_sortable_columns' ] );
 
+		// leaderspath_cohort has no native "View" row action — it's
+		// deliberately not publicly_queryable (see Post_Types::register_cohort()),
+		// so WordPress has no permalink to offer one for. That left facilitators
+		// with no way to reach the actual /learn/{cohort-slug}/lesson/{slug}/
+		// URL the cohort resolves through (found 2026-09-18). This adds a
+		// "Preview First Lesson" action instead, built from the cohort's own
+		// first reachable lesson — not a generic "View" link, since there's no
+		// single canonical page for a cohort to view.
+		add_filter( 'post_row_actions', [ $this, 'cohort_row_actions' ], 10, 2 );
+
 		// Handle sorting.
 		add_action( 'pre_get_posts', [ $this, 'handle_sorting' ] );
 
@@ -954,6 +964,69 @@ JS;
 	public function cohort_sortable_columns( array $columns ): array {
 		$columns['leaderspath_cohort_payment_status'] = 'leaderspath_cohort_payment_status';
 		return $columns;
+	}
+
+	/**
+	 * Add a "Preview First Lesson" row action to the Cohorts list, in place
+	 * of the native "View" action WordPress can't offer for a
+	 * non-publicly-queryable CPT.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param array<string, string> $actions Existing row actions.
+	 * @param \WP_Post              $post    The post being rendered.
+	 * @return array<string, string> Modified row actions.
+	 */
+	public function cohort_row_actions( array $actions, \WP_Post $post ): array {
+		if ( 'leaderspath_cohort' !== $post->post_type ) {
+			return $actions;
+		}
+
+		$url = $this->get_cohort_preview_url( $post->ID );
+
+		if ( null === $url ) {
+			return $actions;
+		}
+
+		$actions['leaderspath_preview_lesson'] = sprintf(
+			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+			esc_url( $url ),
+			esc_html__( 'Preview First Lesson', 'leaderspath' )
+		);
+
+		return $actions;
+	}
+
+	/**
+	 * Build the /learn/{cohort-slug}/lesson/{lesson-slug}/ URL for the first
+	 * lesson this cohort can actually reach (Cohort → Course(s) → Lessons,
+	 * same membership Cohort_Rewrite itself validates against — this never
+	 * links to a lesson the cohort wouldn't legitimately resolve).
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param int $cohort_id Cohort post ID.
+	 * @return string|null The preview URL, or null if the cohort has no
+	 *                      reachable lesson yet (no courses assigned, or its
+	 *                      courses have no lessons).
+	 */
+	private function get_cohort_preview_url( int $cohort_id ): ?string {
+		$cohort = get_post( $cohort_id );
+		if ( ! $cohort || empty( $cohort->post_name ) ) {
+			return null;
+		}
+
+		$lesson_ids = \LeadersPath\Includes\Enrollment::get_cohort_lessons( $cohort_id );
+		if ( empty( $lesson_ids ) ) {
+			return null;
+		}
+
+		$lesson = get_post( $lesson_ids[0] );
+		if ( ! $lesson || empty( $lesson->post_name ) ) {
+			return null;
+		}
+
+		return home_url( sprintf( '/learn/%s/lesson/%s/', $cohort->post_name, $lesson->post_name ) );
 	}
 
 	/**

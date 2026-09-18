@@ -1183,6 +1183,26 @@ Per the user's explicit request, `CLAUDE.md`'s "Claude API Architecture" section
 
 ---
 
+## Fix: Cohort slug not editable/visible, no way to construct a /learn/ URL (2026-09-18)
+
+**Trigger:** user tried to view a real cohort's lesson page and found it impossible — the Cohorts admin list has no "View" row action, and the Edit Cohort screen shows no slug field to read or edit. Without either, there was no way to know or construct the exact `/learn/{cohort-slug}/lesson/{lesson-slug}/` URL `Cohort_Rewrite` requires.
+
+**Root cause, both symptoms traced to the same registration choice:** `Post_Types::register_cohort()` registered the CPT with `'supports' => ['title', 'revisions', 'custom-fields']` — no `'slug'` — and `'publicly_queryable' => false` / `'rewrite' => false` (deliberate: a cohort holds org-confidential data and should only ever resolve through the controlled rewrite lookup, never direct query — see that method's own docblock). WordPress still auto-generates and stores a `post_name` from the title on every save regardless of `supports` (confirmed directly: cohort 348's `post_name` was `make-good-cohort-3` despite no slug UI existing) — the slug was never missing, only invisible and uneditable. Separately, WordPress's native "View" row action requires a working permalink to link to; a CPT that's `publicly_queryable => false` has none, so WordPress correctly omits it — not a bug in isolation, but combined with the invisible slug it left facilitators with no path at all from the admin UI to a real lesson URL.
+
+**Fixed, without reopening the "should cohorts be publicly queryable" decision:**
+1. Added `'slug'` to the CPT's `supports` array. Confirmed this does **not** make the CPT publicly resolvable — `publicly_queryable` stays `false`, unchanged — it only unlocks the native WP slug editor on the Edit Cohort screen.
+2. Added a `post_row_actions` filter (`Admin_Columns::cohort_row_actions()`) that replaces the (impossible) native "View" action with a real **"Preview First Lesson"** link, built via a new `get_cohort_preview_url()` helper. It reuses `Enrollment::get_cohort_lessons()` — the exact same Cohort → Course(s) → Lessons membership `Cohort_Rewrite::resolve_request()` itself validates against — so the generated link can never point at a lesson the cohort wouldn't legitimately reach. Cleanly omitted (no broken/misleading link shown) for a cohort with no courses assigned yet or whose courses have no lessons.
+
+**Verified directly, not just read for correctness:**
+- `post_type_supports('leaderspath_cohort', 'slug')` now `true`; `publicly_queryable` confirmed still `false` — no new public surface introduced.
+- `get_cohort_preview_url()` against four real cohorts: three with real courses/lessons produced correct, real `/learn/{slug}/lesson/{slug}/` URLs; the one cohort with `cohort_courses: null` correctly returned `null`.
+- `cohort_row_actions()` confirmed to actually omit the new action entry for the no-lesson cohort and include a correctly-escaped link for the others.
+- The generated URL for cohort 348 was fed directly through `Cohort_Rewrite::resolve_request()`'s own logic and confirmed to resolve to the correct cohort ID and lesson query — not just "looks like a valid URL," genuinely functional end-to-end.
+
+**Files touched:** `includes/class-post-types.php` (`'slug'` added to Cohort's `supports`), `admin/class-admin-columns.php` (`cohort_row_actions()`, `get_cohort_preview_url()`).
+
+---
+
 ## Quick Reference
 
 ### Test Data
