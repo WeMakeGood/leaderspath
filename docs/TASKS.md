@@ -1,7 +1,9 @@
 # LeadersPath Development Tasks
 
-**Last Updated:** 2026-09-17
-**Current Phase:** Phase 15 — Cohort-Scoped Context Files (design complete, build not started). WS Form cohort-purchase integration (Phase 14) fully closed out and verified end-to-end. WooCommerce cohort-purchase path deprecated.
+**Last Updated:** 2026-09-18
+**Current Phase:** Cohort-scoped chat context is fully built and verified (Phase 15, all 5 stories closed). WS Form cohort-purchase integration fully closed out. WooCommerce cohort-purchase path deprecated. Cohort CPT now behaves as a standard WP post type with role-scoped facilitator access.
+
+**Compaction note (2026-09-18):** This file was compacted at commit `d55f20d` — that commit contains the full, pre-compaction history for every phase summarized below. To read a compacted phase's original task-by-task detail: `git show d55f20d:docs/TASKS.md`, or `git log --all --oneline -- docs/TASKS.md` to browse the file's history. Phases superseded before shipping (see "Removed" note per phase) were deleted outright, not summarized — that reasoning still lives in git history if needed.
 
 ---
 
@@ -14,1237 +16,161 @@
 
 ---
 
-## Completed Phases (see git history for details)
+## Completed Phases (compacted — full detail: `git show d55f20d:docs/TASKS.md`)
 
-- **Phase 1: Foundation** — Plugin scaffolding, docs, build system, Divi 5 hello-module proof of concept
-- **Phase 2: Data Layer** — 5 CPTs, 3 taxonomies, ACF field groups, roles & capabilities
-- **Phase 3: Admin Interface** — Settings page (encrypted API key, model selection), custom admin columns, quick edit
-- **Phase 4: REST API & Claude Integration** — Chat endpoint, context/skill downloads, Claude API with container + code execution + skills
-- **Phase 5: Divi 5 Modules** — 9 modules built, then **removed** (`844094c`) due to incomplete Divi 5 research leading to antipatterns. Core plugin infrastructure retained.
-
----
-
-## Current: Frontend Rebuild
-
-All Divi 5 module code (PHP modules, TypeScript components, build output, frontend assets, VB preview REST endpoints) was removed in commit `844094c`. The core plugin infrastructure remains intact.
-
-### What Was Retained
-- All `includes/` classes (CPTs, taxonomies, capabilities, ACF fields, Claude API, REST API, skill processor)
-- All `admin/` classes (settings, admin columns, admin menu)
-- `modules/Shared/` PHP traits (PostIdHelper, ModuleClassnamesTrait) — reviewed and validated; CustomCssTrait moved to per-module trait files
-- Chat REST endpoint and context/skill download endpoints
-- Build tooling (webpack config, package.json, composer.json)
-
-### What Was Removed
-- All 9 Divi 5 modules (PHP + TypeScript)
-- `modules/Modules.php` (module registration hub)
-- `src/components/` and `src/index.ts`
-- `scripts/bundle.js`, `styles/bundle.css`, `modules-json/`
-- `assets/js/chatbot.js`, `assets/js/context-modal.js`
-- `assets/css/chatbot.css`, `assets/css/context-modal.css`
-- All VB preview REST endpoints from `class-rest-api.php`
-
-### Research (Completed 2026-02-11)
-
-- [x] WordPress block rendering pipeline research → `docs/wordpress-rendering-pipeline.md`
-- [x] Divi 5 module architecture research → `docs/divi5-module-architecture.md`
-- [x] Official extension example repo analysis (`d5-extension-example-modules`)
-- [x] `@divi/types` package analysis (field library, style library, module library)
-- [x] Shared PHP traits re-evaluated against validated patterns
-- [x] Updated `docs/divi-modules.md` with research status and key findings
-
-### Gap Analysis (Completed 2026-02-11)
-
-First-pass Lesson Meta module revealed 22+ gaps vs official patterns. Full gap analysis documented in `docs/divi-modules.md`. Architecture doc (`docs/divi5-module-architecture.md`) rewritten from scratch based on official repo. 28 gotchas now documented.
-
-- [x] Clone and deep-analyze official `d5-extension-example-modules` repo
-- [x] Compare every file pattern against our implementation
-- [x] Rewrite `docs/divi5-module-architecture.md` with correct patterns
-- [x] Rewrite `docs/divi-modules.md` with gap analysis table and file checklist
-- [x] Update MEMORY.md with corrected patterns
-
-### Completed: Lesson Meta Module (2026-02-11)
-
-- [x] Layer 1: Core PHP renderer (`LessonMetaRenderer`) — pure ACF data + semantic HTML, no Divi deps
-- [x] Layer 2: SCSS — resets + difficulty colors only; layout deferred to Divi Layout panel
-- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit component with placeholder content
-- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Custom CSS fields
-- [x] Frontend tested — correct per-post ACF data on lesson pages
-- [x] VB tested — all design controls verified (fonts, Layout panel flex+grid, spacing, content toggles, label text)
-- [x] Content tab — show/hide toggles + custom label text via group-items, defaults working in both VB + frontend
-- [x] Layout panel — full flex/grid support on child `<dl>` element, display generated by PHP + VB inline style
-- [x] CSS specificity — DD/DT margin resets beat Divi theme rules, CSS variable cascade from parent reset
-
-### Validated Patterns (from Lesson Meta debugging)
-
-These patterns are documented in `docs/divi5-module-architecture.md` Gotchas #21-26:
-
-1. **Layout panel on child elements:** Layout doesn't output `display` — must generate it in PHP (`Style::add()` 2D array) and VB (`style={{ display }}`). SCSS only resets CSS variable cascade.
-2. **`Style::add()` format:** Items must be **2D arrays**. Raw declarations need `[[ 'selector' => ..., 'declaration' => ... ]]`.
-3. **group-items defaults:** VB defaults via `"default"` on attribute in module.json. Frontend defaults via `module-default-render-attributes.json`. Both needed.
-4. **group-items `attrName`:** Each item needs `"attrName": "content.innerContent"` to bind correctly.
-5. **CSS variable cascade:** Parent `.et_flex_module` sets `--flex-direction: column`, `--horizontal-gap`, `--vertical-gap`. SCSS must explicitly reset these on inner container.
-
-### Completed: Lesson Activities Module (2026-02-11)
-
-- [x] Layer 1: Core PHP renderer (`LessonActivitiesRenderer`) — ACF relationship + semantic HTML (`<ul>`/`<li>`/`<article>`)
-- [x] Layer 2: SCSS — structural resets only; visual styling deferred to Divi controls
-- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder activities
-- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Content tab toggles, Custom CSS fields
-- [x] Number badge styling — Design > Number Badge group with background color, border/radius, spacing, box shadow (pattern from Divi Blurb imageIcon)
-- [x] Default appearance — gray (#e0e0e0) circle (50% border-radius) via `module-default-render-attributes.json`
-
-### Completed: Activity Meta Module (2026-02-11)
-
-- [x] Layer 1: Core PHP renderer (`ActivityMetaRenderer`) — ACF fields + semantic HTML (`<dl>`/`<dt>`/`<dd>`)
-- [x] Layer 2: SCSS — structural resets, CSS variable cascade reset
-- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder content
-- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Content tab toggles + label text, Custom CSS fields
-- [x] Data: duration, model name (with human-readable labels), model switching indicator
-- [x] Content tab: show/hide toggles + custom label text for all three data points
-
-### Completed: Course Lessons Module (2026-02-11)
-
-- [x] Layer 1: Core PHP renderer (`CourseLessonsRenderer`) — ACF relationship + semantic HTML (`<ul>`/`<li>`/`<article>`)
-- [x] Layer 2: SCSS — structural resets, meta container flex layout, prerequisites section styling
-- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder lessons
-- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Content tab toggles, Number Badge group, Custom CSS fields
-- [x] Data: title (linked), difficulty badge, duration, activity count, excerpt
-- [x] Prerequisites section — linked course names with toggle visibility
-- [x] Content tab: 8 toggles (heading, numbers, difficulty, duration, activity count, excerpt, prerequisites) + heading text
-- [x] Number badge styling — same pattern as Lesson Activities (background, border, spacing, box shadow)
-
-### Completed: Context Library Module (2026-02-11)
-
-- [x] Layer 1: Core PHP renderer (`ContextLibraryRenderer`) — ACF relationship + card grid HTML (`<ul>`/`<li>`/`<article>`)
-- [x] Layer 2: SCSS — card grid layout, card styling, type badges, buttons, full modal overlay styles
-- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder context files
-- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Card decoration group, Icon group, Content tab toggles, Custom CSS fields
-- [x] Data: title, description, file type icon + badge, version label
-- [x] Frontend JS: vanilla JS modal with REST API content fetch + download-as-markdown
-- [x] Content tab: 7 toggles (heading, icon, description, meta, view button, download button) + heading text
-- [x] Card decoration — background, border, spacing, box shadow (same pattern as number badge)
-- [x] Button styling — `elementType: "button"` with full Divi button decoration controls
-- [x] Icon controls — color picker + size range slider (SVGs scale via `font-size` / `1em`)
-- [x] Grid layout — `gridColumnCount` with gap via CSS custom properties (`--horizontal-gap`/`--vertical-gap`)
-
-### Completed: Skills List Module (2026-02-11)
-
-- [x] Layer 1: Core PHP renderer (`SkillsListRenderer`) — ACF relationship + card grid HTML (`<ul>`/`<li>`/`<article>`)
-- [x] Layer 2: SCSS — card grid layout, card styling, compatibility badges, version labels
-- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder skills
-- [x] Layer 4: module.json attrs — font controls per element, Layout panel, Card decoration group, Icon group, Content tab toggles, Custom CSS fields
-- [x] Data: title, description, compatibility info, version
-- [x] Content tab: 5 toggles (heading, icon, description, meta) + heading text
-- [x] Card decoration — background, border, spacing, box shadow (same pattern as Context Library)
-- [x] Icon controls — color picker + size range slider (gear/cog SVG, scales via `font-size` / `1em`)
-- [x] Grid layout — `gridColumnCount` with gap via CSS custom properties
-
-### Completed: Lesson Objectives Module (2026-02-11)
-
-- [x] Layer 1: Core PHP renderer (`LessonObjectivesRenderer`) — ACF repeater + semantic HTML (`<ol>`/`<li>`)
-- [x] Layer 2: SCSS — structural resets, ordered list styling
-- [x] Layer 3: Divi integration — PHP traits, TS module, VB edit with placeholder objectives
-- [x] Layer 4: module.json attrs — font controls per element, Content tab toggles, Custom CSS fields
-
-### Completed: Chatbot Module (2026-02-12)
-
-- [x] Install `league/commonmark` v2.8.0 for server-side markdown→HTML conversion
-- [x] Update REST API (`class-rest-api.php`) — add `content_raw` field + `markdown_to_html()` with GFM + `wp_kses_post()`
-- [x] Layer 1: Core PHP renderer (`ChatbotRenderer`) — dual-mode (Activity sandbox / Lesson Q&A), ACF field detection, chat container HTML
-- [x] Layer 2: SCSS — chat bubbles, message area, input bar, typing indicator, code block styling, `prefers-reduced-motion`
-- [x] Layer 2: Frontend JS (`chatbot.js`) — vanilla JS IIFE, message send/receive, history tracking (raw markdown for API, HTML for display), container ID session continuity, model switching, auto-grow textarea, Enter/Shift+Enter, typing indicator, inline error display
-- [x] Layer 3: Divi integration — `Chatbot.php` + 5 trait files (RenderCallback with `wp_enqueue_script` + `wp_localize_script`, ModuleClassnames, ModuleStyles, ModuleScriptData, CustomCss)
-- [x] Layer 4: module.json — Content tab (showHeading, headingText, emptyText), Design tab (Heading font, Container decoration, User/Assistant Message fonts, Input Field font, Send Button decoration), 9 Custom CSS fields
-- [x] TS files — types, edit (static 3-message mockup), styles, module-classnames, module-script-data, custom-css, placeholder-content, index
-- [x] Module icon: uses Divi's built-in `divi/module-comments`
-- [x] Registration in Modules.php, index.ts
-- [x] JSON files copied to modules-json/chatbot/
-- [x] Build verified — zero errors
-
-### Completed: Context File Upload (2026-02-16)
-
-- [x] Add drag-and-drop / file-select upload metabox ("Import from File") to Context File editor
-- [x] Client-side file read populates post_content textarea directly
-- [x] Auto-sets title and slug from filename on new posts
-- [x] Disable TinyMCE visual editor for Context Files (markdown/plain text only)
-- [x] Accepted formats: .md, .txt, .json, .yaml, .yml, .xml, .csv, .html, .css, .js, .ts, .py, .php, .rb, .sh, .sql, .log, .cfg, .conf, .ini, .env, .toml
-- [x] 1 MB file size limit with user feedback
-- [x] Visual feedback: drag-over highlight, success/error status messages
-
-### Completed: Markdown Drop for WYSIWYG Editors (2026-02-16)
-
-- [x] Drag-and-drop .md/.markdown files onto any TinyMCE editor (standard WP post editor + ACF WYSIWYG fields)
-- [x] Client-side conversion: marked.js v17.0.2 (42 KB UMD, zero dependencies) converts MD → HTML
-- [x] Defeats WordPress EditorUploader overlay (capture-phase handlers on parent document with `stopImmediatePropagation`)
-- [x] Defeats TinyMCE paste plugin file-drop block (capture-phase handlers on iframe document)
-- [x] Raw HTML in Markdown stripped for XSS prevention
-- [x] 1 MB file size limit, TinyMCE notification feedback (success/error)
-- [x] Scripts only load on LeadersPath CPT editor screens
-- [x] ACF WYSIWYG fields handled via `acf.addAction('wysiwyg_tinymce_init')`
-
-### Completed: Visual Builder Fatal Error Fix (2026-02-16)
-
-- [x] Fix `get_current_screen()` fatal error in `admin/class-context-uploader.php` that prevented Divi VB from loading in Theme Builder
-- [x] Add `function_exists()` guard for frontend contexts where `get_current_screen()` is unavailable
-- [x] Add global namespace prefix (`\get_current_screen()`) for namespaced file
-
-### Pending Tasks
-
-- [ ] Build sample Bricks templates for Activity / Lesson / Course CPTs and verify chatbot widget renders correctly inside each context
+- **Phase 1: Foundation** — Plugin scaffolding, docs, build system.
+- **Phase 2: Data Layer** — CPTs, taxonomies, ACF field groups, roles & capabilities.
+- **Phase 3: Admin Interface** — Settings page (encrypted API key, model selection), custom admin columns, quick edit.
+- **Phase 4: REST API & Claude Integration** — Chat endpoint, context/skill downloads, Claude API with container + code execution + skills.
+- **Phase 5–12: Divi 5 modules built, then fully removed; frontend rebuilt as builder-agnostic PHP renderers + shortcodes.** 9 Divi modules were built module-by-module (Lesson Meta, Lesson Activities, Activity Meta, Course Lessons, Context Library, Skills List, Lesson Objectives, Chatbot), then removed entirely (`844094c`) after incomplete Divi 5 research led to real antipatterns. Migrated (`Phase 12`, 2026-05-03) to plain PHP renderers in `includes/renderers/` + WordPress shortcodes — builder-agnostic (works in Bricks, Gutenberg, classic editor). No Divi code remains in the codebase.
+- **Phase 13: Bricks owns display (2026-05-16)** — Once Bricks' own query loops + dynamic data could read ACF directly, all 7 non-chatbot renderers/shortcodes were deleted. The plugin's job narrowed to schema, REST API, Claude API, and the chatbot widget (the one surface it still renders, since it bundles JS/asset wiring/nonce/dual-mode detection).
+- **Phase 6: Polish & Testing** — Never substantially started; superseded by real testing done ad hoc throughout later phases (each feature verified live against real data as built, not via a separate test-writing phase). No PHPUnit/Jest harness exists as of this writing (`tests/` is still the unused scaffold).
+- **Phase 7: WooCommerce Cohort Product (early cohort-as-product model)** — Built, then fully superseded by the Phase 14 correction (cohort is a purchase-time CPT instance, not the product) and later by the WS Form purchase mechanism. No longer describes live architecture.
+- **Phase 8: Schema Refinements** — Prerequisites moved from Activity to Course level; `course_prerequisites` field added.
+- **Phase 9: Admin Columns Cleanup (2026-02-16)** — Slug columns standardized across all CPTs; implementation-detail columns removed.
+- **Phase 10: Streaming Chat Responses (SSE)** — `Claude_API::stream_message()`/`execute_stream()`, `/chat/stream` REST route, `chatbot.js` streaming branch with real-time markdown rendering, stop-generating button, retry-with-backoff for transient errors (500/502/503/529). Non-streaming `/chat` kept as the permanent fallback (browser compat), not a deprecated path. **Still open, never closed out:** verify `X-Accel-Buffering: no` actually disables proxy buffering on the real production Nginx config; client-side connection-timeout/heartbeat detection (30s no-event → "Connection interrupted"); `docs/claude-api-integration.md` streaming-architecture doc update; a deliberate slow-network (throttled DevTools) manual test pass. None of these have blocked anything shipping since — flagging in case they matter for a future infra migration, not urgent work.
+- **Phase 11: Web Tools for Skills (2026-02-17)** — `web_search`/`web_fetch` auto-included server-side tools when an activity has skills (the sandboxed container has no direct internet access). Superseded in later hardening: see Phase 15 API Version work below for the per-model tool-calling fix.
 
 ---
 
-## Phase 13: Scope Reduction — Bricks owns display (2026-05-16)
+## Phase 14: Cohort Architecture — CPT correction, Enrollment split, roster, WS Form purchase (2026-09-16 to 2026-09-17)
 
-After validating that Bricks Builder query loops + dynamic data can build all CPT display surfaces directly from ACF, the seven non-chatbot shortcodes and renderers were removed. The plugin's responsibility is now schema, REST API, Claude API, WooCommerce cohort integration, and the chatbot widget.
+The single largest body of work in this plugin's history — corrected a foundational modeling error (cohort was originally conflated with the WooCommerce product it's sold through), then built the real architecture and its purchase mechanism. Full session-by-session narrative: `git show d55f20d:docs/TASKS.md`, section `## Phase 14: Cohort-Scoped Context Files + Roster (2026-09-16)` through the section immediately preceding `## Phase 15: API Version Configuration UI + Haiku Tool-Calling Fix` — REST permission audit, the WC-checkout-field-chain design that was researched then abandoned same-session, and the complete WS Form integration debugging trail.
 
-- [x] Delete `Activity_Meta_Renderer`, `Context_Library_Renderer`, `Course_Lessons_Renderer`, `Lesson_Activities_Renderer`, `Lesson_Meta_Renderer`, `Lesson_Objectives_Renderer`, `Skills_List_Renderer`
-- [x] Delete unused `assets/js/context-modal.js` (its only consumer was the Context Library shortcode)
-- [x] Slim `class-shortcodes.php` to only register `[leaderspath_chatbot]` and its assets
-- [x] Strip non-chatbot CSS from `assets/css/leaderspath.css`
-- [x] Update `leaderspath.php` requires (drop 7 renderer files)
-- [x] Rewrite `docs/shortcodes.md` to document just `[leaderspath_chatbot]`
-- [x] Rewrite `docs/ui-ux-catalog.md` as a surface/field reference for Bricks builders
-- [x] Update CLAUDE.md, README.md, plugin-design.md, data-contracts.md
-- [x] PHP syntax verified
+**Removed from this file (2026-09-18 compaction):** an entire WC-specific purchase-flow design — a "Cohort Kind" (Organization/Mixed) product-type selector, a 5-hook WooCommerce checkout field chain for a customer-facing requested-start-date, and Variable Product seat-count-as-price-variation — was designed in real detail, then abandoned **before being built at all** once WS Form Pro + Stripe Elements was found to cover the same requirement without WC's cart/order machinery. That design has no WS Form analog and never shipped; removed outright rather than compacted, per the "moot/no-longer-relevant" pruning this compaction pass was asked to do. The abandonment reasoning (WC's order-management UI wasn't actually needed for one product sold to one kind of buyer) is preserved in git history if ever relevant again.
 
----
+### What's real and still governs the codebase today
 
-## Phase 12: Migration off Divi (2026-05-03)
+- **Cohort is a purchase-time instance** (`leaderspath_cohort` CPT), not the WooCommerce product — the product is a reusable catalog offering; each purchase creates one cohort instance with its own facilitator, dates, courses, and roster.
+- **`Enrollment` (commerce-agnostic) vs. `WooCommerce` (commerce-specific) split** — `Enrollment::create_cohort()` is the single canonical cohort-creation operation; every caller (WS Form, WP-CLI, the dormant WC order hook) goes through it, with zero risk of drift between how a cohort gets created depending on which caller triggered it.
+- **`cohort_access_closed`** — a manual, admin-only toggle checked live ahead of the enrollment chain. Corrects a real bug in the original shipped code, where any refund/cancellation auto-revoked the whole cohort's access regardless of reason; access and billing are now treated as separate questions.
+- **Roster/seat-invite system** (`Enrollment::invite_to_cohort()`, `admin/class-cohort-roster.php`) — admin-side, built and verified. Uses stock WordPress account-creation + password-reset, not a custom invite-token system. WC My Account self-service was deliberately deferred, not built.
+- **`Cohort_Rewrite`** (`includes/class-cohort-rewrite.php`) — registers `/learn/{cohort-slug}/lesson/{lesson-slug}/` as an explicit, cohort-aware entry point, additive to the lesson's own canonical `/lesson/{slug}/` permalink. Fails closed (real 404, not a sample-post fallback) on any unresolvable or mismatched cohort/lesson pair.
+- **WP-CLI commands** (`includes/class-cli-commands.php`) — `wp leaderspath cohort create/invite`, `wp leaderspath post create/update/get/list` across all 6 managed CPTs. Wrap the same `Enrollment` methods every other caller uses.
 
-Elegant Themes' support and stability concerns made Divi a poor long-term home for the frontend. Migrated to builder-agnostic WordPress shortcodes that work in any builder — Bricks recommended.
+### WooCommerce purchase mechanism deprecated — WS Form Pro + Stripe Elements is the real, live path
 
-- [x] Port all 8 module renderers to `includes/renderers/` (pure PHP, no builder deps)
-- [x] Replace `PostIdHelper` Theme Builder logic with plain `get_queried_object_id()`
-- [x] Drop `HTMLUtility::render()` use in `ChatbotRenderer` (use `sprintf` + `esc_*`)
-- [x] Add `post_id` parameter override to every renderer for cross-references
-- [x] Hand-port SCSS to plain CSS at `assets/css/leaderspath.css` (no build chain)
-- [x] Create `class-shortcodes.php` with template-mode token engine
-- [x] Register 8 shortcodes wrapping the renderers
-- [x] On-demand asset enqueueing per shortcode
-- [x] Delete `modules/`, `src/`, `modules-json/`, `scripts/`, `styles/`
-- [x] Delete `package.json`, `package-lock.json`, `webpack.config.js`, `tsconfig.json`, `node_modules/`
-- [x] Remove `LEADERSPATH_MODULES_JSON_PATH` constant + `modules/Modules.php` require
-- [x] Replace Divi docs (`divi-modules.md`, `divi5-module-architecture.md`, `wordpress-rendering-pipeline.md`) with `shortcodes.md`
-- [x] Update CLAUDE.md, README.md, plugin-design.md, data-contracts.md, ui-ux-catalog.md
-- [x] PHP syntax verified across all new files
+**Decided directly by the user:** "Based on what we've built, the WC path is completely deprecated. If we were to implement WC in the future it would need to follow the WSForm approach." `class-woocommerce.php` is left in place (architecturally harmless, per the multi-caller `Enrollment` design) but is dormant — not a live purchase path.
 
----
+**The real, shipped integration:** `includes/class-ws-form-integration.php` (`WS_Form_Integration`, hook tag `leaderspath_ws_form_cohort_submitted`) receives WS Form's "Run WordPress Hook" action on real form submissions and calls `Enrollment::create_cohort()` directly — never WS Form's own Post Manager field-mapping, which would silently skip owner resolution/course copying/auto-enrollment. Fields are read by label (`wsf_field_get_objects()`), not hardcoded field ID, so a relabeled form field breaks loudly rather than silently pointing at the wrong data.
 
-## Phase 6: Polish & Testing
+- **Form 7, "LeadersPath Cohort Purchase"** is the real, live, tested form — org-cohort only (a separate form is planned for the mixed-cohort tier, not yet built). Payment method (Credit Card vs. Purchase Order) branches via WS Form's own section-visibility conditional logic; a synchronous Stripe Elements charge sets `cohort_payment_status = 'paid'` directly in the same hook invocation (no webhook/async-confirmation path needed — confirmed against a real test transaction), while Purchase Order sets `pending_payment` with no further automation (an admin manually flips the status once the PO/invoice resolves offline).
+- **Closed out and fully verified end-to-end (2026-09-17):** a real new submission (#4) was run through the live hook and produced cohort #348, with every field (org name, seats, course, start date, payment status, owner, source record) confirmed matching between the raw submission and the created post. This integration is done, not a remaining task.
+- **Two real bugs found and fixed during this build**, both by live testing rather than inspection: (1) WS Form's choice-type fields (`select`/`price_select`) submit as a PHP array of selected label(s), not a scalar — the original `(string)` cast silently produced the literal string `"Array"`, causing a wrong seat count on the first live submission; fixed to unwrap the array first. (2) Seat count was originally parsed via regex from a package label's text range — reconfigured instead to read a real Seats column value directly from the form field, removing the regex parser entirely.
+- **Cohort type (org vs. mixed)** is a `leaderspath_cohort_type` taxonomy (`organization`/`mixed-group` terms), resolved at the **form level** (which form was submitted), not a field within one shared form — a mixed cohort is a standing post individual buyers *join* over time, not one created per single purchase.
+- **Explicitly out of the plugin's scope, decided directly by the user:** pre-cohort discovery/intake data (an org's AI stance, hard-no's, participant list, facilitator prep notes) — "WSForm will handle that and it will change over time. It's outside your scope." No ACF field or schema exists for it, and none should be added.
 
-- [ ] Write PHPUnit tests for CPTs, taxonomies, API
-- [ ] Write Jest tests for React components
-- [ ] Security audit (input sanitization, capability checks, nonces)
-- [ ] Performance optimization
-- [ ] User documentation
-- [ ] Code documentation cleanup
+**Still unbuilt, real future work, not forgotten:** `add_to_cohort( $user_id, $cohort_id )` (the enrollment primitive a future mixed-cohort form's hook handler would call — joining one buyer into an existing standing cohort), the mixed-cohort form itself, and however WS Form will list currently-open mixed cohorts to choose from.
+
+### Cohort-scoped Context Files (Model A) — the Phase 15 foundation
+
+Context files can belong to exactly one cohort (`context_cohort` ACF field, confidential org material) or no cohort (shared curriculum content, unchanged prior behavior). Facilitators get real create/edit access but never `edit_others_`/`read_private_`/`edit_others_leaderspath_contexts` — a `map_meta_cap` exception (`Capabilities::grant_facilitator_own_cohort_context()`) grants per-post access only to their own cohort's files and actively denies everything else (required because WordPress's own default `read_post` mapping otherwise falls back to a generic `read` cap every logged-in user holds, on this publicly-queryable CPT).
+
+`admin/class-cohort-context.php` (`Cohort_Context`) puts context-file management on the Cohort's own edit screen (list + drag-and-drop create + detach), correcting an earlier UX direction that required a facilitator to leave the cohort screen and hunt for the right cohort in a `post_object` dropdown with no disambiguation between similarly-named cohorts.
+
+**Known gap, not yet solved:** detaching a context file from a cohort leaves it orphaned with no easy admin-list discovery path (it's not publicly queryable in the old sense — though see the 2026-09-18 Cohort fix below, which did make the CPT itself publicly queryable; Context Files were not part of that change). A workflow for finding/managing orphaned Context Files is still needed.
 
 ---
 
-## Phase 7: WooCommerce Cohort Product
+## Phase 15: Cohort-Scoped Context Files — all 5 stories closed (2026-09-17 to 2026-09-18)
 
-Cohorts are a WooCommerce product type for enrollment management.
+Five user stories, all now built and verified. Full original design write-up (wireframe/Build-Requirements-doc citations, sequencing rationale): `git show d55f20d:docs/TASKS.md`, section `## Phase 15: Cohort-Scoped Context Files (design, not yet built) — 2026-09-17`.
 
-- [x] ~~Create WooCommerce Cohort product type (`WC_Product_Cohort` extending `WC_Product_Simple`)~~ **Corrected 2026-09-16: this was never actually built.** The real, shipped implementation is a plain Simple Product flagged via `_cohort = yes` postmeta — no custom product class exists. Confirmed by grepping the codebase and against a real product (see Phase 14). Leaving the strikethrough rather than deleting the line so the correction has a paper trail.
-- [x] Cohort product linked to Course CPT (ACF relationship field, multiple courses per cohort)
-- [x] Enrollment management via WooCommerce orders (enroll on completed, unenroll on refund/cancel)
-- [x] Cohort-specific settings (start/end dates, max participants, facilitator via ACF)
-- [x] Access control: enrollment gates Lesson/Activity access via REST API permission checks
-- [x] Admin dashboard: cohort count and quick action button
-- [x] Admin columns: courses, phase, enrollees, dates on product list
-- [x] Test data script: creates sample cohort products
-- [x] Documentation updated (data-contracts, cpt-schema, plugin-design, TASKS)
+- [x] **Story 1 — facilitator attaches context files to a cohort.** `Cohort_Context` metabox (above), built in the same session Phase 15 was scoped.
+- [x] **Story 2 — cohort context loads into activity chat.** `Enrollment::get_cohort_context_files()`, `Chatbot_Renderer`'s `data-cohort-id` widget attribute, `chatbot.js` sending `cohort_id` on every chat/stream/warm request, and `REST_API::resolve_cohort_id()` (the real security boundary — a client-supplied `cohort_id` is always re-verified against real enrollment before use, never trusted on its own) all wired together so `Claude_API::build_system_prompt()` merges a cohort's context files alongside the activity's own. **Verified with a real cross-cohort leak attempt, blocked**: a real user legitimately enrolled in a different cohort could not get another cohort's confidential context injected by claiming its ID, confirmed via an actual live Claude API response containing none of the injected content.
+- [x] **Story 3 — "Disable All Context" toggle.** New ACF field `chatbot_disable_context` on the Activity; when on, both the activity's own context files and any cohort context are skipped together (system prompt and skills unaffected) — the "blindfolded" baseline/control curriculum exercise.
+- [x] **Story 4 — drag-and-drop file upload into chat.** Built, verified end-to-end against the live Anthropic Files API, and later hardened with a real security fix (see "Security fix: cross-user/cross-activity file_id replay," below) and an admin-configurable size cap (Settings → Chat Upload Size Limit, replacing a hardcoded 30MB constant).
+- [x] **Story 5 — learner-visible context/skills panel.** Superseded by story 2's automatic injection making the underlying data cohort-aware — the remaining UI-surfacing work (the lesson-page wireframe's `[f] context`/`[s] skills` toggle panel) is now just a matter of querying already-correct, access-filtered data; not yet built as a UI, but no longer blocked on any missing data layer.
 
----
+**Follow-up, same day (2026-09-18):** `ACF_Fields::filter_activity_context_files_public_only()` now excludes cohort-scoped files from the Activity's own `chatbot_context_files` picker entirely (every role, no admin/editor exception) — now that cohort context auto-injects, manually picking a specific cohort's confidential file into a shared activity's field was never correct.
 
-## Phase 8: Schema Refinements
-
-- [x] Move prerequisites from Activity level to Course level (ACF field migration)
-- [x] Add `course_prerequisites` relationship field to Course Settings
-- [x] Add `WooCommerce::get_cohort_prerequisites()` for aggregated prerequisite resolution
-- [x] Normalize `lesson_activities` return_format from `object` to `id` for consistency
-- [x] Update documentation (data-contracts, cpt-schema, content-creation-guide, TASKS)
+**Also fixed in this Phase's scope, a real pre-existing security gap:** `check_read_permission()` (`/context/{id}/download`, `/skills/{id}/download`) originally checked only `is_user_logged_in()` — any logged-in user could download any context file regardless of cohort/enrollment. Now mirrors `check_chat_permission()`'s full enrollment-chain check.
 
 ---
 
-## Phase 9: Admin Columns Cleanup (2026-02-16)
+## Same-session standalone work (2026-09-17 to 2026-09-18)
 
-Standardized admin list table columns across all 5 CPTs to surface slugs (curriculum filesystem identifiers) and remove implementation-detail columns.
+Smaller, self-contained features/fixes that don't belong to a numbered phase. Full narrative for each: `git show d55f20d:docs/TASKS.md`.
 
-- [x] Add Slug column to all 5 CPTs (Activity, Lesson, Course, Context File, Skill)
-- [x] Add Course columns: Slug, Lessons count, Prerequisites
-- [x] Add Context File columns: Slug
-- [x] Add Skill columns: Slug
-- [x] Remove Activity→Lesson reverse lookup column (many-to-many relationship)
-- [x] Remove Activity Chatbot column + quick edit (implementation detail, not facilitator-relevant)
-- [x] Add slug sorting for all CPTs
-- [x] Build verified
-
----
-
-## Phase 10: Streaming Chat Responses (SSE)
-
-The chatbot currently uses synchronous request/response via `wp_remote_post()`. Long-running requests (skills with code execution, large context windows) hit timeouts before the response completes. Streaming eliminates this by delivering tokens as they're generated.
-
-**Motivation:** Skills that process long inputs (e.g., meeting transcript → report) exceed `wp_remote_post` timeout, returning an HTML error page instead of JSON. Streaming keeps the connection alive and delivers partial results immediately.
-
-### Architecture Overview
-
-| Layer | Current | Streaming |
-|-------|---------|-----------|
-| Anthropic request | `wp_remote_post()` (buffered) | `curl` with `CURLOPT_WRITEFUNCTION` callback |
-| PHP → browser | `WP_REST_Response` JSON | Manual SSE headers + `echo` + `flush()` |
-| Browser parsing | `fetch().json()` | `fetch().body.getReader()` + SSE event parser |
-| Markdown rendering | Server-side (`league/commonmark`) | Client-side (`marked.js`, already installed) |
-| Error handling | JSON error objects | SSE error events + graceful fallback |
-
-### Anthropic SSE Event Format
-
-```
-event: message_start
-data: {"type":"message_start","message":{"id":"msg_...","model":"...","usage":{...}}}
-
-event: content_block_start
-data: {"type":"content_block_start","index":0,"content_block":{"type":"text"}}
-
-event: content_block_delta
-data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
-
-event: content_block_stop
-data: {"type":"content_block_stop","index":0}
-
-event: message_delta
-data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":...}}
-
-event: message_stop
-data: {"type":"message_stop"}
-```
-
-### Phase 10a: PHP Streaming Backend
-
-New parallel code paths — non-breaking; existing synchronous flow remains as fallback.
-
-- [x] **`Claude_API::stream_message()`** — new method parallel to `send_message()`
-  - Uses `curl_exec()` with `CURLOPT_WRITEFUNCTION` for chunked reading
-  - Adds `"stream": true` to Anthropic request body
-  - Callback writes each chunk to PHP output buffer with `echo` + `flush()`
-  - Forwards SSE events from Anthropic directly to browser (passthrough proxy)
-  - Extracts `container_id` from `message_start` event
-  - Detects `stop_reason: "pause_turn"` in `message_delta` for continuation
-- [x] **`Claude_API::stream_lesson_message()`** — same for lesson Q&A mode
-- [x] **`Claude_API::execute_stream()`** — shared curl streaming helper with SSE parsing
-- [x] **`REST_API::register_routes()`** — register `/chat/stream` POST endpoint
-- [x] **`REST_API::handle_stream_chat()`** — streaming endpoint handler
-  - Same permission/validation as `handle_chat()`
-  - Sets SSE headers manually (`Content-Type: text/event-stream`, `Cache-Control: no-cache`, `X-Accel-Buffering: no`)
-  - Calls `Claude_API::stream_message()` which writes directly to output
-  - Sends final `done` SSE event with metadata (model, usage, container_id, content_raw)
-  - Calls `exit()` after stream completes (bypass WP REST response handling)
-- [ ] **Nginx/PHP config** — verify `X-Accel-Buffering: no` disables proxy buffering
-- [x] **Pause turn handling** — detect in `message_delta`, send continuation marker event, resume stream (max 5)
-
-### Phase 10b: Frontend Streaming
-
-- [x] **`chatbot.js` streaming branch** — detect `restStreamUrl` in config
-  - `fetch()` POST to streaming endpoint
-  - `response.body.getReader()` + `TextDecoder` for chunked reading
-  - SSE event parser: split on `\n\n`, extract `event:` and `data:` lines
-  - Handle `content_block_delta` → append text to message element incrementally
-  - Handle `message_start` → extract container_id
-  - Handle `done` → finalize message, convert accumulated markdown → HTML
-  - Handle `error` events → display inline error
-- [x] **Real-time markdown rendering** — `marked.js` enqueued on frontend
-  - Accumulate raw text during stream
-  - `requestAnimationFrame`-throttled `markdownToHtml()` renders formatted output in real-time
-  - Headings, bold, lists, code blocks render progressively as they stream in
-  - Final `renderNow()` flush on completion with complete text from server `content_raw`
-  - User messages also rendered through markdown for pasted MD support
-- [x] **"Stop generating" button** — AbortController to cancel fetch + close connection
-- [x] **Fallback** — if streaming fetch fails before data, retry with non-streaming endpoint
-- [x] **Browser compatibility** — `ReadableStream` feature detection, fallback to sync
-- [x] **`RenderCallbackTrait`** — add `restStreamUrl` + `marked` dependency to `wp_localize_script()`
-
-### Phase 10c: Error Handling & Edge Cases
-
-- [x] **Mid-stream errors** — network drop during stream shows partial response + error
-- [x] **AbortError handling** — user cancellation keeps partial response with markdown conversion
-- [x] **Container ID management** — extracted from `message_start` and `done` SSE events
-- [x] **Conversation history** — accumulate `content_raw` during stream for history array
-- [x] **Anthropic HTTP error handling** — non-SSE error responses (raw JSON) intercepted in PHP `handle_stream_chunk()`, accumulated as `error_body`, sent as proper SSE error event with extracted message
-- [x] **Empty response cleanup** — empty assistant bubble removed on error; `done` with empty `content_raw` skips history push and render
-- [x] **Resilient error detection in JS** — matches both `evt.event === 'error'` and `data.type === 'error'` payloads
-- [ ] **Connection timeout** — client-side heartbeat detection (deferred)
-  - If no event received in 30s, show "Connection interrupted" + retry option
-
-### Phase 10d: Documentation & Testing
-
-- [ ] Update `docs/claude-api-integration.md` with streaming event format + architecture
-- [ ] Update `docs/divi-modules.md` chatbot section with streaming config
-- [ ] Manual testing: activity sandbox with skills (long-running), lesson Q&A, error cases
-- [ ] Test with slow network (throttled DevTools) to verify chunked delivery
-- [ ] Test browser fallback on non-streaming path
-
-### Completed: Phase 10e — Retry Logic for Transient API Errors (2026-02-17)
-
-Automatic retry with backoff for transient Anthropic API errors (500, 502, 503, 529) and curl connection failures. Prevents skills with code execution from failing on intermittent glitches.
-
-- [x] **`Claude_API::is_retryable_error()`** — helper classifies HTTP codes + curl errors as retryable vs non-retryable
-- [x] **`Claude_API::execute_stream()` retry loop** — wraps curl call, max 2 retries (3 total attempts), 1s/3s backoff delays
-  - Sends SSE `retry` event to browser: `{"attempt": 2, "max": 3, "delay": 1}`
-  - Resets stream state (content_raw, content blocks, error_body, http_error) between retries
-  - Preserves `original_body` for clean retries (not contaminated by pause_turn continuation body)
-  - Resets retry counter after successful response (so pause_turn continuations get fresh retry budget)
-  - Non-retryable errors (400, 401, 403, 404, 422) sent immediately as SSE error
-- [x] **`chatbot.js` streaming retry UI** — handles `retry` SSE event
-  - Shows "Retrying... (attempt 2 of 3)" indicator with animated dot
-  - Removes retry indicator on success (`done` event) or final error
-  - "Try again" button after final error — pops last user message from history, re-sends
-- [x] **`chatbot.js` sync retry** — wraps `fetch()` in retry loop with same config
-  - Retryable HTTP codes: 500, 502, 503, 529
-  - Shows retry indicator between attempts, "Try again" button on final failure
-- [x] **SCSS styles** — `.leaderspath_chatbot__retry`, `.leaderspath_chatbot__try_again`, `.leaderspath_chatbot__stop`
-- [x] **Build verified** — zero errors
-
-### Key Technical Decisions to Make
-
-| Decision | Options | Notes |
-|----------|---------|-------|
-| Streaming endpoint | New route `/chat/stream` vs parameter `?stream=1` | New route is cleaner — different response format |
-| During-stream rendering | Raw text vs periodic markdown re-render | `requestAnimationFrame`-throttled `markdownToHtml()` — renders formatted output in real-time without flicker |
-| Pause turn in stream | Server-side continuation vs client-side retry | Server-side keeps connection open; client-side simpler |
-| marked.js sharing | Reuse existing admin bundle vs enqueue separately on frontend | Separate enqueue — admin bundle not loaded on frontend |
-| Non-streaming fallback | Keep forever vs deprecate after streaming stable | Keep as fallback for compatibility |
-
-### Key Gotchas
-
-1. **`wp_remote_post()` cannot stream** — buffers entire response. Must use `curl` directly.
-2. **WordPress REST API assumes buffered responses** — streaming endpoint must bypass `WP_REST_Response`, output headers manually, and call `exit()`.
-3. **`ob_end_flush()`** — WordPress/plugins may have output buffers active. Must flush all before streaming.
-4. **Markdown during stream** — `requestAnimationFrame` throttling renders formatted markdown in real-time. Incomplete syntax (unclosed `**bold`) renders as-is until closing tokens arrive. Much better UX than raw text + jarring final reformat.
-5. **Pause turn** — `stop_reason` appears only in final `message_delta` event. Must accumulate all content blocks and detect pause_turn to continue.
-6. **Code execution blocks** — `server_tool_use` and `bash_code_execution_tool_result` events appear mid-stream. Must handle alongside text deltas.
+- **Markdown/HTML conversion audit + real XSS fix (2026-09-17).** Found and fixed a real, exploitable XSS gap: `chatbot.js`'s client-side `marked.js` use had no output sanitization, confirmed exploitable via a pasted `<img onerror>` payload executing in the learner's own browser on send. Fixed by vendoring DOMPurify v3.4.15 (SRI-verified) and sanitizing `marked.js`'s output; verified in a real headless-Chrome test against the actual vendored files.
+- **API Version Configuration UI + Haiku tool-calling fix (2026-09-17).** The seven API-version settings fields (`beta_*`/`tool_*`) became curated `<select>` dropdowns with a "Custom…" fallback, replacing plain text inputs with no guidance. Building the new connectivity test surfaced a real bug — Claude Haiku 4.5 rejects `web_search`/`web_fetch` outright, but the plugin added those tools unconditionally whenever an activity had skills, regardless of model. Fixed immediately (`Claude_API::build_skills_tools()`, a new `NO_PROGRAMMATIC_TOOL_CALLING_PREFIXES` constant), not just logged. `CLAUDE.md` gained a maintenance-cadence note with real lookup URLs, since a connectivity test can only catch "this value now errors," not "a newer value exists."
+- **Copy-to-clipboard on chat message bubbles (2026-09-17).** Every message bubble gets a small copy button, copying the original plain-text/markdown source rather than rendered HTML. Hidden on an in-progress assistant message until streaming finishes. A real CSS regression (`flex-direction: row-reverse` silently breaking user-message right-alignment without also flipping `justify-content`) was found by the user's own live testing and fixed.
+- **Story 4 file upload built and verified end-to-end (2026-09-17).** Drag-and-drop/click-to-browse file upload for skills-enabled activities, via Anthropic's Files API + `container_upload` content block. A real bug was found during verification: `wp_check_filetype_and_ext()` doesn't recognize `.md`/`.json` in WordPress's default mime map, which would have silently rejected Markdown uploads despite being an explicitly allowed type — fixed via the function's documented mime-override argument. Verified against the live API with real CSV and Markdown uploads, both correctly read by a real skill in a live chat.
+- **Admin-configurable upload size cap (2026-09-17).** The 30MB upload cap became a real Settings field (1–500MB, clamped) instead of a hardcoded constant, for throughput/token-spend control.
+- **Security fix: cross-user/cross-activity `file_id` replay in chat uploads (2026-09-17).** A genuinely good user question ("could uploaded files be accessible across different users' chats?") surfaced a real gap: Anthropic's Files API is workspace-scoped, not per-user, and the plugin accepted a client-supplied `file_id` with zero ownership check. **Confirmed as a real, working exploit before the fix** — a second real, legitimately-enrolled user could replay another learner's `file_id` (even across a different activity) and have Claude read their file content. Fixed with a short-lived ownership transient (checked before any `attached_file_id` is used) plus deleting the file from Anthropic immediately after its one legitimate use (shrinking retention from their standard "up to 30 days" to effectively one request). Both fixes verified against the live API with real accounts.
+- **Cohort CPT fixed to behave like a standard WordPress post type (2026-09-18).** The CPT was missing `editor`/`thumbnail`/`excerpt`/`slug` support entirely and was `publicly_queryable => false` — an oversight from the original WooCommerce-to-CPT port, not a deliberate restriction. Now matches Activity/Lesson/Course's registration exactly, with a real "View" action and public permalink (`/cohort/{slug}/`) — what a non-enrolled visitor's page actually shows is a template/conditional-logic question for later, separate from this fix. Facilitators gained real (previously nonexistent) Cohort access, scoped to their own assignment via the same narrow-grant + `map_meta_cap`-exception pattern already used for Context Files, plus a `pre_get_posts` admin-list filter (UX narrowing, not the security boundary) so a facilitator's Cohorts list shows only their own cohort(s).
 
 ---
 
-## Schema Refinement: Move References to Lesson (2026-02-17)
-
-- [x] Move `activity_references` repeater from Activity Settings to Lesson Settings as `lesson_references`
-- [x] Update ACF field keys (`field_lesson_reference_*`) and field name prefix
-- [x] Update documentation: cpt-schema.md, data-contracts.md, content-creation-guide.md
-- [x] Build verified
-
----
-
-## Phase 11: Web Tools for Skills (2026-02-17)
-
-Skills that need web access (e.g., creating-organization-dossiers) fail in Anthropic's sandboxed container because it has no internet access. Anthropic provides server-side `web_search` and `web_fetch` tools that run on their infrastructure.
-
-- [x] Add `web_search` and `web_fetch` tool types to Settings defaults (`web_search_20250305`, `web_fetch_20250910`)
-- [x] Add `beta_web_tools` header to Settings defaults (`code-execution-web-tools-2026-02-09`)
-- [x] Add `get_web_tool_types()` getter to Settings class
-- [x] Update `get_beta_headers()` to support `'web_tools'` feature key
-- [x] Add admin settings fields for web tool versions (API Version Configuration section)
-- [x] Update `Claude_API::send_message()` — include `web_search` + `web_fetch` in tools array when skills present
-- [x] Update `Claude_API::stream_message()` — same change for streaming path
-- [x] Update beta headers in both methods to include `'web_tools'`
-- [x] Update `docs/claude-api-integration.md` with Web Tools section
-- [x] Build verified
-
----
-
-## Phase 14: Cohort-Scoped Context Files + Roster (2026-09-16)
-
-Sync-up session translating `LP2605001 Platform Development` wireframes and the `MG2609001 Ethical AI Market Analysis` research docs (`Research/LeadersPath Cohort Build Requirements.md`, `Research/LeadersPath Core Cohort Curriculum Design.md`) into concrete plugin/schema work. Session order: admin audit → this phase → templates → dynamic data (steps 3–4 not reached this session).
-
-### Completed: REST permission audit
-
-- [x] Fixed `check_read_permission()` — was `is_user_logged_in()` only; any logged-in user could download any context file or skill regardless of enrollment. Now mirrors `check_chat_permission()`.
-- [x] New `WooCommerce::can_user_access_context()` / `can_user_access_skill()` — reverse-lookup Context/Skill → owning Activity/Lesson → Course → Cohort → Enrollment.
-- [x] Found and fixed a regression the above fix introduced (caught by testing against real data, not by inspection): an unattached context file became undownloadable by anyone but admins. `can_user_access_context()` reworked to check `context_cohort` directly instead of requiring activity/lesson attachment.
-- [!] `can_user_access_skill()` has the equivalent "unattached = admin only" behavior, left as-is — skills always need an activity to have a sandbox to run in, so this may be correct there. Not verified either way; flag before relying on it.
-- [ ] No test coverage added for any of the above — `tests/` is still the unused PHPUnit scaffold (`test-sample.php`). A real harness is its own task, out of scope for this session.
-
-### Completed: Cohort-scoped Context Files (Model A)
-
-Context files can now belong to exactly one cohort (organization-specific, confidential) or no cohort (shared curriculum content, unchanged prior behavior). This includes the "starter module" from the Build Requirements doc (thin, public-source-only baseline) — cohort-owned from creation, not a public artifact that later gets replaced; it persists and is used for a with/without-context comparison throughout the cohort, not discarded after session 1.
-
-- [x] New ACF field `context_cohort` (post_object → `product`, cohort products only) on `leaderspath_context`
-- [x] `ACF_Fields::filter_context_cohort_choices()` — facilitators only see their own cohort(s) in the picker
-- [x] `ACF_Fields::validate_context_cohort()` — hard save-time gate: facilitators must set a cohort they run; admins/editors may leave empty or set any cohort. Authoritative; the picker filter is UI narrowing only
-- [x] `WooCommerce::get_facilitator_cohorts()` — cohorts a user facilitates via `cohort_facilitator`
-- [x] Facilitator capabilities: `edit_/read_/delete_/publish_leaderspath_context(s)` granted, but deliberately **not** `edit_others_`/`delete_others_`/`read_private_` — those would let a facilitator open any cohort's file by post ID. New `Capabilities::maybe_add_facilitator_context_caps()` backfills existing installs (facilitator role already existed on this site before this change)
-- [x] `Capabilities::grant_facilitator_own_cohort_context()` — `map_meta_cap` filter granting per-post access to a co-facilitator's/admin-authored file in their own cohort, and **actively denying** (`do_not_allow`) everything else. Required because WP core's default `read_post` mapping falls back to the generic `read` cap (which every logged-in user holds) for any published post on this publicly-queryable CPT — found by testing `current_user_can()` directly, not by inspection; a grant-only filter left that default hole open
-- [x] Admin list (`class-admin-columns.php`): sortable "Cohort" column (links to the cohort, dash-icon for public), `restrict_manage_posts` filter dropdown, `pre_get_posts` scoping — facilitators see only their cohort(s) + public files regardless of the dropdown
-- [x] Verified end-to-end against real test posts (2 cohorts, 1 facilitator, cross-cohort files) — list visibility, `current_user_can` edit/read/delete on own/other/public, REST access. Test data cleaned up after
-- [x] Stale wireframe reference fixed: `lesson-page.html` used `[lp_activity_chatbot id="{activity_id}"]`; corrected to the real shortcode `[leaderspath_chatbot id="{activity_id}"]`. Note: `docs/bricks-integration.md` still documents `lp_activity_chatbot` as a real alias (line 285) — it isn't registered anywhere in code. Doc is stale on this point too; not corrected yet.
-
-### Completed: `/learn/{cohort}/lesson/{lesson}/` rewrite
-
-Why this exists: an Activity/Lesson is templated and reused across every cohort that reaches it, but the lesson page pre-renders **every** activity's chatbot config into the initial HTML in one server-side pass (`docs/bricks-integration.md`, "Lesson page: no AJAX for activity content") — there's no per-activity request a cohort ID could ride in on later. The cohort has to be resolved *before* that render pass starts, so it has to come from the URL.
-
-- [x] `includes/class-cohort-rewrite.php` — `Cohort_Rewrite` class. Rule: `^learn/([^/]+)/lesson/([^/]+)/?$` → resolves to a normal `leaderspath_lesson` single-post query (same template as `/lesson/{slug}/`) plus a resolved cohort ID query var. Fails closed (404, no sample fallback) on unresolvable cohort/lesson or a lesson not actually in that cohort's course chain (`Enrollment::get_cohort_lessons()`)
-- [x] `/lesson/{slug}/` (canonical CPT permalink) is unchanged — stays the admin-editing / Bricks-preview URL. `/learn/...` is additive, not a replacement
-- [x] Registered in `leaderspath.php` bootstrap, loaded unconditionally (not gated on WooCommerce — see the Enrollment split below)
-- [x] **Verified end-to-end over real HTTP** against the actual `river-valley-food-bank-cohort` / `skills-framework` test data: valid cohort+lesson → 200; invalid cohort slug → 404; valid cohort with a lesson not in its course chain → 404; canonical `/lesson/{slug}/` permalink unaffected → 200. Not just read from inspection.
-- [x] **Real bug found and fixed by testing, not by inspection:** the class's own `force_404()` originally deferred to a `wp` action calling `set_404()`/`status_header()` manually — verified *actively wrong* (produced a 200 with front-page content instead of a 404) because by the time `wp` fires, `WP_Query` has already run against the emptied `query_vars` and resolves to something else. Fixed to the documented-correct, much simpler mechanism: setting `query_vars['error'] = '404'` directly in `parse_request` is sufficient by itself; `WP::main()` picks it up.
-- [x] **Site-config gotcha found while debugging the above** (worth remembering for this dev site specifically, not a plugin bug): a logged-out/"coming soon" interstitial was intercepting every unauthenticated front-end request and serving a 200 regardless of what WordPress's own routing/`is_404()` decided — this masked the real 404 status entirely and looked identical to a routing bug from the outside. Disabled during this session. If 404s ever silently start returning 200 again on this install, check for a coming-soon/maintenance-mode toggle before assuming the rewrite logic broke.
-- [x] Query var renamed from `leaderspath_cohort` to `leaderspath_cohort_slug` as a precaution against colliding with the CPT slug of the same name — not confirmed to have caused any actual failure (the coming-soon interstitial above was the real cause of what looked like a collision at first), but left renamed since there's no downside.
-- [ ] `Post_Id_Helper` / chatbot renderer don't yet read `Cohort_Rewrite::get_current_cohort_id()` — the rewrite resolves the cohort into a query var, but nothing downstream consumes it yet to actually scope which context files load into the system prompt
-- [ ] `class-claude-api.php`'s `build_system_prompt()` doesn't yet merge cohort-scoped context files alongside the activity's own `chatbot_context_files` — this is the actual "cohort context loads into the chatbot" wiring; everything above is the plumbing for it, not the thing itself
-
-### Completed: `leaderspath_cohort` CPT + `Enrollment`/`WooCommerce` split + `create_cohort()`
-
-Built and verified end-to-end this session, closing out the design from the sections below:
-
-- [x] `includes/class-post-types.php` — registered `leaderspath_cohort` CPT. Deliberately not `publicly_queryable` (org-confidential data; resolved only through the controlled `/learn/...` lookup, never direct query). Note: `leaderspath_cohort` briefly existed as a *different* CPT pre-v0.3.0 and was removed as legacy — the capability names collide but the old cleanup code can't fire again on any real install; documented inline in `class-capabilities.php` so this doesn't read as a live conflict later.
-- [x] `includes/class-capabilities.php` — full grant for admin, full operational access for editor (not read-only — editors already hold `leaderspath_manage_cohorts` for the product side). Backfilled onto this dev site's existing admin/editor roles via `maybe_add_cohort_cpt_caps()`, verified via `wp eval` that the caps actually landed.
-- [x] `includes/class-acf-fields.php` — new `register_cohort_instance_settings()` field group on the CPT: `cohort_org_name`, `cohort_owner`, `cohort_facilitator`, `cohort_start_date`/`cohort_end_date`, `cohort_courses`, `current_lesson`, `cohort_seats`, `cohort_payment_status`, `cohort_access_closed`, `cohort_source_order_id`. The product's own field group (`register_cohort_settings()`) slimmed to catalog-only fields: `cohort_courses` (description, purchased courses), `cohort_requested_start_date` (checkout-time intake, replaces the old `cohort_start_date`/`cohort_end_date` there), `cohort_video`.
-- [x] **The full "global find-and-fix" promised in the earlier Context File section, actually done**: every query that assumed cohort = `post_type: product` repointed at `leaderspath_cohort` — `Enrollment::get_facilitator_cohorts()`, `can_user_access_course()`, `ACF_Fields::filter_context_cohort_choices()`, `Capabilities::grant_facilitator_own_cohort_context()`, the admin cohort-filter dropdown, `Cohort_Rewrite::resolve_request()`. Verified with `grep` sweeps after each pass, not assumed complete.
-- [x] **`includes/class-enrollment.php` — new class**, the commerce-agnostic split decided earlier in this same design pass ("cohort creation as a first-class, multi-caller operation"). Carries everything that only ever touched user meta and CPT/ACF data: `enroll_user`/`unenroll_user`/`is_user_enrolled`/`get_user_enrollments`/`get_cohort_enrollees`/`get_cohort_phase`/`get_cohort_prerequisites`/`get_cohort_lessons`/`get_facilitator_cohorts`/all five `can_user_access_*`, plus the two new methods below. Loaded unconditionally in `leaderspath.php` (not gated on WooCommerce).
-- [x] **`Enrollment::create_cohort( array $args )`** — the canonical, single cohort-creation operation. Takes plain values (no `WC_Order`/`WC_Product` types), resolves owner (mixed → facilitator, single-org → whatever the caller passes), copies courses from the offering, seeds dates from the requested-start-date intake, sets payment status to `pending_payment`, enrolls the owner as a participant unless mixed. Returns the new post ID or a `WP_Error` (e.g. no owner resolvable). Fires `leaderspath_cohort_created`.
-- [x] **`Enrollment::set_cohort_payment_status()`** — the ongoing half of the two-event boundary; deliberately never touches `cohort_access_closed` or enrollment. Fires `leaderspath_cohort_payment_status_changed`.
-- [x] **`includes/class-woocommerce.php` slimmed to the genuinely commerce-specific pile** — product checkbox/meta, availability text, admin JS, and now `handle_order_commitment()` (fires on `on-hold`/`processing`, calls `Enrollment::create_cohort()`) + `handle_order_status_changed()` (fires on any status change, calls `Enrollment::set_cohort_payment_status()`, explicitly does *not* touch access on refund/cancel). Still deferred to `plugins_loaded`, only when WC is active — everything it now does is optional commerce-adapter behavior, not core plugin function.
-- [x] **Admin columns rebuilt on the Cohort CPT, retired from the product list** — Courses/Phase/Enrollees (against `cohort_seats`, not WC stock)/Dates/Owner/Payment Status (with a lock icon when `cohort_access_closed`). The old product-list columns stopped making sense once a product became a reusable catalog offering purchasable by many orgs; decided explicitly with the user rather than silently repointed.
-- [x] **Verified end-to-end with real data, not just inspected**: `create_cohort()` for both single-org (owner enrolled, counts against seats) and mixed-org (facilitator becomes owner, not enrolled) cases; the no-owner rejection path; payment-status transition; the full access chain (`can_user_access_lesson`) against a real enrolled user; `cohort_access_closed` toggled on and off with immediate, fully reversible effect and zero enrollment-record mutation. Test cohorts/users cleaned up after.
-- [ ] **Two fields referenced but not yet built**, marked with inline `TODO`s in `class-woocommerce.php`: `cohort_is_mixed_offering` (product-level flag for the not-yet-designed mixed-cohort product tier) and `cohort_variation_seats` (the Variable Product seat-count migration). Both read safely as false/1 via ACF's own empty-field behavior until built — `handle_order_commitment()` doesn't fail, it just treats every purchase as single-org with 1 seat until these land.
-- [x] **Roster/seat-invite system — admin-side built and verified end-to-end; WC My Account self-service screen deliberately deferred as its own follow-up (decided explicitly with the user).**
-  - `Enrollment::invite_to_cohort( int $cohort_id, string $email )` — the one method: creates a `leaderspath_student` account if the email has none, enrolls immediately (no "pending" state beyond native WP `user_registered`/no-login-yet), then calls `wp_new_user_notification( $user_id, null, 'user' )` with a **request-scoped** `wp_new_user_notification_email` filter (added and removed around one send only — never a permanent site-wide override) that swaps the generic reset-email copy for cohort-specific framing while leaving WP core's own reset link untouched. Idempotent for an already-enrolled email (returns the existing user ID, sends no new email). Enforces the seat cap from `cohort_seats`.
-  - `Enrollment::remove_from_cohort()` — thin wrapper over `unenroll_user()`, kept separate so `cohort_access_closed` (which must NOT touch enrollment) can never be confused with an actual roster removal.
-  - `admin/class-cohort-roster.php` — new `Cohort_Roster` class. Metabox on the Cohort edit screen: seat count, a table of current roster members (name/email/role — Owner, Participant, or "Invited — awaiting first login" via `session_tokens` presence) with a Remove action per non-owner row, and an email input to send a new invite when seats remain. `can_manage_roster()` — owner, facilitator, or admin/editor; enforced both for rendering (a non-authorized viewer sees a permission notice, not the form) and on form submission (`load-post.php`, not `save_post` — this isn't ACF/`$_POST['acf']` data). Redirect-then-transient-notice pattern for success/error messages, standard WP form-handling shape.
-  - **Two real bugs found by testing this, not by inspection, both now fixed:** (1) `Enrollment::get_cohort_enrollees()` queried user meta for a quoted-string serialization (`"{id}"`, the format ACF relationship fields use) but `enroll_user()` actually pushes a genuine PHP `int` onto the array, which serializes as `i:{id};` — the query never matched anything, so this method silently returned empty for every cohort since the `Enrollment`/`WooCommerce` split, and by extension every seat-cap check and admin "Enrollees" column was silently broken too (reading "0 enrolled" always). Not new in this session — inherited from the original `WooCommerce::get_cohort_enrollees()`, just never previously exercised against real enrollment data. (2) A follow-on effect of (1): the seat-cap check in `invite_to_cohort()` always read `count($enrollees) === 0`, so it never actually rejected an over-cap invite during initial testing — one real test account was created past a 3-seat cap before the underlying bug was found and fixed; cleaned up after. Re-verified cleanly afterward: seat cap enforced exactly at the boundary, duplicate invite fully idempotent (no new account, no duplicate email), `can_manage_roster()` correct for owner/facilitator/unrelated-user.
-  - **Deferred, not forgotten:** the WooCommerce My Account self-service screen (so a purchaser can manage their own roster without wp-admin access) is unbuilt — same `Enrollment` methods, different rendering surface (`woocommerce_account_menu_items`/`woocommerce_account_{endpoint}_endpoint`, Bricks' native WC design tools). Decided explicitly to sequence admin-side first and prove the mechanics before building the front-end surface.
-- [ ] Bricks/`Post_Id_Helper`/`build_system_prompt()` wiring to actually consume `Cohort_Rewrite::get_current_cohort_id()` and load cohort-scoped context — see the `/learn/` rewrite section above.
-
-### SUPERSEDED — see "Cohort is a purchase-time instance" below
-
-The roster design below this line was written on the assumption that the WC **product** is the cohort. Mid-design, that assumption was found wrong (see the corrected model below) and the design was redone. Left in place, struck through, for the paper trail rather than deleted:
-
-~~**The gap:** `WooCommerce::handle_order_completed()` only ever enrolls `$order->get_customer_id()` — the purchaser. There's no mechanism for an org to buy N seats and then name the actual 5–7 participants. **Decision: cohort stays a WC product; add a roster layer, not a new CPT** — reasoned as wrong-diagnosis-avoidance ("the gap is who gets enrolled, not what a cohort is stored as"), which was correct as far as it went but didn't yet surface the deeper problem below.~~
-
-### Cohort is a purchase-time instance, not the product (corrected mid-session)
-
-**The actual model, confirmed 2026-09-16:** the WC product is a reusable **catalog offering** ("Core Cohort Package"), sold repeatedly to different organizations. **Each individual purchase/order is what becomes one specific cohort instance** — its own facilitator, dates, courses, and roster. Today's schema has this backwards: `cohort_facilitator`, `cohort_start_date`, `cohort_end_date`, `cohort_courses`, `current_lesson` are all ACF fields **on the product itself**, which only works if one product = one cohort = sold exactly once. It does not hold once the product is sellable to multiple orgs, which it needs to be.
-
-This came out of thinking through the roster problem, but it's a different and more foundational issue than the roster — the roster question is downstream of it, not parallel to it.
-
-**Decision: new `leaderspath_cohort` CPT, auto-created on order completion.** Not a product-meta layer, not a cloned-product-per-purchase — a real CPT gets this plugin's existing CPT tooling (ACF UI, admin columns, revisions, capabilities) for free, and an order completing is naturally "the moment a cohort instance is born," which fits WordPress's `post` model far better than treating a WooCommerce order (a transactional record, not meant to be edited like content over six weeks) as the cohort's home.
-
-- **`leaderspath_cohort` (new CPT):** holds `cohort_facilitator`, `cohort_start_date`, `cohort_end_date`, `cohort_courses`, `current_lesson` — moved off the product. Plus a new `source_order_id` (or equivalent) linking back to the originating WC order for purchase/billing traceability. Plus the roster (see below).
-- **The product becomes a true catalog listing** — "Core Cohort Package," sellable indefinitely, to any number of organizations. Team-size/seat-count-as-price-variation (the Variable Product question raised earlier this session, and confirmed correct as a *pricing* mechanism) still applies **to the product**, independent of this CPT question — package size still determines price at the product level; the CPT just holds what happens *after* that specific purchase.
-- **On `WooCommerce::handle_order_completed()`:** instead of (or alongside) enrolling the purchaser directly, create one `leaderspath_cohort` post per cohort-package line item in the order, carrying forward the purchased variation's seat count and the org name (from billing info, or a checkout field asking for it explicitly).
-- **Roster attaches to the new CPT, not the product** — same design as before (confirmed WP users, purchaser + facilitator can invite/revoke, seat cap from the purchased variation, self-service via a WooCommerce My Account screen) but living on `leaderspath_cohort` post meta/ACF instead of product meta.
-
-**Invite mechanics, decided 2026-09-16 (corrects the vaguer "send a set-password link" phrasing from earlier in this same design pass):** no custom invite-token system. Inviting someone to a seat — whether they already have a WP account or not — is a single step:
-
-1. If no WP account matches the invited email, create one now (`wp_insert_user`/`wp_create_user`, role `leaderspath_student`) — **immediately, at invite time**, not deferred until the person clicks anything.
-2. Call `enroll_user()` immediately too. There is no separate "pending" enrollment state to track — the roster entry *is* the enrollment, from the moment of invite. What used to be described as "pending" is really just "account exists, enrolled, hasn't logged in yet," which WordPress already tracks natively (`user_registered`, last-login if the site tracks it) — no bespoke invite-status field needed on top of that.
-3. Send WordPress's own native password-reset flow (`retrieve_password()` and/or `wp_new_user_notification()`) to get them a working password — not a custom invite token. The person clicking the email link does exactly what any WP user does to set/reset a password; nothing custom happens on that end.
-4. **Content, not mechanism, gets customized:** the stock WP reset/new-user email is generic ("a password reset was requested for your account") — a strange first message for someone who doesn't know they have an account yet. Override via the existing WP filters (`wp_new_user_notification_email`, `retrieve_password_message`) so the email actually says "You've been invited to join [Org]'s LeadersPath cohort, facilitated by [name]" before the password-set link, while the underlying link/token mechanism stays 100% stock WordPress.
-
-This is a real simplification from the original "pending invite queue" framing — there's no invite lifecycle to build (pending/accepted/expired/revoked) beyond what WordPress's own user-account state already gives for free.
-
-**Native-mechanism audit, done 2026-09-16 before building anything (same discipline that caught the checkout-restriction question below):**
-- `wp_new_user_notification()` — confirmed correct as designed. It's core, pluggable/overridable by design (exactly what the custom-email-content plan needs), and nothing better exists for this.
-- WooCommerce's `WC_Customer_Download` (its own native "grant access" concept, checked because it sounded adjacent) — **exists, but is the wrong tool.** It's a per-file download-permission system (download count, expiry, one row per product/user/order for a "Downloadable" product's attached file) — it answers "can this person re-download this file," not "is this person enrolled in a multi-week cohort." Using it would repeat the same category of mistake as the earlier product-as-cohort error: reaching for a structurally-adjacent WC concept that represents a genuinely different thing. Confirms `enroll_user()`/`leaderspath_enrollments` (already built) is the right mechanism, not a reason to change course.
-
-**Purchaser auto-enrollment + a new `cohort_owner` field, decided 2026-09-16 for single-org cohorts specifically.** The purchasing user is always automatically enrolled as a participant on cohort creation — this is unchanged, existing, correct behavior (`handle_order_completed()` already does exactly this today; the earlier roster/invite design only ever added *more* people onto the roster, it never questioned this part). What was missing: **the purchaser's automatic seat counts against the package's total seat count** (buy 6 seats, purchaser fills 1, 5 remain to invite — not 7 total), and **who has roster-management authority** was implicitly "whoever the order's `customer_id` was," with no durable, reassignable record of that on the cohort itself. **This purchaser-as-owner default is specific to the single-org product type — see the mixed-organization case below, where it doesn't apply.**
-
-- New field on `leaderspath_cohort`: `cohort_owner` (WP user ID). **Who it defaults to is determined by the cohort's originating product type, not decided per-cohort — corrected 2026-09-16 from an earlier draft of this same section that assumed "owner = purchaser" universally:**
-  - **Single-org cohort:** owner defaults to the purchaser, reassignable afterward by an admin/facilitator (e.g. an executive director buys the cohort but wants their program director managing the roster day-to-day). The owner is also enrolled as a participant, filling one of the purchased seats.
-  - **Mixed-organization cohort:** owner defaults to **the facilitator**, not any individual purchaser. Each participant in a mixed cohort bought only their own single seat — none of them has any standing to manage anyone else's enrollment, so there is no natural participant-owner the way there is in the single-org case. The facilitator is the only party with authority over the whole roster. (The facilitator is not thereby a participant/seat-filler here — this is the one case where owner and participant genuinely diverge, unlike the single-org default above.)
-  - This split is a mechanical default keyed off product type at cohort-creation time, not a judgment call made per cohort.
-- Roster-management authority (invite/revoke seats, described earlier as "purchaser + facilitator") now reads `cohort_owner` and `cohort_facilitator`, not the order's `customer_id` — the order is still recorded for billing/traceability (`source_order_id`), but access-control and roster-management logic never reads it directly. For a mixed cohort, `cohort_owner` and `cohort_facilitator` will typically be the same user — that's expected, not a bug to reconcile.
-- **Everything built and designed earlier this same session that assumed `context_cohort` / `get_facilitator_cohorts()` / `can_user_access_context()` / the `/learn/` rewrite point at `post_type: product` needs to be repointed at `post_type: leaderspath_cohort` once this CPT exists.** None of that logic is wrong in shape — the enrollment-chain walking, the cohort-scoping of context files, the URL rewrite's cohort resolution — it's only wrong in *which post type* it resolves against. This is a global find-and-fix, not a redesign, once the CPT is real.
-- **Migration concern for the one real existing cohort product (279, "Test Cohort"):** it's test data, not production, so no live-migration script is needed yet — but the *pattern* (product → CPT data migration for any cohort created before this change ships) should be decided before real customer data exists, not after.
-
-**Side benefit, noted 2026-09-16, not designed — the mixed-organization cohort tier becomes tractable later.** The curriculum design doc (`Research/LeadersPath Core Cohort Curriculum Design.md`, §3, §9) names a second product tier — "a low-cost single-session mixed-organization offering" for orgs that can't fill a whole single-org cohort — twice as real but explicitly *not designed yet*. Under the pre-correction model (cohort = product), that tier would have needed its own entirely separate mechanism, since "the product IS the cohort" only works for one buyer/relationship per product. Once the roster is its own structure on `leaderspath_cohort`, decoupled from any single order's line items, **the roster becomes the actual site of variation, not the commerce shape** — a single-org cohort's roster fills from one bulk purchase inviting a named team; a mixed cohort's roster could fill from N separate individual-seat purchases, each contributing one person to the *same* cohort instance. Same CPT, same access-chain logic, same context-file scoping, same `/learn/` rewrite — only the population mechanism differs. This is not a design for that tier (pricing, curriculum differences, and whether/how it shares context files across orgs are all still completely open) — it's a note that the CPT correction happens to remove what would otherwise have been the structural blocker to designing it. One piece of that later tier *did* get resolved in passing, since it fell directly out of the `cohort_owner` field work below: a mixed cohort has no single purchaser with standing to manage the whole roster (each participant only bought their own seat), so `cohort_owner` defaults to the facilitator instead — see `cohort_owner` below.
-- **Requested start date, decided 2026-09-16:** the product carries a "requested start date" field (checkout-time input, not authoritative scheduling — the org's stated intent when buying, before a facilitator is even assigned). On order completion, it seeds `cohort_start_date` (and `cohort_end_date`, derived from course/curriculum duration) on the newly-created `leaderspath_cohort` post. From that point on, the *CPT's* dates are the operational source of truth and can be freely adjusted by a facilitator/admin (real scheduling, facilitator availability, etc.) without touching the original product or order. The product-level field is an intake input, not a live-synced field — editing the CPT's dates afterward never writes back to the product or the order.
-- **Creation trigger and payment status, decided 2026-09-16:** PO-based purchasing means a real gap between "the org committed to this" and "payment actually cleared" — possibly days or weeks, since PO/invoice payment typically holds a WC order at `on-hold` or a similar non-`completed` status via a payment-gateway extension, not WooCommerce's native flow. The cohort CPT is created **early**, as soon as the order reflects real commitment (placed / `on-hold`, not waiting for `completed`) — so facilitator assignment and other prep can start during the PO-pending window, which is the actual real-world case this needs to support. The CPT carries **its own payment-status field**, separate from the pedagogical phase `get_cohort_phase()` already derives from dates (`upcoming`/`active`/`completed`) — this is a different axis (commitment/payment state, e.g. `pending_payment` → `paid`), not a replacement for it. That status field updates as the underlying order progresses through its lifecycle (PO submitted → payment received → etc.), so the CPT reflects order-state changes over time rather than being written once at creation and left stale. **What gates on which status is resolved field-by-field below** ("`pending_payment` vs. `paid` gating" further down this section) — not left open.
-**One cohort-package per order, decided 2026-09-16 — enforced natively, no plugin code.** Checked before assuming this needed a custom cart-validation hook: WooCommerce's own **"Sold Individually"** checkbox (Inventory tab on the product) caps that product at quantity 1 in the cart and blocks adding it a second time — this is a real, built-in WC mechanism (confirmed against the installed WC source, `class-wc-cart.php`), not a plugin-code decision at all. **Scope, so this doesn't get over-claimed:** it only guards against duplicates of *the same* product — it does not stop a cart containing this cohort product *plus a different* cohort-flagged product, if a second one is ever introduced (e.g. a mixed-cohort SKU). That gap is accepted for now since only one cohort product exists today; **the trigger to revisit is the moment a second cohort-type product is created** — at that point a small cart-validation snippet checking "does this cart already contain any `_cohort = yes` product" (not just this specific one) becomes the correct fix, not before. Removes a whole class of ambiguity (multiple org names? multiple owners? multiple start dates in one order?) either way — this was never really about `create_cohort()` needing to handle it, since it can't be reached with today's real product catalog.
-
-**`pending_payment` vs. `paid` gating, decided 2026-09-16 — resolved field-by-field, not left as an abstract split:**
-
-| Can happen on `pending_payment`? | |
-|---|---|
-| Facilitator assignment (`cohort_facilitator`) | Yes |
-| Roster invites going out (accounts created, `enroll_user()` called) | Yes |
-| `cohort_courses` populated | Yes — but see below, this isn't really a "gated" action at all |
-| Cohort page / curriculum preview visible | Yes — a direct consequence of `cohort_courses` being set at creation |
-| Chatbot / learner-facing sandbox access | **No — requires `paid`** |
-
-The organizing principle: everything above the chatbot row is *preparation and logistics* — it costs nothing to allow early, and allowing it is the whole point of creating the cohort before payment clears (so prep can happen during a PO's pending window instead of waiting on it). The chatbot/sandbox is the actual paid deliverable, so it's the one thing that waits.
-
-**`cohort_courses` isn't a discretionary "assignment" action with its own gate — it's copied from the purchased product/variation at `create_cohort()` time**, the same moment as everything else. The product already references which course(s) a "Core Cohort Package" bundles, so there's no window where courses are "pending assignment" — they're known and fixed the instant the cohort exists, which is exactly what makes the cohort/curriculum-preview page make sense even before the roster is filled or payment clears: a prospective participant, or the org's own leadership, can see exactly what they'll be doing from day one. **It remains editable afterward** by an admin/facilitator (e.g. swapping a course for an org-specific reason) — not permanently fixed by the purchase, just *seeded* by it. Worth naming the UX wrinkle this implies: the curriculum preview an org sees while the cohort is still being set up could change if a facilitator later adjusts `cohort_courses` — accepted as a reasonable tradeoff for the flexibility, not something being solved for here.
-
-### Refund/cancellation must NOT auto-revoke access — corrects existing shipped behavior
-
-Decided 2026-09-16, and this is a **correction to real, currently-live code**, not new-feature design: `WooCommerce::handle_order_refunded()` / `handle_order_cancelled()` today call `unenroll_order_cohorts()` automatically on both the `woocommerce_order_status_refunded` and `woocommerce_order_status_cancelled` hooks — any refund, for any reason, at any point, immediately and silently revokes the whole cohort's access. (This was previously treated as correct — the Cohort Build Requirements research doc explicitly listed "Enrollment is removed on refund/cancel today" as expected behavior. It isn't.)
-
-**The scenario that breaks it:** an org completes all six sessions, has a bad experience for reasons unrelated to content access (a scheduling dispute, a service-recovery gesture, anything), and Make Good issues a full or partial refund as a business decision. That refund should never, by itself, retroactively cut off a team that already went through the material — access and billing are different questions, and today's code conflates them.
-
-**Decision — access closure is manual-only, one clear lever, no hidden automatic side effects:**
-- Remove the automatic `unenroll_order_cohorts()` call from both `handle_order_refunded()` and `handle_order_cancelled()` entirely — a refund/cancellation, regardless of timing (before, during, or after the cohort), never by itself changes access.
-- New boolean field on `leaderspath_cohort`, e.g. `cohort_access_closed` — an explicit, manual, admin/store-manager-only toggle ("Close access"). Store manager maps to WooCommerce's own `shop_manager` role (`manage_woocommerce` capability) — not a new plugin-specific capability, since that's already WC's own label for this kind of actor and the plugin doesn't reference it anywhere yet.
-- **Mechanics: a hard override checked live, not a bulk-unenrollment action.** `can_user_access_course/lesson/activity/context/skill` all check `cohort_access_closed` first, before walking the enrollment chain — closed means denied regardless of an otherwise-valid enrollment record. Nobody's individual `leaderspath_enrollments` user meta is ever touched by this toggle. Flipping it back off instantly and fully restores access for the whole cohort, with zero data loss or re-enrollment work, because nothing was actually removed — this is the reversibility the "toggle" framing implies, and it's why this shouldn't reuse the existing `unenroll_user()` bulk-removal mechanism.
-- UI: a toggle/button on the cohort's admin screen, not folded into the refund/order flow at all — this is a deliberate, separate admin action a store manager takes on the *cohort*, decoupled from whatever billing action is happening on the *order*.
-
-### Architectural requirement for the build above: cohort creation as a first-class, multi-caller operation
-
-Decided 2026-09-16, alongside the CPT correction above — **build the `leaderspath_cohort` creation path through this seam from the start, not as a later refactor.** The CPT correction happens to create the right moment to do this, since `handle_order_completed()` needs rewriting anyway (to create a CPT post instead of just enrolling the purchaser) — doing the seam separately afterward would mean rewriting the same method twice.
-
-**The want:** the ability to decouple LeadersPath's own domain logic from WooCommerce specifically, so a different commerce backend could be substituted later if needed — not a commitment to actually do that, a door kept open.
-
-**Already mostly true today, confirmed by auditing every public `WooCommerce::` method:** most of the class barely touches WooCommerce at all — `enroll_user`, `unenroll_user`, `is_user_enrolled`, `get_user_enrollments`, `get_cohort_enrollees`, `get_cohort_prerequisites`, `get_cohort_lessons`, `get_facilitator_cohorts`, and all five `can_user_access_*` methods operate purely on user meta and post/ACF queries (and, post-CPT-correction, on `leaderspath_cohort` instead of the product). The coupling for that pile is file location, not logic.
-
-**Genuinely commerce-specific (the real WC-only pile):** `add_cohort_checkbox`, `save_cohort_meta`, `is_cohort_product`, `cohort_availability_text`, `cohort_admin_js`, `handle_order_completed`, `handle_order_refunded`, `handle_order_cancelled`, plus the pricing/variation logic from the seat-count decision above. `get_cohort_phase` moves into this pile too, since it currently reads WC product dates — post-CPT-correction it should read `leaderspath_cohort`'s own dates instead, at which point it *also* stops being commerce-specific.
-
-**The seam:**
-- Split `WooCommerce` into two: a commerce-agnostic **`Enrollment`** class (the "mostly true today" pile above, relocated, not rewritten) and a slimmed-down **`WooCommerce`** class holding only the genuinely commerce-specific pile.
-- `WooCommerce` becomes the first implementation of a small plugin-owned interface — something like "translate a purchase-completed event into a cohort-creation call" — rather than `handle_order_completed()` reaching directly into `WC_Order` methods and calling cohort-creation logic inline. The event/call passed across that boundary should be a plain value (purchaser user ID, catalog offering ID, seat count, requested start date) with no `WC_Order`/`WC_Product` types crossing into `Enrollment` or the cohort-creation path.
-- **This boundary carries two kinds of events, not one**, per the PO/async-payment decision above: a **creation** event (order reflects real commitment — placed/`on-hold`) and a **status-change** event (payment progresses — `on-hold` → `completed`, or refunded/cancelled) that updates an *existing* cohort CPT's payment-status field rather than creating a new one. Both should cross the seam as the same kind of plain value (cohort/order identifiers + a status string), hooked to whichever WC order-status transitions the adapter cares about (`woocommerce_order_status_changed` is the natural WC-side hook for the ongoing sync, separate from the one-time `woocommerce_order_status_completed` creation trigger) — but the receiving side (`Enrollment` / the cohort-creation path) should see one consistent "cohort status changed" shape regardless of what triggered it or which commerce backend is behind the adapter.
-
-**Sharper framing, decided 2026-09-16: this isn't just an interface WooCommerce happens to implement — cohort creation is a first-class plugin operation with its own stable, human-usable contract, and WC is one caller of it among several.** The original framing centered WC ("`WooCommerce` becomes the first implementation of..."); the corrected center is the operation itself, callable the same way regardless of what's calling it — a WC order hook, a WS Form submission, a WP-CLI command, or an MCP tool.
-
-- **One PHP method is the actual implementation and source of truth** — e.g. `Enrollment::create_cohort( array $args ): int|WP_Error`, taking plain values (offering/product ID, owner user ID, org name, seat count, requested start date, and a `source` string for traceability — `'woocommerce'`, `'ws_form'`, `'wp_cli'`, `'mcp'`, etc.). Same "plugin owns logic, thin adapters call it" pattern this codebase already uses for the Bricks `lp_*` functions (`docs/bricks-integration.md`) — not a second, different pattern for a second kind of external caller.
-- **WC's order hook calls this method directly** (same PHP process, no HTTP round-trip to itself) — this is the "creation event" from the seam above, now named concretely.
-- **A new REST endpoint wraps the same method** for any HTTP-capable caller — this is what WS Form (or any front-end form tool) posts to, and what an MCP tool would call if/when one exists. The endpoint does auth/capability/nonce checking and argument marshalling only; it holds no cohort-creation logic of its own, same division of labor as every other REST endpoint in this plugin.
-- **A new WP-CLI command wraps the same method** (`wp leaderspath cohort create --offering=... --owner=... --seats=...` or similar) for terminal/scripting use — genuinely useful on its own for Make Good staff creating/backfilling cohorts by hand, not just an API-completeness exercise.
-- **All callers run the identical validation and creation logic** — no drift possible between "a cohort created via WooCommerce checkout" and "a cohort created by an admin running a WP-CLI command," which matters for testing (the WP-CLI path becomes the natural way to exercise this logic without needing a real WC order every time) and for the eventual mixed-cohort tier (which may want a different front-end entirely, but the same underlying operation).
-- This is what makes "swap WooCommerce for something else later" actually possible without touching `Enrollment`, the roster, `context_cohort`, or the `/learn/` rewrite at all — none of those should ever import a `WC_*` class directly once this seam exists.
-
-### Completed: Cohort admin UI/UX pass
-
-Requested alongside the roster build — the Cohort CPT needed to actually feel like part of the plugin's admin, not a bolted-on afterthought.
-
-- [x] **Menu placement:** `leaderspath_cohort` added to `Admin_Menu::SUBMENU_ORDER`, positioned right after Dashboard and before Courses — a facilitator thinks top-down (which cohort → which courses → lesson-level detail), and Cohorts/Courses are both "container" concepts a facilitator assigns/manages, distinct from the more granular Lesson/Activity/Context/Skill content types.
-- [x] **Dashboard fixed to stop referencing the product** — `get_content_counts()`'s `cohorts` figure now reads `wp_count_posts('leaderspath_cohort')` instead of a `WP_Query` against `post_type: product`; the stats table and "New Cohort" quick action both link to the CPT. A separate "New Cohort Package (Product)" quick action was added alongside it — the two are genuinely different actions now (create a purchase-time instance vs. create/edit the reusable catalog offering) and collapsing them back into one link would misrepresent the corrected model.
-- [x] **Field groups split from one flat 11-field list into four**, grouped by what a facilitator is actually doing when they look at each — matches this plugin's existing convention (Activity separates Settings from Chatbot; Skill visually separates sync fields) rather than inventing a new pattern:
-  - **Cohort Details** (main column): organization, owner, facilitator — *who's involved*
-  - **Scheduling** (main column): start/end dates, current lesson — *when it runs*. `current_lesson` grouped here rather than with Curriculum because it's a week-to-week facilitator action like the dates, not a one-time content selection like the courses list
-  - **Curriculum** (main column): courses, seats — *what it covers*
-  - **Status** (sidebar, `position: side`): payment status, access-closed toggle, source order — glanceable state, same treatment WordPress gives its own Publish/status boxes, deliberately separate from content a facilitator edits routinely
-- [x] Verified via `acf_get_field_groups()`/`acf_get_fields()` that all four groups register with the correct fields, position, and menu_order — not just read from the source.
-
-### Completed: Cross-CPT consistency audit (all 6 post types)
-
-Requested after the roster/UI-UX build — the dashboard's CPT order needed to match the real menu order, plus a systematic pass across every CPT registration and field group for naming/UI inconsistencies, not just Cohort's own polish.
-
-- [x] **Dashboard stats table, `get_content_counts()`'s key order, and Quick Actions buttons all reordered** to match the real menu order (Cohorts → Courses → Lessons → Activities → Context Files → Skills) — previously the dashboard still reflected the pre-Cohort ordering with Cohorts tacked on at the end, inconsistent with the menu itself. "New Cohort" is now the primary Quick Action (was "New Lesson") — a deliberate call given Cohorts now lead the hierarchy, not an oversight.
-- [x] **`all_items` label standardized to "All {Name}" across every CPT** — found Activity/Lesson/Course already used this pattern, but Context Files and Skills used the bare plural ("Context Files", "Skills") with no "All" prefix, and the new Cohort registration had matched the *inconsistent* pair rather than the majority convention. Fixed all six to `"All {Name}"`.
-- [x] **Everything else checked and found to be intentional variation, not inconsistency** — worth recording so it isn't "fixed" again later by someone who didn't do this audit:
-  - `public`/`publicly_queryable`/`exclude_from_search` differ between the fully-public content types (Activity/Lesson/Course, with archives) and Context/Skill (`publicly_queryable: true` specifically for ACF relationship-field search, per an existing inline comment) vs. Cohort (`publicly_queryable: false`, confidential data, resolved only through `/learn/...`). Each difference is deliberate and already documented at its own registration.
-  - `supports` varies by actual content shape — Activity/Lesson/Course carry `thumbnail`/`excerpt` (real editorial content); Context has no thumbnail (plain text); Skill and Cohort have no `editor` either (their "content" is entirely ACF fields, not a WYSIWYG body). Not an oversight — Cohort matching Skill's `supports` array is correct given the same reasoning applies.
-  - Cohort's multi-field-group structure (3 main-column groups + 1 sidebar group) was checked against Lesson's existing 5-group precedent (Settings/Facilitator Content/Learner Content/Access Roles in `position: normal`, Chatbot in `position: side`) and matches that established pattern exactly — not a new convention introduced for Cohort.
-  - Field `instructions` tone/style (short declarative sentences, parenthetical examples, occasional "see X above/below" cross-references) is consistent across all CPTs' field definitions, Cohort's included.
-- [x] **CLAUDE.md and the persistent memory file (`MEMORY.md`) both corrected** — both still said "5 CPTs" and described cohorts as WC Simple products, stale since the Phase 14 model correction. CLAUDE.md's Plugin Scope and Completed Work sections updated; `MEMORY.md` restructured per its own stated convention (one line per entry in the index, detail moved to a new `cohort-is-purchase-time-instance.md` topic file) rather than left as an inline sprawl, and ~80 lines of dead Divi 5 module documentation removed — that architecture was fully deleted from the codebase per this same file's "Migrated off Divi" note, so keeping detailed docs for it served no purpose.
-- [ ] **Not audited this pass:** admin column label/rendering consistency beyond what the Cohort roster build itself needed (e.g. whether every CPT's custom columns follow identical formatting conventions for dates, counts, dashicon fallbacks) — worth a dedicated look if more admin polish work continues, but out of scope for "match the planned CPT order + fix `all_items`."
-
-### Completed: WP-CLI commands (`includes/class-cli-commands.php`)
-
-Prompted by repeatedly hand-writing bespoke `wp eval-file` scripts for test-data work this session — exactly the pattern the earlier "cohort creation as a first-class, multi-caller operation" design section named WP-CLI as a real intended caller of, not just an API-completeness gesture.
-
-- [x] `wp leaderspath cohort create` — thin wrapper over `Enrollment::create_cohort()`, the identical operation the WooCommerce order hook calls. `wp leaderspath cohort invite` wraps `Enrollment::invite_to_cohort()` (sends the real password-reset email — not a dry-run command).
-- [x] `wp leaderspath post create/update/get/list <post-type>` — generic commands across all 6 managed CPTs (`activity`, `lesson`, `course`, `context`, `skill`, `cohort`). `create`/`update` take `--title`/`--content`/`--excerpt` plus repeatable `--field=name=value` for ACF fields (comma-separated values become an array of ints, matching every LeadersPath relationship field's `return_format => 'id'` convention). `get` dumps a post's core fields plus every ACF field grouped exactly as the admin UI groups them — the direct replacement for the one-off audit scripts written earlier this session.
-- [x] Self-guards on `defined('WP_CLI') && WP_CLI` and self-registers via `\WP_CLI::add_command()` at the bottom of the file — loaded unconditionally in the bootstrap (harmless no-op outside a CLI context), no separate activation step.
-- [x] **Two real issues found by testing, not by inspection, both fixed:**
-  1. WP-CLI's synopsis parser rejected `[--field=<name=value>]` — the nested `=` inside the placeholder token isn't valid synopsis grammar. Fixed to `[--field=<field-assignment>]`.
-  2. `apply_field_flags()` originally had no validation that a `--field` name was actually registered on the target post type — `update_field()` itself doesn't check this, so a wrong-CPT or typo'd field name silently wrote raw postmeta with no error. Confirmed by deliberately testing `--field=cohort_video=...` against a Course, which succeeded and left stray `cohort_video`/`_cohort_video` meta on post 326 before the fix. Now validates against `acf_get_field_groups()`'s actual registered fields for that post type and warns + skips on mismatch. Stray test meta cleaned up afterward.
-- [ ] **Known limitation, not a bug:** `--field` only handles scalar values and comma-separated ID lists — it can't set a repeater's nested sub-fields (`lesson_objectives`, `lesson_references`) in one flag. Those still need a script or the admin UI. Documented in the method's own docblock so it isn't rediscovered as a "bug" later.
-
-### SUPERSEDED — see "WooCommerce dropped as the purchase mechanism" below
-
-Everything in this section was designed against WooCommerce being the checkout/purchase path. That assumption was revisited and changed within the same session, before any of it was built — left here struck through in spirit (not deleted) for the paper trail. **Do not build this section's design; read the corrected one below instead.**
-
-### Design: real customer-facing requested-start-date + Cohort Kind (Org/Mixed) — not yet built
-
-Found 2026-09-16 while reviewing the product: `cohort_requested_start_date` was built last session as an ACF field on the *product's admin edit screen* — but its own docblock already claimed it was "captured at checkout as the organization's intent." Those are contradictory: an admin-edit-screen ACF field is never seen by the purchasing customer at all. This is a real implementation bug against last session's own stated intent, not a misunderstanding — confirmed by testing/inspection, not assumed.
-
-**Researched before building** (per explicit instruction not to reach for a third-party plugin without checking): a genuine customer-facing product-page field, without any plugin, is a well-established 5-hook WooCommerce pattern — `woocommerce_before_add_to_cart_button` (render) → `woocommerce_add_to_cart_validation` (reject if missing) → `woocommerce_add_cart_item_data` (attach to the cart item) → `woocommerce_get_item_data` (show back to the customer in cart/checkout) → `woocommerce_checkout_create_order_line_item` (persist onto the real order's line-item meta). No plugin needed.
-
-**A materially bigger question surfaced along the way and was resolved after real research, not assumed:** whether "Cohort Org" and "Cohort Mixed" should be genuine custom WooCommerce product types (their own entries in the Product Type dropdown, alongside Simple/Grouped/External/Variable) or a value on the existing product. Researched the real mechanics: a custom type is a documented, working pattern (extend `WC_Product`, register via `product_type_selector` + `woocommerce_product_class` — WooCommerce Subscriptions does exactly this for "Simple Subscription"/"Variable Subscription"). But `WC_Product::is_type()` compares against a literal `product_type` string, and WooCommerce core (plus any third-party code) checks `is_type('variable')`/`is_type('simple')` in many places — a genuinely new type string doesn't automatically pass those checks anywhere, and making it work correctly everywhere costs real, ongoing compatibility auditing (which is exactly what Subscriptions' own codebase spends significant surface area doing). **Decided, after seeing that real cost, not to build genuine custom types.**
-
-**The actual design, decided 2026-09-16:**
-
-- **Product type stays real WooCommerce Simple or Variable** — zero custom-type compatibility risk, whichever core or any other plugin checks `is_type()` anywhere.
-- **New "Cohort Kind" select** (Organization / Mixed) on the product, alongside the existing `_cohort` checkbox — same admin-JS toggle pattern already used to show/hide the Cohort Settings ACF panel. Deliberately **no automatic coupling** to the Product Type dropdown (decided explicitly) — an admin picks Cohort Kind and Product Type independently and is trusted to pair them sensibly (Organization → Variable, Mixed → Simple), rather than the plugin enforcing/auto-switching it.
-- **Organization kind (Variable product):** buyer picks a team-size variation (the already-designed-but-unbuilt seat-count-as-priced-attribute migration) and a requested start date via the new 5-hook front-end field chain above. Both flow through to the real order's line-item meta.
-- **Mixed kind (Simple product):** no seat choice (one person, one price) and **no cart-tracked date field at all** — the product page just displays the next scheduled start date as plain, read-only text from a product-level ACF field admin-set by Make Good. Decided explicitly: since the buyer doesn't choose the date, there's nothing to persist per-order; simpler is more correct here, not a shortcut.
-- **`WooCommerce::handle_order_commitment()` needs a matching fix**, not just the front-end field: it currently reads `get_field('cohort_requested_start_date', $product->get_id())` — a product-level default — when it should read the **order line item's** meta for that specific purchase's chosen date (Organization kind only; Mixed kind has no per-order date to read, and would fall back to the product-level next-scheduled-date field it displays).
-- **Resolves the two existing `class-woocommerce.php` TODOs from last session** (`cohort_is_mixed_offering`, `cohort_variation_seats`) — `cohort_is_mixed_offering` becomes reading the new Cohort Kind select instead of a boolean flag; `cohort_variation_seats` becomes real once the Variable Product migration is built.
-
-**Not yet built — this is a design write-up only, captured before implementation per the session's own "design now, build next" pattern for changes this size.**
-
-### WooCommerce dropped as the purchase mechanism — WS Form + Stripe instead (2026-09-16)
-
-**This is the current, correct direction — read this section, not the superseded one above, before building any of the cohort-purchase flow.**
-
-**How this came about:** while designing the WC checkout-field chain above, the user asked whether the real requirement — a single cohort-package purchase, custom fields (org name, website, contact info, seat count, start date), Stripe payment, and a CRM sync — actually needed WooCommerce's product/cart/order machinery at all, given there's effectively one product and no multi-item cart. On inspection, it doesn't: **WS Form Pro** (already installed and licensed in this stack) has a **Stripe Elements add-on** (one-time payments, native Stripe Elements, "E-Commerce fields" for priced options — confirmed real via WS Form's own documentation) and an **already-active FluentCRM bridge** (`ws-form-fluentcrm`, confirmed installed and active) that syncs any WS Form submission to FluentCRM via a configurable action. A single WS Form form can plausibly do everything the WC-based design above was building by hand: collect org info, let the buyer pick a seat-count option (priced), charge Stripe, and hand the submission to FluentCRM — with a real, form-builder UI instead of five custom hooks and an admin-JS toggle.
-
-**What this costs, decided explicitly rather than defaulted into:** WooCommerce's order-management UI (admin order list, refund handling, built-in payment-status tracking, order emails) goes away as the purchase-tracking system. The user weighed this directly and judged it acceptable — WS Form's own submission log plus Stripe's dashboard are enough visibility for one product sold to one kind of buyer, and none of WooCommerce's inventory/shipping/tax/reporting machinery was ever actually needed here.
-
-**What survives unchanged:** `Enrollment::create_cohort()` remains the single canonical cohort-creation operation — this is exactly the scenario the earlier "cohort creation as a first-class, multi-caller operation" design (this same Phase) was built for. **WS Form becomes a new caller of it, replacing WooCommerce as a caller, not a redesign of `Enrollment` itself.** The `Enrollment`/`WooCommerce` split done earlier this session (commerce-agnostic core vs. a slim commerce-specific adapter) also pays off here directly: dropping the WC adapter doesn't touch `Enrollment`, the roster, `context_cohort`, or the `/learn/` rewrite at all.
-
-**What needs to be built instead (not started — this is the design handoff for the next session):**
-- A WS Form form collecting: organization name, website, contact info, Cohort Kind (Organization/Mixed — still relevant, now as a form field/branching rather than a WC product-type pairing), seat count (Organization only, priced via WS Form's E-Commerce fields), requested start date (Organization only; Mixed still just displays the next scheduled date, unchanged reasoning from the superseded design above).
-- ~~A WS Form submission action (or a hook into one) that calls `Enrollment::create_cohort()`~~ — **resolved below, see "Integration mechanism: WS Form's Run WordPress Hook action."**
-- The Stripe payment-confirmation lifecycle (WS Form's own payment-intent/webhook flow) needs to map onto the two-event boundary already designed (`create_cohort()` on commitment, `set_cohort_payment_status()` on confirmation) — **still not researched.** Genuinely the next open item.
-- **Whether the existing `WooCommerce` class (`class-woocommerce.php`), `class-cohort-rewrite.php`'s (none currently) WC dependencies, and anything else built this session assuming a WC product exists should be removed, left dormant, or kept as a secondary/fallback path** — not decided. Given the multi-caller design, leaving `WooCommerce` in place as an unused/optional adapter is architecturally harmless, but worth an explicit call rather than silently rotting.
-- The one real WC product (329, "Core Cohort Package") and its test cohorts built this session were designed around the now-superseded model — **not yet reconciled with this pivot**, flagging so test data doesn't quietly imply a design that's no longer current.
-
-### Integration mechanism resolved: WS Form's "Run WordPress Hook" action, field lookup by label (2026-09-17)
-
-**Confirmed against a real test form the user already built** (WS Form form ID 3, "Stripe - Customer" — Post Manager, Save Submission, Show Message, and Send Email actions all already configured and working on `submit`), not just researched from docs.
-
-**What Post Manager alone can do, proven working in form 3:** create a `leaderspath_cohort` post directly and map a submitted field straight to an ACF key (`action_post_field_mapping_acf`, form 3 maps field 9 → `field_cohort_instance_org_name`) — zero PHP. **Decided not to rely on this for the real integration**, though: `Enrollment::create_cohort()` does more than set fields — owner resolution (purchaser vs. facilitator for mixed cohorts), copying courses from the offering, and auto-enrolling the owner as a participant. Post Manager's direct field-mapping would silently skip all of that. The canonical method stays the single source of truth for cohort creation, same principle as every other caller (WP-CLI, the former WC hook).
-
-**The actual mechanism: WS Form's "Run WordPress Hook" action**, confirmed via the real installed plugin source (`ws-form-pro/includes/functions.php`), not just public docs:
-
-- Configure the action as **Action (`do_action`)**, not Filter — `Enrollment::create_cohort()` doesn't need to hand data back into the form.
-- **Priority is a literal number, not a coarse toggle** — corrected after seeing real data (see below): each action carries its own numeric `priority` (Stripe Elements ran at 10, the test form's Post Manager action at 25, etc.) and WS Form runs actions in ascending order. Set the hook's priority higher than Stripe Elements' own action so payment has actually completed first.
-- Plugin registers a real handler: `add_action( '<hook-tag>', 'leaderspath_ws_form_...' , 10, 2 )` receiving `( $form, $submit )` — confirmed exact signature from WS Form's own source, not assumed.
-- **Field lookup by label, not hardcoded field ID — using WS Form's own first-party function, not custom code.** `wsf_field_get_objects( $form, false, 'Organization Name' )` returns the field object(s) whose label matches exactly (confirmed via source: `WS_Form_Form::groups[]->sections[]->fields[]`, filtered on `$field->label == $field_label`); then `wsf_submit_get_value( $submit, "field_{$field->id}" )` reads the submitted value. This resolves the earlier open question (hardcoded field-ID contract vs. label lookup) in favor of label lookup — the user's stated preference — and it turns out WS Form already ships the exact function for it, so no custom matching code is needed at all. A relabeled field breaks the integration loudly (lookup returns nothing) rather than silently pointing at the wrong field, which a stale hardcoded ID would risk.
-- **Not yet built**: the actual `leaderspath_ws_form_cohort_submitted` handler function, the "Run WordPress Hook" action's configuration on the real cohort-purchase form, and the exact label strings the handler expects (needs to be decided alongside the final form's field labels, then documented — likely its own `docs/ws-form-integration.md`, mirroring `docs/bricks-integration.md`'s "registration lives in plugin code, not editor configuration" discipline for the hook-tag name and expected labels specifically, even though the lookup itself is label-based rather than ID-based).
-
-### Payment-lifecycle question resolved: `ecommerce_status` on the submission, from a real test transaction (2026-09-17)
-
-**The user ran a real test transaction on form 3** (Stripe test-mode card, real Post Manager + Stripe Elements actions firing) — this is what actually answered the "single biggest open item" from the previous entry, not further doc research. Full submission data inspected directly from `wp_wsf_submit`/`wp_wsf_submit_meta` (submission ID 1). **Form 3's Post Manager action was left configured from earlier testing and fired during this transaction, creating a real `leaderspath_cohort` post (#343) — this was incidental leftover from testing Stripe in isolation, not part of the real design, and the user confirmed Post Manager is not part of the agreed integration (the "Run WordPress Hook" → `create_cohort()` approach stands, unchanged). Post 343 was deleted as stray test data.**
-
-**What the real submission data confirmed, precisely:**
-- **`ecommerce_status`** on the submission meta reads `"completed"` once Stripe Elements' action succeeds — a plain, first-party, queryable status string. This is the exact signal to check, no derivation from raw Stripe payloads needed.
-- **`ecommerce_transaction_id`** holds the real Stripe PaymentIntent ID (`pi_...`) flat on the submission — the natural value for `cohort_source_order_id`.
-- **`ecommerce_transaction`** holds the full serialized Stripe PaymentIntent JSON, if ever more detail is needed than the status string.
-- **Stripe Elements' payment and Post Manager's post-creation both completed synchronously within the one submission** — no async webhook gap observed in this test. This means, for the "Run WordPress Hook" action (set to a priority after Stripe Elements' own action), `ecommerce_status` is already reliably `"completed"` by the time the handler runs, in the normal case.
-- **Practical effect on the two-event design:** for a synchronous card payment via Stripe Elements, `create_cohort()` and `set_cohort_payment_status('paid')` can likely both happen in the same hook invocation — check `ecommerce_status === 'completed'` and pass `payment_status: 'paid'` directly into `create_cohort()`'s args, rather than needing a genuinely separate later event. **Caveat, not yet tested:** this test used a synchronous card charge; some Stripe payment methods (bank debits, some wallets) confirm asynchronously after the form submission completes, which *would* need the second event (a webhook or later status check) — not yet verified whether that path is in scope for this product, or whether Stripe Elements as configured here only ever supports synchronous methods.
-
-### Async-payment caveat resolved: buyer picks Credit Card or Purchase Order, WS Form's own conditional actions branch it (2026-09-17)
-
-**Resolves the "some Stripe payment methods confirm asynchronously" caveat from the entry above — not by handling async Stripe confirmation, but by not needing to.** The buyer picks a payment method in the form itself (a simple selector — "Pay by Credit Card" vs. "Request a Purchase Order"), and **WS Form's own conditional-action system** (confirmed via docs: an IF/THEN block on any action, gating whether it runs at all — "Control Actions With Conditional Logic") does the branching, not the plugin's hook handler:
-
-- **IF Payment Method = Credit Card** → THEN the Stripe Elements action runs (as tested — synchronous, `ecommerce_status` reliably `"completed"` by the time the hook fires).
-- **IF Payment Method = Purchase Order** → Stripe Elements action does not run at all. No charge, no payment confirmation of any kind through this form.
-- **The "Run WordPress Hook" action always runs** (unconditioned), at a priority after Stripe Elements' own (conditional) action. Its only payment-related job is reading the submitted Payment Method field value: Credit Card + `ecommerce_status === 'completed'` → `create_cohort()` called with `payment_status: 'paid'`; Purchase Order → called with `payment_status: 'pending_payment'`.
-- **PO handling is deliberately not automated further, decided explicitly.** The PO path captures the same org/cohort info as the Credit Card path (org name, seats, start date, etc.) — no PO-number field, no amount field, nothing payment-specific. An admin handles the actual PO/invoice exchange entirely outside this form (offline, in whatever system Make Good already uses for that), then manually flips `cohort_payment_status` to `paid` on the Cohort edit screen once resolved — the field and the manual-override capability already exist from earlier this session, no new admin UI needed.
-- **This fully closes the async-payment question** — there is no Stripe webhook or delayed-confirmation path to build for this product, because the only two ways money changes hands are (1) a synchronous card charge that resolves within the same submission, already proven working, or (2) no charge at all through this form (PO), which the plugin never needs to wait on.
-
-### The real form is built: form 7, "LeadersPath Cohort Purchase" — tested against order processing and FluentCRM (2026-09-17)
-
-**Built and tested in a different session, then inspected directly here** (`wp_wsf_form`/`wp_wsf_form_meta`/`wp_wsf_field`, form ID 7) — this is real, current state, not a plan. Correction to the mechanism description above, found by checking the actual configured conditional logic rather than assuming it matched the doc-researched "IF/THEN gates an action" pattern: **the CC/PO branch is implemented as section visibility, not an action-level condition.** A "Payment Type" conditional block, triggered on field 321 (Payment Method) being `selected`, toggles the visibility of two sections — "Payment Details" (id 87, contains the Stripe Elements fields) and "Complete Order" (id 86, a plain submit button) — showing exactly one depending on the choice. Functionally the same outcome (Stripe only ever gets submitted through if that section was shown), just a different WS Form primitive than the action-conditional pattern described in the entry above. Both produce the same result for the hook's purposes: check which path was taken via the submitted Payment Method value.
-
-**The "Run WordPress Hook" action is already configured and waiting on the plugin:**
-```
-action_hook_type: "do_action"
-action_hook_hook: "name_of_hook"   ← literal placeholder, the plugin defines and hooks this name
-action_hook_priority: "190"
-events: ["submit"]
-```
-Also configured and already tested: Save Submission, Show Message, Send Email, and **Add to FluentCRM** (full field mapping already wired — first/last name, email, phone, full billing address, organization name/website/role/budget — confirmed real, not aspirational).
-
-**Confirmed field IDs for the fields the user specified** (First Name, Last Name, Email, Organization Name), plus the payment/cohort fields needed for the handler — **recorded here for reference/testing only; the handler itself must still resolve these via `wsf_field_get_objects($form, false, '<Label>')` at runtime, per the label-lookup decision above, not hardcode these numbers:**
-
-| Label | Field ID (form 7, as of 2026-09-17) |
-|---|---|
-| First Name | 278 |
-| Last Name | 279 |
-| Email | 280 |
-| Organization Name | 283 |
-| Cohort Package (price_select — the seat-count/package choice) | 291 |
-| Requested Start Date (datetime) | 292 |
-| Payment Method (select — drives the CC/PO section-visibility branch) | 321 |
-
-**Resolved, out of scope for the plugin (2026-09-17):** form 7's pre-cohort discovery/intake section ("Where is your team already using AI," leadership's AI stance, hard-no's, who's participating, facilitator prep notes) is **explicitly not the plugin's concern** — decided by the user directly, not left ambiguous. WS Form/FluentCRM own that data and it's expected to change over time as the form evolves; the plugin's schema (`leaderspath_cohort` ACF fields) is not the place for it and should not grow a field for it. The plugin's scope is precisely the hook that captures the specific, named fields needed for `Enrollment::create_cohort()` — nothing broader.
-
-**The user also confirmed:** a separate form will be built for the mixed-cohort type — form 7 is org-cohort only. The Cohort Kind (Organization/Mixed) distinction from earlier in this Phase is therefore resolved at the **form level** (which form was submitted), not a field within one shared form as earlier design drafts assumed.
-
-**Explicitly not decided yet, for next session:** the actual `leaderspath_ws_form_cohort_submitted` (or similarly named) handler function — none of it is built; what hook tag name to register for `"name_of_hook"` (the plugin, not the form, owns this decision per the Bricks-integration precedent of "registration lives in plugin code"); where the new intake-question data lives, if anywhere, in the schema; where "seats"/package pricing tiers are actually defined (the `price_select` field type handles this WS Form-side, so this may already be resolved and just needs confirming against the field's own configured options); the mixed-cohort form's field list, once built; whether `WooCommerce`/`Cohort_Rewrite` need any changes now that the purchase origin isn't necessarily a WC order at all.
-
-### Intake-data scope resolved, out of the plugin's hands (2026-09-17)
-
-**Superseded by direct user instruction the earlier "not decided yet" framing above:** "Don't worry about the additional information. WSForm will handle that and it will change over time. It's outside your scope. However, creating the hook to capture specific fields with specific titles IS your scope." This closes the intake/discovery-data schema question outright — not deferred, not TODO, explicitly not the plugin's concern. The plugin's only job is the hook, reading the named fields it needs for `Enrollment::create_cohort()`.
-
-### Handler built: `WS_Form_Integration` (2026-09-17)
-
-**`includes/class-ws-form-integration.php`** — the actual `leaderspath_ws_form_cohort_submitted` handler, registered on `plugins_loaded` in `leaderspath.php` (mirrors the existing `WooCommerce` deferred-registration pattern, guarding on `function_exists('wsf_field_get_objects')` instead of `class_exists('WooCommerce')`). The file itself also self-guards with the same check at the top (a no-op if WS Form Pro isn't active), so the deferred wrapper and the file guard are redundant-but-harmless defense in depth.
-
-**Hook tag decided:** `leaderspath_ws_form_cohort_submitted` (a `LeadersPath\Includes\WS_Form_Integration::HOOK_TAG` constant) — replaces form 7's literal placeholder `"name_of_hook"`. **Still needs the user to update form 7's "Run WordPress Hook" action config** (`action_hook_hook`) to this exact string in the WS Form UI; the plugin side is done but the form side isn't updated yet.
-
-### Real submission, real bugs found — first live test (2026-09-17)
-
-**The user ran a real form 7 submission end-to-end against the just-built handler and it worked — cohort #345 was created — but with wrong data**, reported directly: seats came out as 1 (wrong), no course was linked (expected — no course field existed at submission time), and the source-record field was WC-shaped with no link. This is what actually surfaced the bugs below — not further code review.
-
-**Root cause of the seats bug:** WS Form's choice-type fields (`select`, `price_select`) submit their value as a **PHP array of selected label(s)**, not a scalar — confirmed from `WS_Form_Submit::db_get_submit_meta()` (`ws-form-pro/includes/core/class-ws-form-submit.php`), which `maybe_unserialize()`s the raw stored value (e.g. `a:1:{i:0;s:7:"3 seats";}`) before wrapping it as `['value' => $value, ...]`. `wsf_submit_get_value()` only unwraps that outer `value` key — the array inside it was never unwrapped by the handler's original `(string)` cast, which silently produced the literal string `"Array"`. Fixed in `get_field_value()`: if the resolved value is an array, take its first element before casting to string. This bug applied to **every** choice-type field the handler reads (Cohort Package, Payment Method), not just seats — Payment Method likely also matched neither `PAYMENT_CREDIT_CARD` nor anything sensible on that first run, just masked because the fallback (`pending_payment`) happened not to look obviously wrong.
-
-**The user then extended form 7 itself** (a different, real config change, inspected directly via `wp_wsf_field`/`wp_wsf_field_meta`, not assumed): added a **"Course" field** (id 331, `select`, submitting a `leaderspath_course` post ID directly — confirmed against cohort #346's underlying submission, which selected course 326, "AI Fluency Foundations"), and reconfigured **"Cohort Package"** (`price_select`, id 291) with **three real columns — Label, Price, Seats** — `select_price_field_value` points at the Seats column (index 2), so the field now submits a literal seat-count number (`"3"`, `"5"`, `"7"`) directly, not a label to regex-parse. The "More than 7 seats — Contact Us" option has a deliberately empty Seats value in its column, which is now the (more robust) signal for skipping cohort creation — replacing the old label-prefix string match, which no longer has a label to match against at all.
-
-**Handler updated accordingly:**
-- `parse_seats_from_package_label()` removed entirely — seats is read directly as `(int)` from the Cohort Package field's (corrected) scalar value; a value `< 1` (the Contact-Us row's empty Seats column) skips cohort creation, same practical effect as before but driven by the real data shape instead of label text.
-- New `LABEL_COURSE = 'Course'` read and passed to `create_cohort()` as a new `course_id` arg (see below).
-- `get_submission_edit_url()` added — builds a real WS Form admin link (`admin.php?page=ws-form-submit&id={form_id}#{submit_id}`, confirmed from `WS_Form_Common`'s own submission-notification-email builder in `ws-form-pro/includes/class-ws-form-common.php`, not guessed) and passes it through as `source_url`.
-
-### Schema fixes: source record, course, cohort type (2026-09-17)
-
-Three real gaps the user identified directly from cohort #345/#346's actual data, not from a review:
-
-1. **Source record was WC-shaped with no link.** `cohort_source_order_id` (a `number` field labeled "Source Order," WC-specific instructions) is now **two fields**: `cohort_source_record_id` (renamed, generic instructions — "the order, submission, or other backend record") and a new `cohort_source_url` (a `url` field — a direct admin link to the originating record). `Enrollment::create_cohort()`'s `source_order_id` arg is renamed `source_record_id`, plus a new `source_url` arg; both `WS_Form_Integration` and `WooCommerce::handle_order_commitment()` (via `WC_Order::get_edit_order_url()`) now pass both.
-2. **Course selection.** The user added a real "Course" field to form 7 (see above) rather than building a hidden field or filtered selector speculatively — `create_cohort()` gained a `course_id` arg (a direct `leaderspath_course` ID) that takes precedence over the older `offering_id`-copy-from-product path, which stays for `WooCommerce`'s continued use. Deliberately not a repeater/multi-select — form 7 submits exactly one course per purchase today.
-3. **Cohort type had no persisted field.** `$is_mixed` was only ever a transient `create_cohort()` argument, discarded after creation — no way to tell org vs. mixed from an existing cohort record. **Resolved with a new `leaderspath_cohort_type` taxonomy** (`includes/class-taxonomies.php`), not an ACF field or a `Course Type` taxonomy on Courses as first discussed — the user corrected that design mid-session: `create_cohort()` only ever runs on the **organization**-purchase path; a **mixed** cohort is a standing post that individual buyers *join* one at a time, not one *created* per purchase. So `create_cohort()` always sets the term to `organization` unconditionally (not derived from `$is_mixed`, which nothing calling `create_cohort()` today sets `true` for anyway). Two flat, non-hierarchical terms — `organization` / `mixed-group` — seeded idempotently inside `register_cohort_type()` itself (a `term_exists()` guard), since this is a fixed, code-depended-on vocabulary, not an editor-authored one like Topic/Context Category/Skill Category.
-
-**Explicitly future work, not started:** `add_to_cohort( $user_id, $cohort_id )` — the enrollment primitive an eventual mixed-cohort form's hook handler will call (joining one buyer into an existing, standing mixed cohort) — and the mixed-cohort form itself, including however WS Form will list currently-open mixed cohorts to choose from (a "Cohort" selector, analogous to today's "Course" selector, but listing `leaderspath_cohort` posts filtered to the `mixed-group` term instead of `leaderspath_course` posts). Both are deliberately out of scope for this session — building them now would be speculative without the mixed-cohort admin/listing groundwork existing yet.
-
-**Cohorts #345 and #346 (the two real test transactions from this fix) were backfilled directly** via `wp eval` to reflect what the corrected handler would have produced: `cohort_source_record_id`/`cohort_source_url` set from their real underlying submissions (2 and 3), the `organization` term applied to both, `cohort_courses` set to `[326]` on #346 (its submission genuinely selected a course; #345's submission predates the Course field entirely, so it has none to backfill), and #345's `cohort_seats` corrected from the buggy `1` to the true value `3` (its real Cohort Package selection, confirmed from the raw submission meta).
-
-**Verified against real data before considering this done:** loaded form 7 and submission 3 via WS Form's own `WS_Form_Form`/`WS_Form_Submit::db_read()` (bypassing the capability check, since WP-CLI has no current user) and re-ran the corrected field-reading logic directly — confirmed it now resolves Seats: 5, Course: 326, Email/Org Name/Payment Method/Start Date all correct, matching cohort #346's actual data.
-
-**Closed out 2026-09-17 — form updated, live end-to-end test run and verified.** Form 7's `action_hook_hook` was updated in the WS Form UI from the placeholder to `leaderspath_ws_form_cohort_submitted`. A real new submission was run through the actual hook (not a re-run of stored data) — submission #4, producing cohort #348. Verified directly by comparing the submission's raw field data against the created post:
-
-| Field (submission #4) | Value | Cohort #348 ACF value | Match |
-|---|---|---|---|
-| Organization Name (283) | Make Good | `cohort_org_name` | Make Good — match |
-| Cohort Package seats (291) | `"7"` | `cohort_seats` | 7 — match |
-| Course (331) | `"326"` | `cohort_courses` | `[326]` — match |
-| Requested Start Date (292) | 09/26/2026 | `cohort_start_date` | 09/26/2026 — match |
-| Payment Method (321) | Credit or Debit Card | — | — |
-| `ecommerce_status` | completed | `cohort_payment_status` | paid — match |
-| — | (purchaser: Christopher Frazier) | `cohort_owner` | 1 — match |
-| — | submission #4 | `cohort_source_record_id` / `cohort_source_url` | 4 / links to submission #4 — match |
-
-Every field the corrected handler reads resolved correctly against a brand-new live submission. **The WS Form → `Enrollment::create_cohort()` integration is fully done and verified — not a remaining task.**
-
-`add_to_cohort()`, the mixed-cohort form, and its listing mechanism remain unbuilt — still future work, unchanged from before (see "Discovered Tasks" below).
-
-### WooCommerce cohort-purchase path deprecated (2026-09-17)
-
-**Decided directly by the user, not a design inference:** "Based on what we've built, the WC path is completely deprecated. If we were to implement WC in the future it would need to follow the WSForm approach." This closes the open question from "WooCommerce dropped as the purchase mechanism" above — `class-woocommerce.php` is not removed (no reason to delete working code that's architecturally harmless per the multi-caller design), but it is dormant/deprecated: no new cohort purchases are expected to flow through it, and any future WC integration would need to be rebuilt as a thin `Enrollment::create_cohort()` caller matching the `WS_Form_Integration` pattern, not resume from the old `handle_order_commitment()`/`handle_order_status_changed()` design as-is.
-
-- [ ] **Not yet done:** mark `class-woocommerce.php` as deprecated in its own docblock/header comment, so a future reader doesn't assume it's the live path.
-- [ ] **Not yet decided:** whether to leave the one real WC product (329, "Core Cohort Package") and its test cohorts in place as historical/dormant data, or clean them up. Not urgent — flagging so it isn't silently forgotten.
-
-### Source record rendered as a button, not a raw URL field (2026-09-17)
-
-User feedback on the raw `cohort_source_url` field: "Rather than showing the link to the source record, let's make it a button." Reworked: `cohort_source_url` is **no longer an ACF field at all** — it's plain post meta (`update_post_meta()`, written by `Enrollment::create_cohort()`), and the field group instead has a `message`-type ACF field (`field_cohort_instance_source_link`, no `name` — display-only) whose content is rendered dynamically via `acf/render_field/key=field_cohort_instance_source_link` → `ACF_Fields::render_cohort_source_link_button()`, which reads the post meta and prints a real `<a class="button">` (or "No source record on file" if empty). Resolves the post ID during render via ACF's own `acf_get_form_data('post_id')` — confirmed against ACF Pro core that `$field` itself carries no post-ID key, so this is the correct API rather than a guess. Verified directly (not just lint-checked): simulated the render against cohort #346's real data and confirmed the exact HTML output, link included.
-
----
-
-## Discovered Tasks
-
-- [ ] Handle file outputs from code execution (deferred — not critical for MVP)
-- [ ] Handle skill deletion (delete from Anthropic when trashed?)
-- [x] ~~Wire `Cohort_Rewrite` into `leaderspath.php` bootstrap~~ — confirmed already wired (`leaderspath.php:91`), verified by code survey 2026-09-17. Flush-rewrites/real-Bricks-template verification still not separately confirmed this session.
-- [ ] Merge cohort-scoped context files into `build_system_prompt()` alongside the activity's own `chatbot_context_files` — **superseded by Phase 15 below**, which designs this properly (cohort scoping, the never-load-context override, and the upload/access-control requirements from the Build Requirements doc) rather than doing a bare merge
-- [ ] Build the cohort roster / seat-invite system (see Phase 14 design) — WC My Account endpoint, email invite flow, seat cap enforcement
-- [ ] `docs/bricks-integration.md` documents `[lp_activity_chatbot]` as a real shortcode alias (line 285); it isn't registered anywhere in code. Either register the alias or correct the doc
-- [ ] Verify `can_user_access_skill()`'s "unattached = admin only" behavior is actually correct, or give it the same public/cohort treatment `can_user_access_context()` got
-- [!] **Bug in currently-shipped code, found 2026-09-16:** `WooCommerce::handle_order_refunded()`/`handle_order_cancelled()` auto-unenroll the whole cohort on any refund/cancellation, for any reason. Fix: remove the auto-unenroll — `cohort_access_closed` (the manual toggle) already exists on `leaderspath_cohort` now, so the replacement is unblocked. **Not yet done** — the dangerous automatic behavior is still live in `class-woocommerce.php` as of this writing, though the WC path is now deprecated (see above) which lowers real-world exposure but doesn't fix the bug in the code itself.
-
----
-
-## Phase 15: Cohort-Scoped Context Files (design, not yet built) — 2026-09-17
-
-Requested directly by the user as the next body of work, alongside two source documents not previously read into this file: the wireframes at `LP2605001 Platform Development/Design/Wireframes/` (`cohort-page.html`, `lesson-page.html`, `globals.html`) and `MG2609001 Ethical AI Market Analysis/Research/LeadersPath Cohort Build Requirements.md` (a plugin-audit-and-requirements doc, prepared by a different session against this same codebase, v0.7.0). The Build Requirements doc's findings are treated as authoritative background for this phase, not re-derived — cited by section below rather than repeated in full.
-
-### The five user stories (as given, verbatim intent preserved)
-
-1. Facilitator can add context files to a cohort.
-2. Once a cohort context file is added, it's included in the context payload for an activity — active in activity work for learners in that cohort.
-3. Facilitator/course designer can mark an activity to **never** load any context files, even cohort ones — for baseline/control comparisons (this is the session-1 "blindfolded" exercise in `LeadersPath Core Cohort Curriculum Design.md` §7 — the with/without-context comparison is a real curriculum mechanic, not a hypothetical).
-4. Learner can drag-and-drop a file (text first; DOCX/PDF/other Claude-readable formats later) into a chat, included in that one instanced conversation only, never saved server-side (privacy).
-5. Learner can see which context files and skills are active for an activity, gated to what they have access to via cohort enrollment or public access — surfaced either in the chat UI or an embeddable context UI.
-
-### What already exists vs. what's genuinely new (confirmed by code survey, not assumed)
-
-**Already built (Phase 14):**
-- `context_cohort` ACF field (`field_context_cohort`) on the Context CPT — a context file can already be scoped to exactly one `leaderspath_cohort` post. Facilitator-picker filtering (`filter_context_cohort_choices()`) and save-time validation (`validate_context_cohort()`) both real and working — `includes/class-acf-fields.php`.
-- `can_user_access_context()` in `WooCommerce`/`Enrollment` — the enrollment-chain access check already exists for gating who can read a cohort-owned context file.
-- The lesson-page wireframe already designs the UI surface story 5 needs: the Activity Marker's `[f] context` / `[s] skills` toggle buttons expand a panel listing context files and skills for the current activity (`lesson-page.html`, `.marker-panel`/`#panel-context`/`#panel-skills`) — this is query-driven off "context files linked to this activity," not yet cohort-aware in the wireframe's own annotations, but it's the existing intended surface, not a new one to design from scratch.
-
-**Genuinely not built (confirmed by direct code read, not inference):**
-- `build_system_prompt()` (`includes/class-claude-api.php:1294`) only reads the activity's own `chatbot_context_files` — **zero cohort-scoping logic anywhere in the method.** `Cohort_Rewrite::get_current_cohort_id()` has exactly one call site in the whole plugin (its own definition) — nothing consumes it. This is story 2, fully unbuilt.
-- No ACF field or code path resembling "never load context for this activity" exists anywhere — grepped clean. This is story 3, fully unbuilt.
-- No file upload handling exists anywhere in the plugin (`includes/`/`admin/`) — confirmed absence, not an assumption, and independently confirmed by the Build Requirements doc's own code read. This is story 4, fully unbuilt, and per that doc it's also a **real, live security gap once org material is involved**: `/context/{id}/download` uses `check_read_permission()`, which today checks only `is_user_logged_in()` — any logged-in user, from any cohort, can already download any context file by ID. That's harmless while all context is shared curriculum material, but becomes a cross-org data leak the moment a cohort-owned file exists — **which it already can, today, since `context_cohort` is built and live.** This predates story 4 and should be treated as a standing exposure to close, not something to defer alongside the new upload feature.
-- Story 5's data layer (which context files/skills are actually active for a given activity+cohort combination, filtered to what the current learner may see) doesn't exist yet either — the wireframe designs the panel, but nothing computes cohort-aware, access-filtered contents for it to query.
-
-### Sequencing, informed by the Build Requirements doc's own sequencing (§7) and this session's scope
-
-The Build Requirements doc's own priority order (§7) puts "fix `check_read_permission`" first, ahead of the upload feature, specifically because it's small and is the one item that's already a live gap rather than a future one. Recommended order for this phase, not yet started:
-
-1. **Fix `check_read_permission()` for cohort-owned context files** — small, closes a real gap that exists right now independent of anything else in this phase. Mirror `check_chat_permission()`'s enrollment-chain check, same pattern already used elsewhere in Phase 14.
-2. **Wire cohort-scoped context into `build_system_prompt()`** (story 2) — resolve `Cohort_Rewrite::get_current_cohort_id()` (or pass cohort ID through the REST request explicitly; `/chat`/`/chat/stream` currently carry no `cohort_id` param at all, confirmed by code survey — decide which mechanism is authoritative before building) and merge cohort `context_cohort`-scoped files alongside the activity's own `chatbot_context_files`.
-3. **The never-load-context override** (story 3) — new ACF toggle on Activity, checked before step 2's merge logic runs at all.
-4. **Story 5's UI wiring** — make the lesson-page wireframe's context/skills panel actually cohort-aware and access-filtered, once steps 2–3 exist to query against.
-5. **Story 4 (drag-and-drop upload)** — the Build Requirements doc treats this as its own workstream (§3) with real requirements beyond "add a file input": non-web-root or hardened storage (not `/wp-content/uploads/` as-is), server-side type/size validation, cohort scoping, and an explicit lifecycle decision (retention on cohort completion/refund, deletion policy) — genuinely more scope than the other four stories combined. Sequenced last here since it's the newest, least-designed piece, not because it matters least.
-
-### Explicitly out of scope for this phase (per the Build Requirements doc, not re-litigated here)
-
-Session-record pipeline (transcripts → addenda), the starter context module skill, and the cohort-library pre-processing workflow (Build Requirements §§1, 2, 4) are adjacent but separate workstreams — content/process work and a new Skill, not plugin schema/code. Not part of this phase's task list.
-
-### `context_cohort` field placement corrected (2026-09-17)
-
-**User feedback, direct:** the Phase 14 design put `context_cohort` (the cohort-scoping relationship) on the *Context File* screen only — a facilitator has to leave the cohort they're managing, go create/find a Context File, and pick the right cohort from a `post_object` dropdown with no disambiguation if two cohorts share a similar name. "I expected to see the context files for the cohort in the cohort admin page somewhere" — the interaction direction was backward, same shape of problem the roster metabox (`Cohort_Roster`) already solved for enrollment by living on the Cohort screen instead of requiring a trip through the Users list.
-
-**Decided:** add a new admin class mirroring `Cohort_Roster`'s pattern — a metabox on the `leaderspath_cohort` edit screen listing attached context files, plus a drag-and-drop `.md`/`.txt` dropzone (reusing `Context_Uploader`'s client-side file-read logic, not duplicating it) that creates a new `leaderspath_context` post and sets `context_cohort` to the current cohort automatically — no picker, no ambiguity, since the cohort ID comes from the screen you're already on.
-
-- `context_cohort` stays editable from the Context File's own edit screen too (not made read-only) — the cohort-side dropzone becomes the primary/easy path; the original field remains a fallback for reassignment/admin cleanup, not removed.
-- The "remove" action in the new metabox **detaches only** (clears `context_cohort` back to empty) — does not trash the post, same non-destructive posture as the roster's "Remove" (unenroll, not delete-the-account).
-- **Known gap this creates, flagged by the user, not yet solved:** detaching leaves an orphaned, non-public Context File with no easy discovery path in the admin list today (it's not publicly queryable, so it won't surface in normal browsing). A workflow for finding and trashing unattached/nonpublic context files is needed at some point — not designed yet, tracked as its own follow-on task below, not bundled into this build.
-
-- [x] **Built 2026-09-17:** `admin/class-cohort-context.php` → `Cohort_Context` class. Metabox on `leaderspath_cohort` (`add_meta_boxes_leaderspath_cohort`) listing context files via `WP_Query` on `meta_key = context_cohort` / `meta_value = $cohort_id`; drag-and-drop `.txt`/`.md` zone reads the file client-side into hidden fields (title from filename, content), then a real form POST creates the `leaderspath_context` post server-side via `wp_insert_post()` + `update_field('context_cohort', $cohort_id, $context_id)` — not a client-side-only trick, since (unlike `Context_Uploader`) this has to create a brand-new post, not populate an existing one's editor. "Detach" clears `context_cohort` back to empty (does not trash the post), matching the decided-non-destructive posture. Authority check reuses `Cohort_Roster::can_manage_roster()` directly (owner/facilitator/admin) rather than reimplementing it — confirmed via code survey this was the only such check in the codebase, so this is not a duplicate. Wired into `leaderspath.php` bootstrap alongside `Context_Uploader`/`Cohort_Roster`.
-- [x] **Drag-and-drop unification, built 2026-09-17** (superseding the "not worth it yet" note originally here): user asked for an audit of every admin drag-and-drop implementation for consistency. Found three total: `Context_Uploader`, the new `Cohort_Context`, and `MD_Drop` (drag `.md` onto any TinyMCE editor/ACF WYSIWYG field). `Context_Uploader` and `Cohort_Context` were unified — `MD_Drop` was deliberately left separate, since it hooks TinyMCE/`EditorUploader` directly rather than rendering its own dropzone element, a structurally different mechanism, not an oversight or inconsistency to fix.
-  - New `assets/js/admin/dropzone.js` (real enqueued asset, matching `MD_Drop`'s convention rather than the old `wp_register_script('', '', ...)` + inline-heredoc trick both classes used before) — one `window.LeadersPathDropzone.init({dropzone, fileInput, onFileRead})` call wires drag/drop/select/size-limit/status-message behavior; each caller supplies only its own `onFileRead(content, file, showStatus)` callback. `Context_Uploader`'s callback writes into the existing post's `#content` textarea; `Cohort_Context`'s stages hidden fields ahead of a form submit — the two targets are still genuinely different, but the shared wiring around them no longer is.
-  - New `admin/trait-dropzone-markup.php` → `Dropzone_Markup` trait, `render_dropzone_styles()` — one shared CSS block (`leaderspath-dropzone`, `--active`, `__status--success/error`) both classes now emit, replacing two near-identical parallel class-name sets (`leaderspath-context-dropzone*` vs `leaderspath-cohort-context-dropzone*`).
-  - Both classes re-verified end-to-end after the refactor (`wp eval` against real cohort 348: create → `context_cohort` set → detach → cleared) — behavior unchanged, only the rendering/enqueue mechanism moved.
-  - `MD_Drop`'s own 1MB limit, lack of a `dragleave` handler, and TinyMCE-notification-based feedback (vs. a DOM status element) were confirmed as accepted, deliberate differences from the shared dropzone pattern, not bugs — not changed.
-- [x] **Verified end-to-end against real data (2026-09-17):** simulated the metabox's server-side logic via `wp eval` against real cohort 348 — created a context post, confirmed `context_cohort` set to 348, confirmed the metabox's list query (`WP_Query` on `meta_key = context_cohort`) finds it, confirmed detach clears the field back to empty. Re-run again after the drag-and-drop unification refactor with the same result. **Not yet tested through an actual browser drag-and-drop interaction** — the server-side create/list/detach logic is verified; the client-side dropzone JS itself (file read, hidden-field staging, form submit) has not been clicked through in a real browser session.
-- [ ] **Follow-on, not part of this build:** a way to find and manage orphaned (detached, non-public) Context Files from the admin list — e.g. an admin-column filter or dedicated view for "no cohort, not public." Needed once detach is in regular use; not designed yet.
-
-### Markdown/HTML conversion audit + real XSS fix (2026-09-17)
-
-User asked to audit the admin's markdown/HTML-into-WYSIWYG handling for consistency, alongside the drag-and-drop audit above. Found three genuinely separate implementations — `MD_Drop` (drag `.md` onto TinyMCE/ACF-WYSIWYG, client-side `marked.js`), server-side `class-rest-api.php::markdown_to_html()` (`league/commonmark`, chat responses only), and `chatbot.js`'s own client-side `marked.js` use (chat message rendering). Investigated whether the third was redundant with the second before touching anything — it is not: confirmed directly in `includes/class-claude-api.php:908-917` that the streaming `done` SSE event carries only `content_raw` (no `content`/HTML key at all — `markdown_to_html()` is never called anywhere in the streaming code path), so `chatbot.js`'s client-side conversion is the *only* markdown→HTML conversion happening for streamed responses, not wasted duplication. All three implementations left in place as legitimate, non-overlapping jobs.
-
-**A real, exploitable XSS gap was found in the course of this audit, not something being fixed on spec.** `chatbot.js`'s `markdownToHtml()` (called for both the streaming assistant text and, separately, the learner's own typed/pasted message) passes text through `marked.parse()` with no sanitization — confirmed directly, in a real browser, that the vendored `marked.js` build (v17.0.2, which removed the `sanitize` option upstream in v5+) passes raw HTML straight through unchanged: `marked.parse('<img src=x onerror="alert(1)">')` returns the tag untouched. Server-side `markdown_to_html()` has real defense in depth here (`html_input: strip` + `wp_kses_post()`); the client-side path had none. Since this fires on the learner's own message (`chatbot.js:741`), pasting `<img src=x onerror="...">` into the chat box would execute it immediately in the learner's own browser on send.
-
-- [x] **Fixed 2026-09-17.** First attempt (escape raw text before `marked.parse()`) worked but double-escaped fenced-code-block contents (a pasted `<script>` inside a \`\`\`html block would render as the literal string `&lt;script&gt;` instead of `<script>` as visible text) — caught before shipping, not left as a known issue, since code-snippet pasting is a realistic case for this curriculum. Corrected approach: **sanitize marked.js's output HTML afterward**, mirroring the server's own parse-then-sanitize shape, using a newly-vendored **DOMPurify v3.4.15** (`assets/js/vendor/purify.min.js`, downloaded from cdnjs and verified against its published SRI hash before vendoring — a hand-rolled sanitizer was considered and rejected, since bespoke HTML sanitizers are a well-known source of bypassable XSS fixes). `markdownToHtml()` in `assets/js/chatbot.js` now calls `marked.parse()` then `DOMPurify.sanitize()`; falls back to plain-escaped text (never unsanitized `marked.parse()` output) if DOMPurify fails to load.
-- [x] **Verified in a real browser (headless Chrome, not just Node), against the actual final vendored files and the actual final `chatbot.js` logic** — not simulated separately. Confirmed: `<img onerror>` → handler stripped, tag inert; `javascript:` link href → stripped to a plain inert `<a>`; fenced code-block contents → single-escaped, readable as literal text (cosmetic bug from the first attempt resolved); bold/links/lists → render correctly, unaffected.
-- [x] **Also fixed, smaller finding from the same audit:** `marked.umd.js` was registered under two different script handles pointing at the identical file (`marked` in `MD_Drop`, `leaderspath-marked` in `class-shortcodes.php`) — harmless but duplicative. Both now register under the single shared handle `marked`.
-- [x] **Enqueue wiring verified against the real WP install** — fired `wp_enqueue_scripts` via `wp eval` and confirmed `marked`/`dompurify`/`leaderspath-chatbot` all register with correct URLs, versions, and dependency chain (`leaderspath-chatbot` depends on both `marked` and `dompurify`, so WP loads them in the right order), and that all three files exist on disk at the paths WordPress resolves. **Not yet done:** an actual authenticated click-through of the live chatbot widget in a real browser session (login, open a real activity, paste an XSS payload into the chat box, confirm it renders inert) — the sanitization logic itself is verified (headless-Chrome test against the real vendored files) and the server-side wiring is verified (this check), but the two haven't been exercised together through a live authenticated session yet.
-- [ ] **Worth a follow-up look, not investigated this session:** whether any other frontend surface renders unsanitized user-supplied or AI-supplied markdown/HTML via `innerHTML` outside of `chatbot.js` — this audit was scoped to the markdown/WYSIWYG question the user asked, not a full XSS sweep of the plugin.
-
-### Story 4 (drag-and-drop file into chat) — Anthropic API research, real privacy-requirement conflict found (2026-09-17)
-
-Before designing anything, researched how the Claude API actually accepts document/file content, since story 4's stated requirement ("included in that instanced chat but not saved on the server") needs to be checked against what's actually possible — confirmed against `platform.claude.com`'s live Code Execution Tool docs, not assumed from training data.
-
-**Two real mechanisms exist, and neither cleanly satisfies the original ask as stated:**
-
-1. **Inline base64 `document` content block** (`{"type": "document", "source": {"type": "base64", ...}}`, sent directly in the request) — genuinely not persisted anywhere beyond normal request handling, no separate upload step. **But:** PDF only (no `.txt`/`.md`/other types via this path), and it is a plain Messages API feature — **it does not work inside the code-execution/container tool this plugin already uses for skills.** An activity with skills enabled couldn't have Claude actually read/analyze a file uploaded this way.
-2. **Files API upload + `container_upload` content block** — the only way to get a file into the sandboxed container skills run in, supports far more types (CSV, Excel, images, text, etc.). **But Anthropic's own docs state plainly: "Container data, including execution artifacts, uploaded files, and outputs, is retained for up to 30 days."** The file is not deleted after the request — it persists server-side on Anthropic's infrastructure regardless of the plugin's own stateless-conversation design.
-
-**Decided 2026-09-17:** build against option 2 (Files API upload), since it's the only path that actually works with the container/skills flow every other activity already relies on. This is a genuine, material change from the story as originally phrased ("not saved on the server") — **the privacy language for this feature needs to say "not saved on our WordPress server; uploaded to Anthropic and retained there up to 30 days per their standard container/Files API retention," not "never saved."** This mirrors exactly the same distinction the Build Requirements doc already flagged for org file uploads generally (`docs/TASKS.md` Phase 15, "Story 4... §3 storage/lifecycle requirements") — this session's research confirms it applies to *this* story specifically, not just the admin-side cohort-file-upload path.
-
-- [x] **Sign-off question resolved 2026-09-17:** user decided to proceed with implementation now; privacy-copy disclosure is a separate, non-blocking task to handle apart from the code.
-- [x] **Gating decision made 2026-09-17:** `container_upload` only works on activities that already have code execution active — there is no sandbox container at all for a skill-less activity or plain lesson Q&A (confirmed: `container`/`tools` in `class-claude-api.php`'s `send_message()`/`stream_message()` are only added when `get_skills_for_api($activity_id)` returns non-empty, `class-claude-api.php:178`). **Decided: this feature is skills-enabled-activities-only** — the drag-and-drop upload UI in the chat widget only appears/works when the current activity has `chatbot_skills` configured. Rejected alternative: falling back to plain-text injection for skill-less activities — would create two divergent code paths behind one button; not worth the complexity for what the user gets today for free anyway (pasting text directly into the chat message already works with zero new code).
-- [x] **Built and verified end-to-end 2026-09-17.** See "Story 4 built and verified" below — real upload, real skill reading real file content in a live chat, not just a 200 response.
-
-#### Code survey for the build (2026-09-17, confirmed by direct file reads — not assumed)
-
-**1. Where the request body/messages get built (`includes/class-claude-api.php`):**
-- `send_message()` (lines 139-280) calls `build_messages()` (lines 1476-1496) to construct the `messages` array. The **current user turn is pushed as a plain string**, not a content-block array: `$messages[] = [ 'role' => 'user', 'content' => $message ];` (~line 1490-1493). **This is the exact line that needs to change** — `content` needs to become an array of blocks (`[['type'=>'text','text'=>$message], ['type'=>'container_upload','file_id'=>$file_id]]`) when a file is attached, per the Anthropic docs shape confirmed in this session's research.
-- `container`/`tools` are only added (lines 177-188) when `get_skills_for_api($activity_id)` (line 167) is non-empty — this is the exact condition to reuse for gating the whole feature, both server-side (reject an upload attempt against a skill-less activity) and to decide what to tell the frontend.
-- The identical pattern (container/tools construction, plain-string user content) repeats in `stream_message()` and in the pause-turn continuation path — **any fix must be applied in all these places**, not just `send_message()`. Exact line ranges given by the code-survey subagent this session: container references around lines 563/572 (`stream_message()`) and 895/1575 (pause-turn continuation, ~890-996 and ~1548-1620).
-
-**2. Multipart upload — a working pattern already exists, just not in `Claude_API`:**
-- `Claude_API` itself is JSON-only everywhere (`wp_remote_post`/`wp_remote_get` with `wp_json_encode($body)`, one raw-curl streaming call also JSON) — no multipart code in this class today.
-- **`includes/class-skill-processor.php`'s `create_skill()`/`create_skill_version()` (lines 463-536) already do a hand-built multipart upload** to Anthropic (`build_multipart_body()`, lines 549-568 — manual boundary via `wp_generate_password(24, false)`, manual `Content-Disposition` concatenation, sent via `wp_remote_post` with `Content-Type: multipart/form-data; boundary=...`). **Reuse/adapt this exact pattern for the new Files API upload** rather than inventing a second multipart implementation.
-- No shared header-building helper exists anywhere — every call site repeats `x-api-key` (via `Settings::get_api_key()`) and `anthropic-version` inline. Follow the same inline convention rather than introducing a new abstraction for this alone.
-
-**3. REST route convention (`includes/class-rest-api.php`):**
-- Existing routes registered in `register_routes()` (lines 47-125) under namespace `leaderspath/v1`. `/chat` and `/chat/stream` both use `WP_REST_Server::CREATABLE` + `check_chat_permission()` (the full gate: login, `leaderspath_access_chatbot` capability, `X-WP-Nonce`, `Enrollment::can_user_access_activity()`). **A new `/chat/upload` (or similar) endpoint should reuse `check_chat_permission()` exactly** — same authorization posture as sending a chat message, not the lighter `check_read_permission()` used by the download endpoints.
-
-**4. `chatbot.js` fetch convention:**
-- `buildHeaders()` (lines 271-279) sets `Content-Type: application/json` + `X-WP-Nonce`; both existing POST calls (`/chat/stream` ~415-421, `/chat` ~660-664) follow `{method: 'POST', headers: buildHeaders(), body: JSON.stringify(body)}`. **A new upload call must NOT set `Content-Type`** (must let the browser set the multipart boundary automatically) and must send a `FormData` body instead of `JSON.stringify(...)` — this is a real divergence from the existing pattern, not an oversight to fix.
-
-**5. Skills/code-execution detection — no dedicated flag exists:**
-- There is no boolean "has code execution" field anywhere in ACF. Detection is always indirect: `chatbot_skills` (relationship field, `class-acf-fields.php:408-430`) non-empty, filtered through `get_skills_for_api($activity_id)` (`class-claude-api.php:1508`) which only returns skills successfully synced to Anthropic. **The frontend needs this same signal surfaced** (e.g. via `wp_localize_script` alongside the existing chatbot config) so `chatbot.js` knows whether to render the upload UI at all for the current activity — not yet designed which specific mechanism carries that boolean to the frontend.
-
-#### Design questions resolved 2026-09-17 (answered directly by the user before build)
-
-- **Route shape:** separate `/chat/upload` endpoint (multipart), returns `{file_id}`; client passes it as `attached_file_id` on the *next* `/chat`/`/chat/stream` call. Not a combined multipart chat+file endpoint — keeps `/chat`/`/chat/stream` JSON-only, unchanged.
-- **Validation policy:** server-side allowlist (MIME+extension) + 30MB size cap is authoritative; `chatbot.js` mirrors the same checks client-side for fast UX only, never trusted.
-- **UI placement:** attach button + whole-widget drop zone, in the `leaderspath_chatbot__input_row`. Hidden entirely (absent from the DOM) for skill-less activities/lesson Q&A — not visible-disabled.
-- **Privacy copy:** written and shipped inline with the control (`class-chatbot-renderer.php`'s `leaderspath_chatbot__privacy_note`), not deferred as a separate task.
-
-#### Story 4 built and verified end-to-end (2026-09-17)
-
-Built per the code survey and resolved design questions above. Files touched: `class-claude-api.php` (`build_messages()` now takes an optional `?string $attached_file_id`, emitting a `container_upload` content block when set; `send_message()`/`stream_message()` thread it through; `get_skills_for_api()` made `public`; new `upload_file()` posts to Anthropic's Files API using the same hand-built multipart pattern as `Skill_Processor`), `class-rest-api.php` (new `/chat/upload` route reusing `check_chat_permission()`, server-side MIME/extension allowlist + 30MB cap, `attached_file_id` threaded through `handle_chat()`/`handle_stream_chat()`), `class-chatbot-renderer.php` (attach button + hidden file input + privacy note, all gated on a new `has_skills` flag; `data-has-skills` attribute per widget instance), `class-shortcodes.php` (`restUploadUrl` localized), `chatbot.js` (attach button, drag-and-drop on the widget container, upload-then-attach flow, single-use `attached_file_id` cleared after each send), `leaderspath.css` (attach button, drag-over highlight, attachment chip, privacy note styles).
-
-**Real bug found and fixed during verification, not just built-and-assumed-working:** `wp_check_filetype_and_ext()` — used for server-side file-type validation — doesn't recognize `.md`/`.json` in WordPress's default mime map (confirmed directly: returns `type => false` for both, even though they're explicitly in the plugin's own allowlist). This would have silently rejected every Markdown upload, one of the most likely file types a learner would actually attach, matching this plugin's own Context File convention (`.md`/`.txt`). Fixed by passing the plugin's `ALLOWED_UPLOAD_MIME_TYPES` as the function's third argument (its documented extension-to-mime override), which WordPress itself checks before falling back to its own map — confirmed via direct `wp_check_filetype_and_ext()` calls that all 12 allowed extensions now resolve correctly and disallowed ones (`.exe`, `.php`, `.sh`) still don't.
-
-**Also corrected during verification:** the AI-authored code claimed the 30MB size cap mirrored "Anthropic's Files API limit" — checked against `platform.claude.com/docs/en/build-with-claude/files` directly and found Anthropic's actual limit is 500MB. 30MB is a deliberate, separate app-level ceiling (protecting the synchronous `wp_remote_post()` call and PHP memory from an unreasonably large single upload), not a pass-through of Anthropic's own limit — comments corrected in both `class-rest-api.php` and `chatbot.js` to say so accurately. The `upload_file()` docblock's two TODOs (multipart field name `file`, response shape `{"id": ...}`) were also confirmed correct against the same live docs fetch and closed out.
-
-**Verified end-to-end for real, against the live Anthropic API and real activities (157 "Meeting Report — No Context", skill `skill_01J9XXCv6KbHpruurb34U3nc`; 317 "Discernment Warm-Up: Cooperative Riddles", skill-less):**
-- `upload_file()` called directly: real file → real Anthropic `file_id`.
-- `send_message()` with a real `attached_file_id` (CSV): Claude's response correctly quoted the exact row count and all three names/numbers from the actual uploaded file content — not hallucinated.
-- Same test repeated with a `.md` file (the exact type the mime-map bug would have broken): correct verbatim heading and bullet list back from Claude, confirming the fix produces a working upload, not just an accepted-then-broken one.
-- Full `/chat/upload` REST route exercised via `rest_do_request()` with a real nonce/user context (not just calling the PHP method directly): 200 + `file_id` for an allowed type against a skills-enabled activity; 400 `uploads_not_supported` against the skill-less activity; 400 `invalid_file_type` for a `.exe`; 400 `file_too_large` for an oversized file; 403 `rest_forbidden` with no/invalid nonce.
-- All three real files uploaded to Anthropic during testing were deleted via the Files API afterward (no test data left on Anthropic's infrastructure).
-
-**Not done / explicitly out of scope this pass:** no PHPUnit tests added (none existed for `Claude_API`/`REST_API` to update; the task's own scope was live-API verification, not a mocked test suite — mocking Anthropic's API for this specific container/skills flow would test the mock, not the real integration risk this feature carries). `phpcs` coverage not run (not installed in this environment — `vendor/bin/phpcs` absent, no `composer install` run this session); every touched file passed `php -l` and the JS passed `node --check`.
-
-### Admin-configurable upload size cap (2026-09-17, same-day follow-up)
-
-User tested the feature live in the chat frontend and confirmed it works, then asked to make the 30MB upload cap admin-configurable (for throughput/token-spend control) instead of the hardcoded `REST_API` constant from the initial build.
-
-**Built:** new `chat_upload_max_mb` option (Settings → Claude API Configuration, next to Default Model — a mainline chat-behavior setting, not an advanced API-version knob) via the existing `register_setting()`/`add_settings_field()` pattern. Plain number input (`min=1 max=500 step=1`), not a select — there's no fixed set of "valid" values here the way there is for the API-version beta headers, just a bounded range. `sanitize_options()` clamps to [1, 500]MB (500 = Anthropic's own Files API ceiling — a configured value above that could never be reached anyway) and falls back to the 30MB default if the field is missing. New `Settings::get_chat_upload_max_bytes()` getter (bytes, matching the unit `REST_API`/`chatbot.js` actually compare against) follows the exact same pattern as the existing `get_default_model()`.
-
-`REST_API`'s hardcoded `MAX_UPLOAD_BYTES` constant was removed entirely — `handle_chat_upload()` now calls `Settings::get_chat_upload_max_bytes()` at request time, and the `file_too_large` error message reports the actual configured limit (`sprintf` with the real MB value) instead of a hardcoded "30MB" string that would have gone stale the moment an admin changed the setting. `chatbot.js`'s client-side pre-check reads the same value via a new `maxUploadBytes` key in the existing `wp_localize_script()` config (`class-shortcodes.php`), with the hardcoded 30MB kept only as a last-resort fallback if the localized config is ever missing; its rejection message is now computed from that value too, not a hardcoded string.
-
-**Verified live via WP-CLI, not just read for correctness:** confirmed `get_chat_upload_max_bytes()` returns the 30MB default out of the box; set the option to 5MB directly (same code path `sanitize_options()` writes through) and confirmed the real `/chat/upload` REST route (via `rest_do_request()` with a real nonce/user context) then rejects a 6MB file with `"The maximum size is 5MB."` and passes a 1MB file through the size gate (it fails at the next, unrelated step only because the test used a placeholder temp-file path, not because of the size check); confirmed `sanitize_options()` clamps 9999→500 and -5→1 and defaults a missing field to 30; confirmed the field's rendered HTML is well-formed and properly escaped. Setting restored to the 30MB default after testing.
-
-### Open questions carried into this phase, not yet resolved
-
-- Where does cohort-ID resolution for `/chat`/`/chat/stream` actually come from — `Cohort_Rewrite`'s query var (requires the learner to be on a `/learn/{cohort}/...` URL) or an explicit `cohort_id` param on the chat request itself? These aren't equivalent: the rewrite only resolves cohort for the lesson-page URL, not necessarily for every context a chatbot shortcode might render in.
-- Storage location for story 4's server-side note (even though the file itself is never persisted, per the privacy requirement) — is there any server-side trace at all, or is this genuinely request-scoped and gone after the response? Needs an explicit decision before building, not an assumption either way.
-- Token budget ceiling for cohort context + activity context + (eventually) session addenda stacking — the Build Requirements doc flags this as a real, undecided ceiling against the existing ~28K cached tokens per activity, not yet revisited here.
+## Discovered Tasks (open, unresolved)
+
+- [ ] Handle file outputs from code execution (deferred — not critical for MVP).
+- [ ] Handle skill deletion (delete from Anthropic when a Skill post is trashed?).
+- [ ] `docs/bricks-integration.md` documents `[lp_activity_chatbot]` as a real shortcode alias; it isn't registered anywhere in code. Either register the alias or correct the doc.
+- [ ] Verify `can_user_access_skill()`'s "unattached = admin only" behavior is actually correct, or give it the same public/cohort treatment `can_user_access_context()` got.
+- [!] **Live bug, not yet fixed:** `WooCommerce::handle_order_refunded()`/`handle_order_cancelled()` still auto-unenroll the whole cohort on any refund/cancellation, for any reason — `cohort_access_closed` (the manual toggle) exists now, so the fix (removing the auto-unenroll call) is unblocked. Real-world exposure is lower now that the WC purchase path is deprecated, but the dangerous behavior is still live in the code.
+- [ ] A workflow for finding/managing orphaned (detached, non-cohort, non-public) Context Files from the admin list — needed once cohort-context detach sees regular use; not designed yet.
+- [ ] Mark `class-woocommerce.php` as deprecated in its own docblock/header comment, so a future reader doesn't assume it's the live purchase path.
+- [ ] Decide whether to clean up the one real WC product ("Core Cohort Package") and its test-era cohorts, or leave them as historical/dormant data.
+- [ ] `add_to_cohort( $user_id, $cohort_id )` — the mixed-cohort join primitive — and the mixed-cohort form itself remain unbuilt (see Phase 14).
+- [ ] Story 5's learner-visible context/skills panel UI (the lesson-page wireframe's toggle panel) is not yet built, though its data layer is now correct and cohort-aware (see Phase 15).
+- [ ] PHPUnit/Jest test harness — `tests/` is still the unused scaffold (`test-sample.php`). Every feature to date has been verified live against real data instead; a real automated harness remains a separate, not-yet-started body of work.
+- [ ] Phase 10 loose ends: verify `X-Accel-Buffering: no` on the real production Nginx config; client-side stream connection-timeout/heartbeat detection; `docs/claude-api-integration.md` streaming-architecture doc update; a deliberate slow-network manual test pass.
+- [ ] Build sample Bricks templates for Activity/Lesson/Course CPTs and verify the chatbot widget renders correctly inside each context — never done, no blocker, just not yet exercised.
+- [ ] Admin column label/rendering consistency audit across all CPTs (date formatting, count display, dashicon fallbacks) — never done beyond what the Cohort roster/admin-UI pass specifically needed.
+- [ ] `wp leaderspath post update --field=...`'s known limitation: only handles scalar values and comma-separated ID lists, can't set a repeater's nested sub-fields (`lesson_objectives`, `lesson_references`) in one flag. Documented in the command's own docblock; still true.
+- [ ] Whether any frontend surface besides `chatbot.js` renders unsanitized user-supplied or AI-supplied markdown/HTML via `innerHTML` — the XSS fix (see above) was scoped to the one audit that found it, not a full sweep of the plugin.
 
 ---
 
 ## Decisions Log
+
+Chronological, most architecturally-significant decisions across the plugin's history. Divi-5-specific rows (module architecture, VB patterns, Style::add() format, etc.) were removed in the 2026-09-18 compaction — that architecture no longer exists in the codebase; full detail if ever needed: `git show d55f20d:docs/TASKS.md`.
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-01-29 | CPTs for Context Files and Skills | WordPress revision history, familiar admin UI, ACF integration |
 | 2026-01-29 | No conversation persistence | Fresh start on page reload enables experimentation |
 | 2026-01-29 | Single plugin-wide API key | Simpler management, billing at org level |
-| 2026-01-29 | No rate limiting initially | Paid service, trust users until abuse occurs |
-| 2026-01-29 | Streaming optional | Nice UX but adds complexity |
-| 2026-01-29 | Standard chat bubble UI | Recognizable pattern, configurable colors |
-| 2026-01-29 | Inside-out development order | Data layer first, then admin, then frontend |
-| 2026-01-29 | ACF fields via PHP API | Programmatic registration for version control |
-| 2026-01-29 | Skills as ZIP packages | Agent Skills Spec format |
 | 2026-02-03 | Facilitated cohort learning model | Facilitator-led, not self-paced |
 | 2026-02-03 | Dual chatbot modes | Activity Sandbox (demonstrate behaviors) vs Lesson Q&A (helpful assistant) |
 | 2026-02-03 | Privacy-first Q&A bot | No logging, no access restrictions |
 | 2026-02-09 | Nomenclature: Course→Lesson, Cohort→Course | Lesson = atomic teaching unit, Course = curriculum |
 | 2026-02-10 | Remove all Divi 5 module code | Incomplete research led to antipatterns; clean rebuild needed |
-| 2026-02-10 | Cohort as product checkbox | Checkbox next to Virtual/Downloadable (like wc-donation-platform), not custom product type |
-| 2026-02-10 | ACF Pro for Cohort fields | Same UI patterns as all other LeadersPath field groups |
-| 2026-02-10 | User meta for enrollment | Simple serialized array; sufficient for MVP volumes |
-| 2026-02-10 | Cohort phase derived from dates | No manual status field; auto-computed from start/end dates |
-| 2026-02-10 | Multiple courses per cohort | Supports bundled curricula / certificate programs |
-| 2026-02-10 | Graceful WC degradation | Plugin works without WC; enrollment not enforced |
 | 2026-02-11 | Prerequisites at Course level, not Activity | Courses are the right abstraction for sequencing; activities are experiments within lessons |
 | 2026-02-11 | All ACF relationship fields return IDs | Consistent `return_format => 'id'` across all relationship fields |
-| 2026-02-11 | Cohort prereq aggregation via helper method | `get_cohort_prerequisites()` collects from linked courses, de-duplicates, excludes self |
-| 2026-02-11 | Divi 5 frontend is 100% PHP | No React/hydration on frontend; VB is 100% React; use vanilla JS for interactive modules |
-| 2026-02-11 | No Interactivity API for Divi modules | Divi bypasses WP block pipeline; use `wp_enqueue_script` for frontend JS instead |
-| 2026-02-11 | Keep shared PHP traits | PostIdHelper, CustomCssTrait, ModuleClassnamesTrait validated against official patterns |
-| 2026-02-11 | Query ACF directly in render_callback | Don't use Divi dynamic content tokens for complex fields (repeaters, relationships) |
-| 2026-02-11 | Shared DOM structure, separate content | PHP is authoritative renderer; VB matches CSS classes for styling parity, uses placeholder/sample content |
-| 2026-02-11 | Single Chatbot module for Activity + Lesson | Module detects CPT and reads appropriate `chatbot_*` or `lesson_chatbot_*` fields |
-| 2026-02-11 | WYSIWYG fields use native Divi Text module | Facilitator Guide + Learner Overview use ACF dynamic content, not custom modules |
-| 2026-02-11 | CSS classes use underscores not BEM hyphens | Official example uses `moduleClassName__element` with underscores; matches Divi's `moduleClassName` |
-| 2026-02-11 | ModuleRegistration, not register_block_type() | Official pattern uses DependencyInterface + ModuleRegistration::register_module() |
-| 2026-02-11 | Module::render() wraps all PHP output | Official pattern uses Module::render() + $elements->render() + HTMLUtility::render() |
-| 2026-02-11 | Per-module trait files | Official pattern: 5 separate trait files per module (Render, Classnames, Styles, CustomCss, ScriptData) |
-| 2026-02-11 | Bottom-up module architecture | Layer 1: pure core renderer (ACF + semantic HTML), Layer 2: SCSS (no layout), Layer 3: Divi wrapper, Layer 4: settings |
-| 2026-02-11 | Semantic HTML over div/span | `<dl>`/`<dt>`/`<dd>` for metadata, `<ol>` for ordered content, `<ul>`+`<article>` for cards |
-| 2026-02-11 | Divi Layout panel for flex/grid | Layout on child attribute, not module. SCSS only resets; display generated by PHP + VB inline style |
-| 2026-02-11 | ElementComponents namespace | `ET\Builder\Packages\Module\Options\Element\ElementComponents` (NOT `Layout\Components`) |
-| 2026-02-11 | Style::add() 2D array format | Raw declarations in styles array must be `[['selector'=>..,'declaration'=>..]]`; 1D silently filtered |
-| 2026-02-11 | VB defaults via module.json `default` | `module-default-render-attributes.json` only for frontend PHP; VB reads attribute `"default"` in module.json |
-| 2026-02-11 | group-items items need `attrName` | Each item in group-items needs `"attrName": "content.innerContent"` to bind to correct attr path |
-| 2026-02-11 | CSS variable reset in SCSS | Parent `.et_flex_module` sets `--flex-direction: column` etc; child SCSS must reset explicitly |
-| 2026-02-11 | Number badge uses Blurb imageIcon pattern | Child attribute with `styleProps` + `decoration` (background, border, spacing, boxShadow) in Design tab group |
-| 2026-02-12 | Server-side markdown rendering | `league/commonmark` GFM converter in PHP; frontend JS stays lean — just displays pre-rendered HTML |
-| 2026-02-12 | `content_raw` field in chat response | REST API returns both HTML (`content`) and raw markdown (`content_raw`) so JS can send raw text back in conversation history |
-| 2026-02-12 | No streaming for chatbot MVP | Standard request/response with typing indicator; streaming (SSE) deferred to enhancement phase |
-| 2026-02-12 | Chatbot frontend as vanilla JS IIFE | Same pattern as `context-modal.js`; config via `wp_localize_script()`, no React/framework dependency |
-| 2026-02-12 | Use Divi built-in icon library | Custom icons had sizing issues in module picker; Divi's built-in `divi/module-*` icons render correctly at all sizes |
-| 2026-02-16 | Remove parent reverse-lookup columns | Relationships are many-to-many (multiple courses can include same lesson); parent lists would be variable-length noise |
-| 2026-02-16 | Remove chatbot column from Activity list | Chatbot model/enabled is an implementation detail; facilitator cares about content identity, not API settings |
-| 2026-02-16 | Slug column on all CPTs | Slug IS the filesystem identifier (e.g., `lsn001-skills-framework`); primary cross-reference between curriculum registry and WordPress |
+| 2026-02-12 | Server-side markdown rendering (non-streaming) | `league/commonmark` GFM converter in PHP; frontend JS stays lean for the sync path |
+| 2026-02-12 | Chatbot frontend as vanilla JS IIFE | Config via `wp_localize_script()`, no React/framework dependency |
+| 2026-02-16 | Slug column on all CPTs | Slug IS the filesystem identifier; primary cross-reference between curriculum registry and WordPress |
 | 2026-02-16 | Context File editor: text-only, no TinyMCE | Context files are markdown/plain text; visual editor mangles whitespace and formatting |
-| 2026-02-16 | Context File drag-and-drop import | Client-side FileReader reads text, sets post_content directly; no server upload needed for text content |
-| 2026-02-16 | Markdown drop for all TinyMCE editors | Client-side marked.js converts MD→HTML on drop; capture-phase handlers defeat WP EditorUploader + TinyMCE paste plugin |
-| 2026-02-16 | SSE streaming for chatbot (Phase 10) | `wp_remote_post` timeouts on long-running skills; streaming via `curl` + SSE keeps connection alive |
-| 2026-02-16 | Parallel streaming endpoint `/chat/stream` | New route, not parameter toggle — different response format (SSE vs JSON) warrants separate endpoint |
-| 2026-02-16 | Client-side markdown for streaming | During stream: raw text; on complete: `marked.js` converts to HTML. Server-side `league/commonmark` stays for non-streaming fallback |
-| 2026-02-16 | Keep non-streaming fallback | Synchronous endpoint remains for browser compat + simplicity; streaming is opt-in via feature detection |
-| 2026-02-17 | Real-time markdown rendering | `requestAnimationFrame`-throttled `markdownToHtml()` during streaming eliminates jarring raw→formatted reformat. Incomplete markdown syntax is acceptable mid-stream |
-| 2026-02-17 | Intercept non-SSE error responses in PHP | Anthropic HTTP errors return raw JSON (not SSE). PHP `handle_stream_chunk()` detects `http_error` state and accumulates error body instead of forwarding raw JSON to browser |
-| 2026-02-17 | User messages rendered as markdown | User input passed through `markdownToHtml()` for display, supporting pasted markdown content |
-| 2026-02-17 | Server-side retry for streaming | PHP retries transient errors (500/502/503/529, curl failures) with 1s/3s backoff, max 2 retries. Sends `retry` SSE event so JS can show status. Non-retryable errors (4xx) fail immediately |
-| 2026-02-17 | Client-side retry for sync path | JS retries same HTTP codes with same delays. "Try again" button on final failure lets user manually retry |
+| 2026-02-16 | SSE streaming for chatbot | `wp_remote_post` timeouts on long-running skills; streaming via `curl` + SSE keeps connection alive |
+| 2026-02-16 | Keep non-streaming fallback permanently | Synchronous endpoint remains for browser compat + simplicity, not a deprecated path |
+| 2026-02-17 | Client-side markdown for streaming, server-side for sync | During stream: client `marked.js`; on complete/sync: server `league/commonmark`. Both are real, non-overlapping jobs (confirmed 2026-09-17: streaming's `done` event carries no server-rendered HTML at all) |
+| 2026-02-17 | Server-side + client-side retry for transient API errors | PHP retries 500/502/503/529 + curl failures (1s/3s backoff, max 2); JS mirrors this for the sync path with a "Try again" button on final failure |
 | 2026-02-17 | References on Lesson, not Activity | References are reading materials that support the lesson as a teaching unit; activities are action-oriented sandbox experiments |
-| 2026-02-17 | Web tools always-on with skills | `web_search` + `web_fetch` auto-included when activity has skills; no per-activity toggle. Container sandbox has zero internet — server-side tools are the only web access path |
-| 2026-02-17 | No web tools for lesson Q&A | Lesson chatbot is a simple Q&A helper, no skills, no web access needed |
-| 2026-05-03 | Migrated off Divi to builder-agnostic shortcodes | Elegant Themes' support and stability problems made Divi a poor long-term home. Shortcodes work in Bricks, Gutenberg, classic editor, theme PHP — no lock-in |
-| 2026-05-03 | Renderers as the canonical layer, shortcodes as a wrapper | `includes/renderers/` is pure PHP and reusable from theme code. Shortcodes are a thin layer that adds parameter parsing and template-mode token replacement |
-| 2026-05-03 | Template-mode `{token}` syntax with `do_shortcode` first | List shortcodes accept inner content as a per-item template. Inner content runs through `do_shortcode()` before token replacement so nested shortcodes work |
-| 2026-05-03 | Hand-ported plain CSS, no build step | SCSS used only nesting and a few CSS variable resets. Hand-port produced cleaner output than compiled SCSS would; no npm dependency at any point |
-| 2026-05-03 | Drop Theme Builder post-ID resolution logic | Bricks doesn't override WP globals the way Divi's Theme Builder does. Plain `get_queried_object_id()` → `get_the_ID()` is sufficient |
-| 2026-05-16 | Plugin no longer renders CPT display markup | Bricks Builder reads ACF natively via query loops and dynamic data. Shipping our own renderers duplicated work and expanded the attack surface for no gain. The chatbot widget stays as a shortcode because it bundles JS, asset wiring, REST nonce, and dual-mode ACF detection |
-| 2026-05-16 | Keep `Chatbot_Renderer` as the canonical chatbot output | Theme code can call it directly (`\LeadersPath\Renderers\Chatbot_Renderer::render()`); the shortcode is a thin wrapper that handles attribute parsing and asset enqueueing |
-| 2026-09-16 | Context Files can be cohort-scoped (`context_cohort` field, Model A — field on the file) | Org-specific material needs a confidentiality boundary; the starter module and session-2-onward library are cohort-owned from creation, not public content that later gets replaced (`Research/LeadersPath Cohort Build Requirements.md` §1–2) |
-| 2026-09-16 | Facilitators get real create/edit access to Context Files, but never `edit_others_`/`read_private_` | Full CPT grant would let a facilitator open any cohort's confidential file by post ID via WP's own primitive caps. Cross-cohort access to a co-facilitator's/admin's file in *their own* cohort is instead a per-post `map_meta_cap` exception, which must also actively deny (`do_not_allow`) — WP core's `read_post` falls back to the generic `read` cap for published posts on this publicly-queryable CPT otherwise |
-| 2026-09-16 | `/learn/{cohort}/lesson/{lesson}/` as an additive, not replacing, URL | The lesson page pre-renders every activity's chatbot config in one server-side pass (no per-activity AJAX) — cohort context must be known before that render starts, so it has to live in the URL. `/lesson/{slug}/` stays the canonical CPT permalink for admin/preview |
-| 2026-09-16 | **Corrected same day:** cohort is a purchase-time instance (new `leaderspath_cohort` CPT, created on order completion), not the WC product itself | Product must be a reusable catalog offering sellable to many orgs; today's `cohort_facilitator`/`cohort_start_date`/etc. living on the product only works if one product = one cohort = sold once. Everything built earlier the same session assuming `context_cohort`/roster/the `/learn/` rewrite point at `post_type: product` needs repointing at the new CPT — the logic shape is right, only the post type is wrong |
-| 2026-09-16 | Cohort seat count is a WC Variable Product attribute (team-size variation → price), not `stock_quantity` on a Simple product | Cohorts are sold as fixed-price team packages, not a per-seat quantity multiplier. Checked against the one real cohort product: stock management was never actually turned on, so this isn't a migration away from working logic, just an unbuilt piece. Applies to the *product* (pricing); the *roster* (who fills the seats) lives on the new per-instance CPT, not the product |
-| 2026-09-16 | `leaderspath_cohort` created early (order commitment, not `completed`), carries its own payment-status field synced from order-status changes | PO/invoice-based purchasing means a real gap between commitment and cleared payment — prep work (facilitator assignment, scheduling) needs to start in that window, not wait for `completed`. Payment status is a separate axis from `get_cohort_phase()`'s pedagogical phase, updated on an ongoing basis as the order progresses, not written once at creation |
-| 2026-09-16 | Commerce seam carries two event kinds across the WC boundary: one-time creation, ongoing status-change | Async/PO payment means the cohort-order relationship isn't a single trigger-and-forget — status needs to flow to the CPT as it changes. Both should present the same plain-value shape to `Enrollment`/cohort-creation logic regardless of what WC hook fired or which commerce backend is behind the adapter |
-| 2026-09-16 | **Corrects live shipped behavior:** refund/cancellation no longer auto-revokes cohort access; access closure becomes a manual `cohort_access_closed` toggle, checked live ahead of the enrollment chain | A refund issued after a cohort completed (service recovery, a dispute unrelated to content) shouldn't retroactively and silently cut off a team that already went through the material. Access and billing are different questions; conflating them was a real bug in `handle_order_refunded()`/`handle_order_cancelled()`, not a design choice worth keeping. A live-checked override (vs. bulk `unenroll_user()`) keeps the toggle fully and instantly reversible with no re-enrollment work |
-| 2026-09-16 | Roster invites use stock WordPress account-creation + password-reset, not a custom invite-token system | Creating the account and enrolling immediately at invite time (not deferred to first click) means "pending" is just native WP user state (`user_registered`, no login yet) — no bespoke invite-status lifecycle to build. Only the email *content* is customized (via `wp_new_user_notification_email`/`retrieve_password_message`), not the underlying link/token mechanism, since the stock reset email has no cohort context and reads oddly as a stranger's first message from the site |
-| 2026-09-16 | New `cohort_owner` field, default determined by product type: single-org → purchaser (reassignable, also fills a seat); mixed-org → facilitator | Purchaser auto-enrollment is existing correct behavior for single-org, but two things were previously implicit: whether the purchaser's seat counts against the package total (yes), and who has durable roster-management authority (now explicit and reassignable, not "whoever the order's `customer_id` was"). For mixed cohorts, "owner = purchaser" doesn't generalize — each participant only bought their own seat, none has standing over anyone else's, so the facilitator is the only party who can own the roster there |
-| 2026-09-16 | Cohort creation is one PHP method (`Enrollment::create_cohort()`), with REST/WP-CLI/MCP as thin callers alongside the WC order hook | Reframes the earlier "pluggable commerce seam" from "an interface WooCommerce implements" to "a first-class plugin operation WC is one caller of." Makes cohort setup usable from WS Form, WP-CLI, or a future MCP tool with zero risk of drift between how a cohort gets created depending on which caller triggered it — same "plugin owns logic, thin adapters call it" pattern already used for the Bricks `lp_*` functions |
-| 2026-09-16 | Built the `leaderspath_cohort` CPT, split `WooCommerce` into `Enrollment` (commerce-agnostic) + a slimmed `WooCommerce` (order/product hooks only), and implemented `create_cohort()`/`set_cohort_payment_status()` | Executes the design decided earlier the same session. Sequenced the class split *before* writing `create_cohort()` so the new method never briefly lived on the class it was about to move off of |
-| 2026-09-16 | `Cohort_Rewrite`'s `force_404()` fixed to rely solely on `parse_request`'s `query_vars['error'] = '404'`, not a deferred `wp`-action `set_404()`/`status_header()` call | Found by testing over real HTTP (not by inspection) that the deferred version was actively wrong — by the time the `wp` action fires, `WP_Query` has already run against the emptied query_vars and can resolve to something else, producing a 200 with the wrong page's content instead of a 404 |
-| 2026-09-16 | Cohort roster invites are admin-side only this pass; WC My Account self-service is a deferred follow-up | Proves the core mechanics (`invite_to_cohort()`, account creation, seat cap) on a simple, controllable surface before building the more involved front-end rendering context. Decided explicitly, not a scope cut discovered mid-build |
-| 2026-09-16 | Cohort admin field groups split into 4 (Details/Scheduling/Curriculum in main column, Status in sidebar) instead of one flat 11-field list | Matches this plugin's existing convention (Activity/Skill already separate concerns visually) rather than a new pattern. Status fields (payment, access-closed, source order) get the sidebar treatment WordPress itself gives Publish/status boxes — glanceable state, not routine-edit content |
-| 2026-09-16 | `leaderspath_cohort` placed in the admin menu right after Dashboard, before Courses | Facilitators think top-down: which cohort, then which courses, then lesson-level detail. Cohorts and Courses are both "container" concepts distinct from the more granular Lesson/Activity/Context/Skill types |
-| 2026-09-16 | **Real bug found by testing, inherited from before this session's `Enrollment` split:** `get_cohort_enrollees()` queried user meta for a quoted-string serialization (`"{id}"`) but `enroll_user()` pushes a genuine PHP int, which serializes as `i:{id};` — the query never matched, silently returning 0 enrollees for every cohort ever. This broke every seat-cap check and every admin "Enrollees" column reading since the split; fixed to match the actual serialization format | Found only because the roster build actually exercised `get_cohort_enrollees()` against real enrollment data for the first time — neither `create_cohort()`'s earlier tests nor casual inspection would have caught it, since the owner-enrollment path never needed to *count* enrollees, only enroll one |
-| 2026-09-16 | `all_items` label standardized to "All {Name}" across every CPT; Cohort's dashboard/menu ordering matched to the real planned order | Cohort's registration had matched Context/Skill's inconsistent bare-plural pattern rather than the majority ("All Activities" etc.) convention Activity/Lesson/Course already used. Dashboard order was never updated when the menu order changed, so it still reflected the pre-Cohort layout with Cohorts appended last |
-| 2026-09-16 | `MEMORY.md` restructured to one line per index entry with detail moved to topic files, and ~80 lines of dead Divi 5 documentation removed | The memory file had grown past its own stated convention and was flagged for compaction; the Divi 5 content documented an architecture already fully deleted from the codebase (per this same file's own "Migrated off Divi" note), so detailed docs for it served no purpose going forward |
-| 2026-09-16 | Built real WP-CLI commands (`wp leaderspath cohort create/invite`, `wp leaderspath post create/update/get/list`) instead of continuing to hand-write one-off `wp eval-file` scripts for test data | The CLI commands wrap the exact same `Enrollment` methods every other caller uses — no separate logic path — and were already named as an intended caller in the earlier "cohort creation as a first-class, multi-caller operation" design. `post get` in particular replaces the pattern of writing a bespoke audit script every time a content gap needs checking |
-| 2026-09-16 | Cohort Org/Mixed stay real WooCommerce Simple/Variable product types (a "Cohort Kind" select, not a genuine custom product type) | Researched the real cost of a custom `WC_Product` subclass entry in the type dropdown: `is_type()` compares a literal `product_type` string, and correctly passing every `is_type('variable')`/`is_type('simple')` check elsewhere in WC core or third-party code (as WooCommerce Subscriptions itself does extensively for its own custom types) is real, ongoing compatibility work, not a one-time class registration. Decided against it after seeing that cost, not before |
-| 2026-09-16 | Requested-start-date needs a genuine 5-hook WooCommerce front-end field chain (render/validate/cart-data/display/order-line-item), not an ACF admin field | The original field lived on the product's admin edit screen while its own docblock claimed it was "captured at checkout" — a real implementation bug against the stated intent. Researched the correct no-plugin mechanism before building rather than assuming a third-party add-on was required |
-| 2026-09-16 | **WooCommerce dropped as the cohort purchase mechanism — WS Form Pro + Stripe Elements instead, superseding the design above from the same session.** | One cohort-package product, custom checkout fields, and a CRM sync don't need WC's cart/product/order machinery. WS Form Pro's Stripe Elements add-on (one-time payments, priced E-Commerce fields) and the already-active `ws-form-fluentcrm` bridge cover the whole flow with a form-builder UI instead of custom hooks. `Enrollment::create_cohort()` is unaffected — this is exactly the scenario the multi-caller design anticipated, WS Form just becomes the new caller. Traded away deliberately: WC's order-management UI, judged unnecessary for one product sold to one kind of buyer |
-| 2026-09-17 | WS Form integration goes through the "Run WordPress Hook" action (a real `do_action($form, $submit)`), calling `Enrollment::create_cohort()` directly — not WS Form's Post Manager add-on's own direct field-to-ACF mapping | Post Manager proved working (a real test form already creates a `leaderspath_cohort` post + maps a field to an ACF key with zero PHP) but would silently skip everything `create_cohort()` does beyond setting fields — owner resolution, course copying, auto-enrollment. Keeping the canonical method as the only creation path, same principle as every other caller |
-| 2026-09-17 | Fields are looked up by label (`wsf_field_get_objects($form, false, 'Label')`), not hardcoded field ID, using WS Form's own first-party function — confirmed by reading the actual installed plugin source, not just docs | Resolves the field-ID-fragility question in favor of the more resilient option: a relabeled field breaks loudly (lookup returns nothing) rather than a stale numeric ID silently pointing at the wrong field after a form edit |
-| 2026-09-17 | Payment-lifecycle mapping resolved from a real test transaction, not further research: `ecommerce_status === 'completed'` on the submission is the signal; `create_cohort()` + `set_cohort_payment_status('paid')` can collapse into one hook call for synchronous Stripe Elements payments | A real test submission showed Stripe Elements' payment and Post Manager's post-creation both completing synchronously within one submission — no async gap for this payment method. Caveat logged: some Stripe payment methods confirm asynchronously and would need the second event/webhook the original two-event design assumed; not yet verified whether that's in scope |
-| 2026-09-17 | Form 3's leftover Post Manager action (from earlier Stripe-only testing) fired during the real test transaction and created a stray `leaderspath_cohort` post (#343) — deleted, confirmed not part of the real design | User confirmed explicitly: Post Manager was left configured from prior testing, not intentional; the agreed "Run WordPress Hook" → `create_cohort()` integration stands unchanged |
-| 2026-09-17 | Payment method is a buyer choice (Credit Card vs. Purchase Order) on the form itself; WS Form's own conditional-action logic gates whether Stripe Elements' action runs at all — closes the async-payment caveat entirely rather than handling it | There is no webhook/delayed-confirmation path to build: Credit Card resolves synchronously within the submission (already proven), and Purchase Order never triggers a charge through this form at all. The hook only ever reads which path was taken and sets `pending_payment`/`paid` accordingly |
-| 2026-09-17 | PO submissions capture only the same org/cohort info as Credit Card — no PO-number or amount field, no further automation | Decided explicitly: the admin team handles the actual PO/invoice exchange offline, then manually flips `cohort_payment_status` on the Cohort edit screen (the field and override already exist) — matches "no need to automate there" |
-| 2026-09-17 | Real cohort-purchase form built (form 7, "LeadersPath Cohort Purchase") and tested against order processing + FluentCRM, in a different session — inspected here, not assumed | Confirms the design against real, tested WS Form configuration rather than the abstract plan. Found the CC/PO branch is implemented as section-visibility toggling, not an action-level condition as the docs-researched pattern suggested — same practical outcome, different WS Form mechanism, corrected in the record |
-| 2026-09-17 | Cohort Kind (Organization/Mixed) resolved at the form level — a separate form will be built for mixed cohorts — not as a field within one shared form | Matches how form 7 was actually built (org-cohort only); simpler for the handler (each form's hook registration is inherently scoped to one kind, no branching needed inside one handler) |
-| 2026-09-17 | Pre-cohort intake/discovery data (AI stance, hard-no's, participant list, etc.) is explicitly out of the plugin's scope — no ACF field, no schema, nothing built for it | User decided directly: "WSForm will handle that and it will change over time. It's outside your scope." The plugin's job is precisely the hook capturing the named fields `create_cohort()` needs, nothing broader |
-| 2026-09-17 | Seat count parsed from the Cohort Package label's range stores the **upper bound** ("4-5 seats" → 5); "More than 7 seats — Contact Us" skips cohort creation entirely | **Superseded same day** — see the row below: the field was reconfigured to submit a real Seats-column number directly, so there's no label to parse anymore. Kept for the historical record of the original (never-shipped) design intent |
-| 2026-09-17 | `WS_Form_Integration` (`includes/class-ws-form-integration.php`) registers hook tag `leaderspath_ws_form_cohort_submitted`, deferred to `plugins_loaded` guarded on `function_exists('wsf_field_get_objects')` — same pattern as the existing `WooCommerce` deferred registration | Keeps the plugin working with WS Form Pro inactive (no fatal on missing functions) while still self-registering automatically, matching the existing WC-integration precedent rather than inventing a new bootstrap pattern |
-| 2026-09-17 | `Enrollment::find_or_create_user_by_email()` extracted as a shared primitive between `invite_to_cohort()` and the new WS Form handler | The WS Form handler needs to resolve/create the owner *before* a cohort exists (unlike `invite_to_cohort()`, which enrolls into an existing one) — extracting avoided duplicating account-creation logic across both callers |
-| 2026-09-17 | First live submission surfaced a real bug: WS Form choice-type fields (`select`/`price_select`) submit as a PHP array of selected label(s), not a scalar — the handler's `(string)` cast on that array silently produced the literal string `"Array"`, causing cohort #345's wrong seat count | Confirmed from `WS_Form_Submit::db_get_submit_meta()` in the real installed WS Form Pro source, not assumed. Fixed in `get_field_value()`: unwrap an array value (take its first element) before casting to string — applies to every choice-type field the handler reads, not just seats |
-| 2026-09-17 | "Cohort Package" reconfigured with 3 real columns (Label/Price/Seats), submitting the Seats column value directly (a real number); seat-count label-parsing (`parse_seats_from_package_label()`) removed entirely | Field's own config (`select_price_field_value` → Seats column) makes the number authoritative and explicit rather than inferred via regex from label text. The "More than 7 seats — Contact Us" row's empty Seats value is now the (more robust) signal for skipping cohort creation, replacing the old label-prefix string match |
-| 2026-09-17 | Form 7 gained a real "Course" field (select, submitting a `leaderspath_course` post ID directly); `create_cohort()` gained a `course_id` arg taking precedence over the older `offering_id`-copy-from-product path | Real, tested form config, not a hypothetical hidden field or filtered selector — the simplest mechanism (one course choice per purchase) that matches how form 7 actually works today. `offering_id` stays for `WooCommerce`'s continued use |
-| 2026-09-17 | `cohort_source_order_id` split into `cohort_source_record_id` (renamed, commerce-agnostic) + `cohort_source_url` (a direct admin link) — later reworked further, see below | The old field/label was WC-specific ("Source Order") even though a WS Form submission ID was now being stored there; user asked for the originating record to be traceable via more than a bare number, no matter which backend created the cohort |
-| 2026-09-17 | Cohort type (org vs. mixed) is a new `leaderspath_cohort_type` taxonomy on the Cohort CPT (terms `organization`/`mixed-group`), not an ACF field and not a `Course Type` taxonomy on Courses as first proposed | User corrected the design mid-session: `create_cohort()` only ever runs on the organization-purchase path; a mixed cohort is a standing post individual buyers *join*, not one created per-purchase — so `create_cohort()` always tags `organization` unconditionally. A taxonomy (vs. a field) also lets Bricks query/filter cohorts by type directly |
-| 2026-09-17 | `cohort_source_url` reworked again: moved out of ACF entirely into plain post meta, with a `message`-type ACF field rendering it as a real `<a class="button">` via `acf/render_field` | User: "Rather than showing the link to the source record, let's make it a button." A raw readonly URL field isn't a button; moving the value to post meta and rendering the button dynamically was simpler than layering custom JS/CSS onto a real ACF field value |
-| 2026-09-16 | One cohort-package per order enforced via WC's native "Sold Individually" checkbox — zero plugin code | Checked before assuming custom cart-validation code was needed; WC's built-in mechanism covers today's reality (one cohort product) exactly. Revisit with a small validation snippet only once a second cohort-type product exists, since "Sold Individually" only guards the same product against itself |
-| 2026-09-16 | `pending_payment` vs. `paid` gating resolved field-by-field: facilitator, roster invites, and curriculum preview all proceed on commitment alone; only chatbot/sandbox access requires `paid` | Organizing principle: everything above the chatbot is preparation/logistics, costs nothing to allow early, and is the whole point of creating the cohort before payment clears. The sandbox is the actual paid deliverable, so it's the one gate that protects revenue |
-| 2026-09-16 | `cohort_courses` is copied from the purchased product/variation at creation, not a discretionary post-creation "assignment" step — but remains editable afterward | The product already fixes which courses a package bundles, so there's no pending-assignment window; copying at creation is what makes the curriculum preview meaningful even before the roster fills or payment clears. Staying editable (vs. permanently fixed) trades a UX wrinkle — the preview an org sees could later change — for facilitator flexibility to adjust for an org-specific reason |
-| 2026-09-17 | API Version Configuration fields (`beta_*`/`tool_*`) are now `<select>` fields with curated known-valid options + a "Custom…" fallback, not plain text | User: "we should make this a select, not a text field with checks to fix if vals go stale." Anthropic has no discovery endpoint for valid values, so the list is curated from this plugin's own history (`git log` on `class-settings.php`), not live-fetched |
-| 2026-09-17 | A real connectivity check ("Test Code Execution / Web Tools Settings") was added for the code-execution/web-tools group only, not all seven fields | `beta_skills`/`beta_files` only apply once a real skill_id is referenced in a `container` — no cheap, side-effect-free way to exercise them. User: "I'm fine if we don't add testing" for those two, once the tradeoff was explained |
-| 2026-09-17 | The real fix for "values going stale" is a CLAUDE.md maintenance note with lookup URLs, not automated detection | A connectivity test can only catch "this value now actively errors," not "this value still works but a newer one exists" — the latter needs a human checking Anthropic's docs. User asked for this explicitly: "make a note in our CLAUDE.md that these need to be checked and updated by Claude Code regularly with a lookup URL to use" |
-| 2026-09-17 | Building the connectivity test surfaced a real, separate bug: Claude Haiku 4.5 rejects `web_search`/`web_fetch` outright, but the plugin added those tools unconditionally whenever skills were present, regardless of model | Confirmed directly against the real API (not docs): Haiku 4.5 returns "does not support programmatic tool calling," Sonnet 5 accepts the identical request. `chatbot_model` lets any facilitator pick Haiku for any activity, skills included — a real, reachable misconfiguration (though no shipped activity is currently affected) |
-| 2026-09-17 | Fixed by excluding `web_search`/`web_fetch` (not by blocking Haiku+skills at the field level) — new `Claude_API::build_skills_tools()` shared by all four request-building call sites | User: "Fix it now" when asked whether to fix immediately or log as a discovered task. Keeping `code_execution` available for Haiku+skills preserves the actually-supported capability rather than disabling skills entirely for that model choice |
-
----
-
-## Phase 15: API Version Configuration UI + Haiku Tool-Calling Fix (2026-09-17)
-
-**Trigger:** user feedback that the "API Version Configuration" settings fields (`beta_code_execution`, `beta_skills`, `beta_files`, `beta_web_tools`, `tool_code_execution`, `tool_web_search`, `tool_web_fetch`) were plain text inputs with no guidance, even though I ("you selected the current settings somehow") had picked specific values from documentation research with no way for an admin to know if they'd since gone stale.
-
-### Select + Custom UI (`admin/class-settings.php`)
-
-All seven fields now render via a shared `render_version_select_field()` helper: a `<select>` of curated known-valid values (`Settings::KNOWN_VERSION_VALUES`, built from this plugin's own `git log` — the actual prior/current values that have shipped here, not invented) plus a `Custom…` option that reveals a plain text input, synced via a small inline script. The `<select>` itself carries no `name` attribute — only the text input does — so `sanitize_options()`/form submission needed no changes at all.
-
-### Connectivity test, honestly scoped
-
-`Claude_API::test_api_versions()` (called via a new "Test Code Execution / Web Tools Settings" button, mirroring the existing "Test Connection" pattern) makes one real, zero-cost (`max_tokens: 0`, same trick as `warm_cache()`) request using the *currently configured* `beta_code_execution`/`beta_web_tools`/tool-type values, confirming they still work. **Deliberately does not cover `beta_skills`/`beta_files`** — exercising those requires a real skill_id in a `container`, which has no cheap side-effect-free test path; the UI says so plainly rather than implying a false sense of coverage. **Also deliberately does not detect staleness** — a value that still works but has since been superseded by something better-supported returns 200 just like the current one would; per the user's own framing ("we need to ensure that the values are valid, up-to-date, and the best ones to use"), that's a documentation-currency problem, not something a connectivity check can solve — closed instead via the new CLAUDE.md maintenance note (see below).
-
-### Real bug found while building the test: Haiku rejects web tools
-
-Testing against `haiku` (the cheapest model, my first instinct for a throwaway test) failed with a genuine API error: `"claude-haiku-4-5-20251001 does not support programmatic tool calling. The following tools have allowed_callers that require it: web_search, web_fetch."` Confirmed `sonnet` accepts the identical request. This isn't a settings-values problem — it's a **latent bug** in the plugin itself: every real request-building call site (`send_message()`, `stream_message()`, `warm_cache()`) added `web_search`/`web_fetch` unconditionally whenever an activity had skills configured, regardless of which model (`chatbot_model`, a free per-activity select including Haiku) was chosen. Checked real data: no shipped activity currently pairs Haiku with skills (all three skill-enabled activities use Sonnet), so this was reachable but not yet triggered in production.
-
-**Fixed, not just logged** (user: "Fix it now"): new `Claude_API::build_skills_tools( string $model_id ): array` is the single place all four call sites (the three above, plus `test_api_versions()`) build their `tools` array. It always includes `code_execution`; it omits `web_search`/`web_fetch` when `$model_id` starts with a prefix in the new `NO_PROGRAMMATIC_TOOL_CALLING_PREFIXES` constant (currently `claude-haiku`). Verified directly against the real API both ways: Sonnet still gets all three tools (200, unchanged behavior); Haiku + `code_execution` alone now succeeds (200) where it previously would have failed outright.
-
-### CLAUDE.md maintenance note added
-
-Per the user's explicit request, `CLAUDE.md`'s "Claude API Architecture" section gained an "API Version Configuration — maintenance cadence" subsection: the seven values can go silently stale, Claude Code sessions working in this repo should check them against Anthropic's docs periodically (not just reactively), with the real lookup URLs (beta headers, code execution, skills, web search, web fetch docs) and pointers to exactly which constants to update (`Settings::KNOWN_VERSION_VALUES`/`get_defaults()`, `Claude_API::NO_PROGRAMMATIC_TOOL_CALLING_PREFIXES`). Also caught and fixed a live example of the same drift while there: the "Required API Features" code block in CLAUDE.md still showed `code_execution_20250825` (the actual current default is `code_execution_20260521`) — genericized the block to point at Settings as the source of truth instead of hardcoding a snapshot that will itself go stale again.
-
-**Not done / explicitly out of scope:** no automated staleness detection was built (see above — a documentation problem, not a code problem); `beta_skills`/`beta_files` have no connectivity test; the seven `KNOWN_VERSION_VALUES` lists only include values actually confirmed from this repo's own git history, not a speculative full changelog of every version Anthropic has ever shipped.
-
----
-
-## Chatbot: copy-to-clipboard on message bubbles (2026-09-17)
-
-**Trigger:** user generated a long meeting report in an activity chat and found it painful to select and copy manually. Asked for a copy icon/button on message bubbles (right-click capture was considered and rejected — overriding the native context menu is worse UX/accessibility than a discoverable button, and native right-click-to-copy already works today for anyone who prefers it).
-
-**Built:** every message bubble (`createMessage()` in `chatbot.js`, both `user` and `assistant` roles) now renders a small copy button as a flex sibling of the bubble content — not absolutely positioned overlapping text. The button copies the message's original plain-text/markdown source, not the rendered HTML, so pasting into an email or doc doesn't carry stray markup: the raw text is stashed on the message element (`_lpRawText`, read at click time, not closed over) and set from `data.content_raw` (sync assistant responses), the original `message` string (user messages, before `markdownToHtml()`), and `accumulatedText` (kept current on every streaming render pass). Copy uses `navigator.clipboard.writeText()` with an `execCommand('copy')` fallback for non-secure contexts/older browsers; either path swaps the icon to a checkmark for 1.5s as confirmation.
-
-**Streaming-specific behavior:** the copy button on an in-progress assistant message is hidden (`leaderspath_chatbot__message--streaming` modifier, added at bubble creation and removed at both stream-completion points — the normal `.then()` and the `.catch()` error/abort path) since copying partial, still-arriving text isn't useful. An aborted stream still reveals the button afterward on whatever partial text survived, matching how the rest of the UI already treats a stopped stream as "final, not broken."
-
-**Real bug found and fixed by the user's own live testing, not caught by static review:** the first CSS pass added `flex-direction: row-reverse` to `.leaderspath_chatbot__message--user` (to place the copy button left of the right-aligned user bubble, reading before it) without also flipping `justify-content` from its existing `flex-end`. Reversing the flex direction also reverses which end of the main axis `flex-end` packs against, so the combination silently broke right-alignment for user messages, pushing them to the left instead — confirmed as a real regression only because the user actually looked at it in the browser (not caught by `node --check`, class-name cross-referencing, or any other static check run beforehand). Fixed by changing `justify-content` to `flex-start` for the reversed row, then confirmed the fix in a standalone Playwright screenshot test matching the real DOM order (bubble element appended before the button element) before asking the user to re-verify — the layout only makes sense once `flex-direction` and `justify-content` are reasoned about together, not independently.
-
-**Also attempted and abandoned this session:** a full authenticated-browser Playwright check of the real `/learn/{cohort}/lesson/{slug}/` page (installing Playwright + Chromium into the scratchpad, forging real WordPress auth-cookie values via `wp_generate_auth_cookie()` for a real enrolled user). The cohort/lesson rewrite route didn't resolve to the expected Bricks-rendered lesson page in this environment (returned a bare CPT archive instead) — an existing routing/template-resolution question unrelated to this feature, not chased further. Correctly redirected to asking the user to verify directly in their own working browser session instead of continuing to debug unrelated infrastructure to manufacture an automated check.
-
-**Files touched:** `assets/js/chatbot.js` (`createMessage()` signature gained an optional `rawText` param; new `createCopyButton()`/`copyText()`/`fallbackCopy()`; three call-site updates to pass raw text; streaming-class toggle at both stream-end points), `assets/css/leaderspath.css` (`.leaderspath_chatbot__copy`/`--done`, `.leaderspath_chatbot__message--streaming`, flex layout fix on `.leaderspath_chatbot__message--user`).
-
-**User-verified in the live chat UI (not just code review):** icon placement and look, copy correctness for both user and assistant messages, the checkmark feedback, and the right-alignment fix after the flex-direction correction.
-
----
-
-## Security fix: cross-user/cross-activity file_id replay in chat uploads (2026-09-17)
-
-**Trigger:** user directly asked, after the file-upload feature (Story 4) shipped, whether uploaded files could be accessible across different users' chats — a genuinely good question that surfaced a real gap the original build missed.
-
-**The gap:** Anthropic's Files API is workspace-scoped, not per-user or per-conversation — their own docs state this explicitly and warn against the exact mistake this plugin made: *"Never accept file_id values from end users or other untrusted sources: a user-supplied file_id would let one user of your application read content that another user uploaded."* `/chat/upload` returned a bare `file_id` to the client with nothing recording who it belonged to, and `/chat`/`/chat/stream`'s `attached_file_id` param accepted any string and passed it straight to `container_upload` with zero ownership check. Any authenticated learner who obtained another learner's `file_id` (browser devtools, a shared machine, a captured network request) could replay it into their own chat request — including against a *different* activity — and Claude would read that other learner's file content. This wasn't a theoretical concern; it was confirmed as a real, working exploit path before the fix (see verification below).
-
-**Fixed, both parts confirmed together as the user's explicit choice, not independently:**
-
-1. **Server-side ownership map.** `REST_API::record_upload_ownership()` sets a `leaderspath_upload_{file_id}` transient (`{user_id, activity_id}`, 1 hour TTL) on successful upload. `verify_upload_ownership()` checks it before `attached_file_id` is ever passed to `Claude_API::send_message()`/`stream_message()` — rejects with `403 file_ownership_mismatch` on any mismatch (wrong user, wrong activity, or no record at all, e.g. after expiry or a previous use). Wired into both `handle_activity_chat()` (sync) and `handle_stream_chat()` (SSE — the check runs *before* `start_sse_output()`, since a REST error response isn't possible once SSE headers are sent).
-2. **Delete-after-use.** New `Claude_API::delete_file()` (`DELETE /v1/files/{file_id}`, best-effort/fire-and-forget) is called immediately after a successful attached-file chat turn, alongside clearing the now-spent ownership transient. Shrinks the file's real retention window from Anthropic's standard "up to 30 days" down to effectively one request — a meaningfully better privacy posture than relying on their default expiry alone.
-
-**Verified end-to-end against the real API and real users, not just read for correctness:**
-- Uploaded a file as user 1 for activity 157; confirmed the ownership transient recorded `{user_id: 1, activity_id: 157}`.
-- **Real attack simulated and blocked:** a second real user (17, "dana.lee" — confirmed via `Enrollment::can_user_access_activity()` and the `leaderspath_access_chatbot` capability to *legitimately* pass every other permission gate on activity 157) attempted to use user 1's `file_id` → `403 file_ownership_mismatch`. This confirms the block is the new ownership check specifically, not a false positive from an unrelated permission failure.
-- **Cross-activity replay also blocked:** user 1 attempting to reuse their own `file_id` against a *different* skills-enabled activity (140) → same `403`.
-- **Legitimate path still works:** correct user + correct activity → `200`, Claude correctly read the real uploaded content back.
-- **Delete-after-use confirmed against Anthropic directly:** a file-metadata GET for the same `file_id` immediately after its legitimate use returned `404` — genuinely deleted from Anthropic's infrastructure, not just forgotten locally. The ownership transient was also confirmed cleared (`false`).
-- **Second line of defense:** attempting to replay the same `file_id` again after deletion is rejected by the (already-cleared) ownership check before ever reaching Anthropic's now-irrelevant 404 — defense in depth, not reliance on a single check.
-
-**Files touched:** `includes/class-rest-api.php` (`record_upload_ownership()`/`verify_upload_ownership()`, ownership check + delete-after-use wired into both `handle_activity_chat()` and `handle_stream_chat()`), `includes/class-claude-api.php` (new `delete_file()`).
-
----
-
-## Fix: Cohort missing standard post-type editing (slug, content, excerpt, featured image) and role-scoped admin access (2026-09-18)
-
-**Trigger:** user tried to view a real cohort's lesson page and found it impossible — the Cohorts admin list has no "View" row action, and the Edit Cohort screen shows no slug field. First-pass fix (below, superseded same day) added `'slug'` support only and a custom "Preview First Lesson" row action — **the user corrected this directly**: Cohort should behave like any other standard WP post type (title, content, excerpt, slug, featured image — matching Activity/Lesson/Course exactly), with a real native "View" action pointing at the Cohort's own page, not an invented pattern found nowhere else in WordPress. Separately, the user reversed the underlying `publicly_queryable => false` design decision itself: "someone who isn't part of the cohort should be able to see something about it since they might get a link from a friend or colleague" — what a visitor without access actually sees is a template/conditional-logic question for later, not a reason to keep the CPT non-queryable.
-
-**Superseded first pass (kept here for the record, not the current design):** added `'slug'` only to `supports`, kept `publicly_queryable => false`, and added a custom `Admin_Columns::cohort_row_actions()` row action linking to the cohort's *first reachable lesson* rather than the cohort itself. Removed entirely once the user corrected the approach.
-
-**What actually shipped:**
-1. **`Post_Types::register_cohort()`** now matches Activity/Lesson/Course's registration args exactly: `public`/`publicly_queryable` → `true` (was `false`), `rewrite` → `['slug' => 'cohort', 'with_front' => false]` (was `false`), `query_var` → `true`, `supports` → `['title', 'editor', 'thumbnail', 'excerpt', 'slug', 'revisions', 'custom-fields']` (was `['title', 'revisions', 'custom-fields']` — missing `editor`/`thumbnail`/`excerpt`/`slug` entirely, an oversight from the original WooCommerce-to-CPT port, not a deliberate restriction). `has_archive` stays `false` — a single cohort's own page is fine to reach directly or via a shared link; a public listing of every organization's cohorts is a different, unrequested thing. WordPress's native "View" row action now appears on its own, with no custom code — exactly the standard pattern the user asked for.
-2. **`Post_Types::CLASSIC_EDITOR_POST_TYPES`** gained `leaderspath_cohort` (user asked directly, mid-build: "other CPTs have disable Gutenberg... I'd like that for Cohort as well"). Matters more now that Cohort has real `editor` support — without this it would be the only ACF-driven LeadersPath CPT dropped into the block editor instead of the classic editor every sibling CPT uses.
-3. **Facilitator role gained real Cohort access, scoped to their own assignment** — previously `get_facilitator_caps()` granted **zero** Cohort capabilities at all (facilitators couldn't see the Cohorts menu or edit a cohort, full stop). Added the exact same narrow-grant + `map_meta_cap`-exception pattern already used for Context Files (`grant_facilitator_own_cohort_context()`): baseline `edit_leaderspath_cohort`/`read_leaderspath_cohort`/`edit_leaderspath_cohorts`/`delete_leaderspath_cohort` on the role, deliberately withholding `edit_others_`/`read_private_`/`delete_others_leaderspath_cohorts` (which would let a facilitator open any cohort by post ID), and a new `Capabilities::grant_facilitator_own_cohort()` filter granting per-post access only when `cohort_facilitator` (ACF) matches the current user, hard-denying otherwise (necessary because Cohort is now publicly queryable, so WordPress's own generic-`read` fallback would otherwise let any logged-in user through — same reasoning as the Context File filter). A dedicated `maybe_add_facilitator_cohort_caps()` upgrade-path backfill was needed since the existing `maybe_add_facilitator_context_caps()` is gated on a capability every existing facilitator role already has, so it wouldn't have re-run for the newly-added Cohort caps.
-4. **`Admin_Columns::filter_cohorts_by_facilitator()`** (`pre_get_posts`) scopes the Cohorts admin list table by role: administrators/editors (who hold `edit_others_posts`) see every cohort, unchanged; a facilitator sees only cohort(s) where `cohort_facilitator` matches them (`post__in`, or `[0]` — WordPress's own "match nothing" idiom — if they have none assigned yet). Explicitly documented as UX-only narrowing, not the security boundary — that's #3's `map_meta_cap` filter, which independently blocks direct access by URL/post ID even if this query filter were bypassed.
-5. **Editor's existing full Cohort access left unchanged** — the user explicitly chose not to revisit that grant in this pass, only to add the new facilitator scoping alongside it.
-
-**Verified directly against real data, not just read for correctness:**
-- `public`/`publicly_queryable` confirmed `true`; a real permalink (`/cohort/make-good-cohort-3/`) now resolves — confirmed both via `get_permalink()` and a real `curl` HTTP 200 after `wp rewrite flush`.
-- `post_type_supports()` confirmed `true` for `editor`/`thumbnail`/`excerpt`/`slug`; `use_block_editor_for_post_type('leaderspath_cohort')` confirmed `false`.
-- Ran the actual capability upgrade path (`Capabilities::maybe_add_caps()`) and confirmed the facilitator role gained exactly the intended baseline caps, with the withheld ones (`edit_others_`, `read_private_`) confirmed still absent.
-- **Real facilitator/cohort boundary tested with real (throwaway) accounts**: a facilitator assigned to one cohort could `edit_post`/`read_post` their own cohort (`true`) and was correctly denied on a different real cohort assigned to someone else (`false`) — the actual security check, not just capability presence.
-- `filter_cohorts_by_facilitator()` tested directly against a real `WP_Query` with `is_admin()`/`is_main_query()` forced true (not reachable from WP-CLI's default context, confirmed the guard correctly no-ops outside true wp-admin requests first): a facilitator's query correctly got `post__in` restricted to only their assigned cohort; an admin's query was correctly left untouched (bypass fires first, independent of whether that admin also happens to facilitate cohorts); a facilitator with no assigned cohorts correctly got `post__in => [0]`.
-- Test throwaway facilitator accounts and their cohort-field test assignment were cleaned up afterward (test data, confirmed disposable by the user).
-
-**Files touched:** `includes/class-post-types.php` (CPT registration args, `CLASSIC_EDITOR_POST_TYPES`), `includes/class-capabilities.php` (`get_facilitator_caps()`, `grant_facilitator_own_cohort()`, `maybe_add_facilitator_cohort_caps()`), `admin/class-admin-columns.php` (`filter_cohorts_by_facilitator()`, replacing the removed superseded-approach row-action code).
-
----
-
-## Phase 15, Stories 2 & 3 built: cohort context injection + "Disable All Context" toggle (2026-09-18)
-
-**Trigger:** user asked directly to pick these back up — the two remaining unbuilt items from the original Phase 15 five-story design (`docs/TASKS.md`, "Phase 15: Cohort-Scoped Context Files"): story 2 (a cohort's own context files loading into its learners' activity chats) and story 3 (a per-activity toggle to disable all context, including cohort context, for the "blindfolded" baseline/control curriculum exercise).
-
-**The real design problem, resolved before writing code:** the chat REST endpoints had no `cohort_id` param at all, and nothing anywhere consumed `Cohort_Rewrite::get_current_cohort_id()` — confirmed by grep before starting, not assumed. The lesson page renders every activity's chatbot config in one server-side pass with no per-activity request where a cohort could be threaded in later (`Cohort_Rewrite`'s own docblock), so the cohort ID has to be baked into the widget's rendered HTML at render time and carried forward by the client on every subsequent chat request from that widget — the same `data-*`-attribute pattern already used for `data-has-skills` (Story 4, the file-upload feature).
-
-**Built:**
-1. **`Enrollment::get_cohort_context_files( int $cohort_id ): array`** — new public method, the reverse lookup of the existing `can_user_access_context()` (given a cohort, list its published context files). Deliberately kept separate from `Admin_Cohort_Context`'s similarly-named private method rather than consolidated: that one returns full `WP_Post` objects including drafts for an admin management screen; this one returns published-only IDs for the chat system prompt — different contracts, not incidental duplication.
-2. **`Chatbot_Renderer`**: `get_data()` now includes `cohort_id` (from `Cohort_Rewrite::get_current_cohort_id()`, 0 if the page wasn't reached via `/learn/{cohort}/lesson/{lesson}/`), and `build_html()` emits it as `data-cohort-id` on the widget container.
-3. **`chatbot.js`**: reads `data-cohort-id` once per widget instance, sends it as `cohort_id` on every `/chat`, `/chat/stream`, and `/chat/warm` request from that widget (the warm-cache request specifically needs it to match the real chat request's prefix byte-for-byte, or the cache write is wasted — see `Claude_API::warm_cache()`'s own docblock on this).
-4. **`REST_API::resolve_cohort_id()`** — the actual security boundary. `cohort_id` is a client-supplied param (`get_chat_args()`), but it's never trusted on its own: this re-verifies the requesting user is genuinely enrolled in that exact cohort (`Enrollment::is_user_enrolled()`, admin/editor bypass matching every other enrollment check in this class) before it's used for anything, silently zeroing it out (not erroring — a stale/foreign cohort ID just means no cohort context loads, not a broken chat) on any mismatch. Without this, a learner could pass an arbitrary `cohort_id` and read a different organization's confidential context — the identical class of risk the file-upload ownership check (`record_upload_ownership()`) closed earlier this session for `attached_file_id`. Wired into `handle_chat()`/`handle_activity_chat()`, `handle_stream_chat()`, and `handle_warm()`.
-5. **`Claude_API::build_system_prompt()`** gained a `$cohort_id` parameter (threaded through `send_message()`, `stream_message()`, `warm_cache()`): when non-zero, cohort context files are merged (de-duplicated) with the activity's own `chatbot_context_files` under the same "Reference Materials" heading — additive, not a replacement.
-6. **New ACF field `chatbot_disable_context`** (true/false, Activity's AI Sandbox Configuration, right before Context Files) — the story 3 baseline/control toggle. When on, `build_system_prompt()` skips **both** context sources together (the activity's own selection AND any cohort context) — an all-or-nothing blank-slate mode for the "blindfolded" curriculum exercise (`LeadersPath Core Cohort Curriculum Design.md` §7), deliberately scoped to reference material only: system prompt and skills are unaffected.
-
-**Verified end-to-end against the live Anthropic API with real (throwaway) data, not just unit-level function checks:**
-- Created a real Context File scoped to cohort 348 with a distinctive marker string; confirmed `build_system_prompt(157, 0)` excludes it, `build_system_prompt(157, 348)` includes it alongside the activity's own existing context file (both present, correctly merged), and `build_system_prompt(157, 348)` with `chatbot_disable_context = true` excludes everything (no "Reference Materials" section at all).
-- **Real cross-cohort leak attempt, blocked, confirmed via a genuine live chat response**: a real (throwaway) user legitimately enrolled in a *different* cohort (330, which independently grants real access to activity 157 — so they pass every other permission gate normally) sent a real chat message claiming `cohort_id=348` (not their cohort). `resolve_cohort_id()` correctly zeroed it to 0; the actual Claude API response was confirmed to contain none of the injected marker content — not a mocked check, a real conversation that could have leaked another organization's confidential material and didn't.
-- **Real legitimate case, confirmed via a genuine live chat response**: the real enrolled user (cohort 348) asked Claude directly about the injected content and received a response correctly quoting it back — full pipeline (render → resolve → verify → inject → API → response) working, not just individually passing checks.
-- Confirmed `build_system_prompt()` produces byte-identical output for identical inputs (a correctness requirement for `warm_cache()`'s "prefix must byte-match the real request" cache-reuse contract — both call the same method with the same arguments, so this is structurally guaranteed, not coincidental).
-- All test data (context file, test user, test enrollment) cleaned up afterward; `chatbot_disable_context` confirmed reset to its default (`false`) on the real test activity.
-
-**Files touched:** `includes/class-enrollment.php` (`get_cohort_context_files()`), `includes/renderers/class-chatbot-renderer.php` (`cohort_id` in `get_data()`/`build_html()`), `assets/js/chatbot.js` (`cohortId` read + sent on chat/stream/warm requests), `includes/class-rest-api.php` (`cohort_id` arg, `resolve_cohort_id()`, wired into all three handlers), `includes/class-claude-api.php` (`build_system_prompt()` cohort/disable-context logic, threaded through `send_message()`/`stream_message()`/`warm_cache()`), `includes/class-acf-fields.php` (`chatbot_disable_context` field).
-
-### Follow-up: Activity's "Context Files" picker now excludes cohort-scoped files (2026-09-18)
-
-**Trigger:** user asked directly, right after the cohort-context-injection work above shipped — now that a cohort's own context loads into chat automatically, could the Activity's `chatbot_context_files` picker be filtered to show only public (unscoped) files? A real, well-timed follow-up: with auto-injection live, manually picking one specific cohort's confidential file into a shared activity's own field was never correct (it would apply that cohort's material to every other cohort reaching the same activity) — worth closing immediately rather than leaving as a latent footgun.
-
-**Decided directly:** public-only for every role, no admin/editor exception — unlike the existing Cohort-picker filter (`filter_context_cohort_choices()`), which does bypass for admins/editors. There's no legitimate reason for anyone to pick a cohort-scoped file into this specific field now that the automatic injection exists.
-
-**Built:** new `ACF_Fields::filter_activity_context_files_public_only()`, hooked to `acf/fields/relationship/query/key=field_chatbot_context_files` — adds a `context_cohort NOT EXISTS` meta_query condition (same idiom already used in `Admin_Columns`' cohort-context-files filter and `Enrollment::can_user_access_context()`'s "no cohort = public" logic), merged with `AND` alongside whatever meta_query ACF/other filters may already have set, rather than overwriting it.
-
-**Verified against ACF's own real query-building code, not a simulation of it** — first attempt called `acf_field_relationship::get_ajax_query()` with an empty options array, which doesn't populate `field_key` and so never matches the `key=` hook variant; found and corrected before treating the (falsely passing... actually falsely *failing*, the file still appeared) result as real. Retested with the correct `field_key` option — the exact same code path the browser's live relationship-field search AJAX call uses:
-- A real test public context file appeared in results; a real test cohort-348-scoped context file did not; every other pre-existing real context file appeared unaffected (no over-filtering).
-- Confirmed the filter only narrows *new* picker search results, not already-saved data: temporarily setting a cohort-scoped file as an existing selection on a real activity showed it's still stored correctly (`get_field()` returns it), so an already-attached file from before this fix isn't silently stripped — only blocked from being newly added going forward.
-- All test data cleaned up; activity 157 confirmed restored to its original `chatbot_context_files` value.
-
-**Files touched:** `includes/class-acf-fields.php` (`filter_activity_context_files_public_only()`, registered in the constructor).
+| 2026-02-17 | Web tools always-on with skills, never for lesson Q&A | Container sandbox has zero internet — server-side tools are the only web access path; lesson Q&A is a simple helper needing neither |
+| 2026-05-03 | Migrated off Divi to builder-agnostic shortcodes | Elegant Themes' support/stability problems made Divi a poor long-term home; shortcodes work in any builder |
+| 2026-05-16 | Plugin no longer renders CPT display markup | Bricks reads ACF natively via query loops/dynamic data; the chatbot widget stays a shortcode because it bundles JS/asset wiring/nonce/dual-mode detection |
+| 2026-09-16 | Context Files can be cohort-scoped (`context_cohort` field on the file) | Org-specific material needs a confidentiality boundary; cohort-owned from creation, not public content later replaced |
+| 2026-09-16 | Facilitators get real Context File access, but never `edit_others_`/`read_private_` | A full CPT grant would let a facilitator open any cohort's confidential file by post ID; per-post `map_meta_cap` exception grants only their own cohort's files and actively denies the rest |
+| 2026-09-16 | `/learn/{cohort}/lesson/{lesson}/` as an additive, not replacing, URL | The lesson page pre-renders every activity's chatbot config in one server-side pass — cohort context must be known before that render starts |
+| 2026-09-16 | **Corrected same day:** cohort is a purchase-time instance (`leaderspath_cohort` CPT), not the WC product itself | The product must be a reusable catalog offering sellable to many orgs; per-cohort fields living on the product only worked if one product = one cohort = sold once |
+| 2026-09-16 | `cohort_access_closed` is a manual toggle, checked live — refund/cancellation no longer auto-revokes access | A refund issued for reasons unrelated to content access shouldn't retroactively cut off a team that already completed the material; access and billing are different questions |
+| 2026-09-16 | Roster invites use stock WordPress account-creation + password-reset, not a custom invite-token system | No bespoke invite-status lifecycle to build; only the email *content* is customized, not the underlying link/token mechanism |
+| 2026-09-16 | Cohort creation is one PHP method (`Enrollment::create_cohort()`), with every other caller (WS Form, WP-CLI) as a thin wrapper | Zero risk of drift in how a cohort gets created depending on which caller triggered it |
+| 2026-09-16 | Real bug found by testing: `get_cohort_enrollees()`'s serialization-format mismatch silently returned 0 enrollees for every cohort | Found only because the roster build actually exercised the method against real enrollment data for the first time |
+| 2026-09-16 | Cohort Org/Mixed stay real WooCommerce Simple/Variable product types, not a genuine custom product type | A custom type's `is_type()` compatibility auditing is real, ongoing work (as WooCommerce Subscriptions' own codebase demonstrates) — decided against after seeing that cost, not before. **Later superseded entirely** once WooCommerce was dropped as the purchase mechanism |
+| 2026-09-16 | **WooCommerce dropped as the cohort purchase mechanism — WS Form Pro + Stripe Elements instead** | One product, custom fields, one CRM sync didn't need WC's cart/product/order machinery; `Enrollment::create_cohort()` unaffected, WS Form just became the new caller |
+| 2026-09-17 | WS Form integration goes through "Run WordPress Hook" calling `Enrollment::create_cohort()` directly, not Post Manager's own field-mapping | Post Manager would silently skip owner resolution, course copying, and auto-enrollment — the canonical method stays the only creation path |
+| 2026-09-17 | WS Form fields are looked up by label, not hardcoded field ID, using WS Form's own first-party function | A relabeled field breaks loudly (lookup returns nothing) rather than a stale ID silently pointing at the wrong field |
+| 2026-09-17 | Cohort type (org vs. mixed) is a `leaderspath_cohort_type` taxonomy, resolved at the form level | `create_cohort()` only ever runs on the organization-purchase path; a mixed cohort is a standing post individual buyers join, not one created per purchase |
+| 2026-09-17 | API Version Configuration fields are curated `<select>` dropdowns + a "Custom…" fallback, not plain text | Anthropic has no discovery endpoint for valid values; the list is curated from this plugin's own shipped history |
+| 2026-09-17 | Fixed by excluding `web_search`/`web_fetch` for Haiku (not by blocking Haiku+skills at the field level) | Keeps `code_execution` available for Haiku+skills rather than disabling skills entirely for that model choice |
+| 2026-09-17 | Chat file uploads go through Anthropic's Files API + `container_upload`, skills-enabled activities only | The only mechanism that works inside the code-execution container every skills-enabled activity already relies on; a skill-less activity has no container to upload into |
+| 2026-09-17 | Chat-uploaded files get a short-lived ownership check + are deleted from Anthropic immediately after use | Anthropic's Files API is workspace-scoped, not per-user — closes a real, confirmed-exploitable cross-user file-access gap and shrinks retention from their standard 30 days to one request |
+| 2026-09-18 | `leaderspath_cohort` becomes `publicly_queryable`, with a full standard-post-type `supports` array | A cohort needs its own public landing page reachable via a shared link; confidential fields stay protected by ACF/REST access, not by hiding the post from queries |
+| 2026-09-18 | Cohort's own context files auto-inject into its learners' activity chats, with a real enrollment check before use | Manually re-attaching a cohort's files to every activity it reaches doesn't scale, and the URL-only cohort-resolution path (no per-request cohort param existed before this) needed a security boundary, not just wiring |
+| 2026-09-18 | Activity's own `chatbot_context_files` picker excludes cohort-scoped files entirely, no admin/editor exception | With auto-injection live, manually picking one cohort's confidential file into a shared activity would apply it to every other cohort reaching that same activity |
 
 ---
 
@@ -1279,5 +205,7 @@ wp eval-file wp-content/plugins/leaderspath/bin/create-test-data.php
 |----------|--------|-------------|
 | `/leaderspath/v1/chat` | POST | Send message — synchronous JSON response |
 | `/leaderspath/v1/chat/stream` | POST | Send message — SSE streaming response |
+| `/leaderspath/v1/chat/warm` | POST | Fire-and-forget prompt-cache pre-warm |
+| `/leaderspath/v1/chat/upload` | POST | Upload a file for the next chat turn (skills-enabled activities only) |
 | `/leaderspath/v1/context/{id}/download` | GET | Download context file content |
 | `/leaderspath/v1/skills/{id}/download` | GET | Download skill package metadata |
