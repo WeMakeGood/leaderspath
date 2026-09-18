@@ -1231,6 +1231,21 @@ Per the user's explicit request, `CLAUDE.md`'s "Claude API Architecture" section
 
 **Files touched:** `includes/class-enrollment.php` (`get_cohort_context_files()`), `includes/renderers/class-chatbot-renderer.php` (`cohort_id` in `get_data()`/`build_html()`), `assets/js/chatbot.js` (`cohortId` read + sent on chat/stream/warm requests), `includes/class-rest-api.php` (`cohort_id` arg, `resolve_cohort_id()`, wired into all three handlers), `includes/class-claude-api.php` (`build_system_prompt()` cohort/disable-context logic, threaded through `send_message()`/`stream_message()`/`warm_cache()`), `includes/class-acf-fields.php` (`chatbot_disable_context` field).
 
+### Follow-up: Activity's "Context Files" picker now excludes cohort-scoped files (2026-09-18)
+
+**Trigger:** user asked directly, right after the cohort-context-injection work above shipped — now that a cohort's own context loads into chat automatically, could the Activity's `chatbot_context_files` picker be filtered to show only public (unscoped) files? A real, well-timed follow-up: with auto-injection live, manually picking one specific cohort's confidential file into a shared activity's own field was never correct (it would apply that cohort's material to every other cohort reaching the same activity) — worth closing immediately rather than leaving as a latent footgun.
+
+**Decided directly:** public-only for every role, no admin/editor exception — unlike the existing Cohort-picker filter (`filter_context_cohort_choices()`), which does bypass for admins/editors. There's no legitimate reason for anyone to pick a cohort-scoped file into this specific field now that the automatic injection exists.
+
+**Built:** new `ACF_Fields::filter_activity_context_files_public_only()`, hooked to `acf/fields/relationship/query/key=field_chatbot_context_files` — adds a `context_cohort NOT EXISTS` meta_query condition (same idiom already used in `Admin_Columns`' cohort-context-files filter and `Enrollment::can_user_access_context()`'s "no cohort = public" logic), merged with `AND` alongside whatever meta_query ACF/other filters may already have set, rather than overwriting it.
+
+**Verified against ACF's own real query-building code, not a simulation of it** — first attempt called `acf_field_relationship::get_ajax_query()` with an empty options array, which doesn't populate `field_key` and so never matches the `key=` hook variant; found and corrected before treating the (falsely passing... actually falsely *failing*, the file still appeared) result as real. Retested with the correct `field_key` option — the exact same code path the browser's live relationship-field search AJAX call uses:
+- A real test public context file appeared in results; a real test cohort-348-scoped context file did not; every other pre-existing real context file appeared unaffected (no over-filtering).
+- Confirmed the filter only narrows *new* picker search results, not already-saved data: temporarily setting a cohort-scoped file as an existing selection on a real activity showed it's still stored correctly (`get_field()` returns it), so an already-attached file from before this fix isn't silently stripped — only blocked from being newly added going forward.
+- All test data cleaned up; activity 157 confirmed restored to its original `chatbot_context_files` value.
+
+**Files touched:** `includes/class-acf-fields.php` (`filter_activity_context_files_public_only()`, registered in the constructor).
+
 ---
 
 ## Quick Reference

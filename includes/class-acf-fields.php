@@ -62,6 +62,21 @@ class ACF_Fields {
 			'acf/render_field/key=field_cohort_instance_source_link',
 			[ $this, 'render_cohort_source_link_button' ]
 		);
+
+		// Restrict the Activity's "Context Files" picker to public
+		// (unscoped) files only — every cohort-scoped file, for every role,
+		// no admin/editor exception. This field attaches material to an
+		// activity shared by every cohort that reaches it; a cohort's own
+		// context now loads automatically (Claude_API::build_system_prompt(),
+		// via the cohort_id resolved at chat time) instead of being manually
+		// picked here — picking one specific cohort's confidential file into
+		// a shared activity was never correct, even before that existed.
+		add_filter(
+			'acf/fields/relationship/query/key=field_chatbot_context_files',
+			[ $this, 'filter_activity_context_files_public_only' ],
+			10,
+			3
+		);
 	}
 
 	/**
@@ -162,6 +177,41 @@ class ACF_Fields {
 
 		// No assigned cohort → empty picker, not "every cohort" (0 never matches).
 		$args['post__in'] = ! empty( $cohort_ids ) ? $cohort_ids : [ 0 ];
+
+		return $args;
+	}
+
+	/**
+	 * Restrict the Activity's "Context Files" relationship picker to public
+	 * (unscoped `context_cohort`) files only — for every role, no
+	 * admin/editor exception.
+	 *
+	 * A cohort's own context now loads into the chat automatically (see
+	 * Claude_API::build_system_prompt(), resolved from the cohort_id baked
+	 * into the widget at render time) — this field is only ever meant for
+	 * curriculum content shared across every cohort that reaches the
+	 * activity. Picking one specific cohort's confidential file in here
+	 * would apply it to every other cohort using the same activity too,
+	 * which was never a legitimate use of this field.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param array      $args  WP_Query args ACF will run.
+	 * @param array      $field The field being queried.
+	 * @param int|string $post_id The post being edited.
+	 * @return array Modified query args.
+	 */
+	public function filter_activity_context_files_public_only( array $args, array $field, $post_id ): array {
+		$existing_meta_query = $args['meta_query'] ?? []; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+
+		$args['meta_query'] = [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'relation' => 'AND',
+			[
+				'key'     => 'context_cohort',
+				'compare' => 'NOT EXISTS',
+			],
+			$existing_meta_query,
+		];
 
 		return $args;
 	}
