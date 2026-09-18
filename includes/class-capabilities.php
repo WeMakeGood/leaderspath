@@ -31,6 +31,9 @@ class Capabilities {
 		// granting the blanket edit_others_/delete_others_ capability that
 		// would expose every cohort's files. See get_facilitator_caps().
 		add_filter( 'map_meta_cap', [ __CLASS__, 'grant_facilitator_own_cohort_context' ], 10, 4 );
+
+		// Same shape, for the Cohort post itself — see grant_facilitator_own_cohort().
+		add_filter( 'map_meta_cap', [ __CLASS__, 'grant_facilitator_own_cohort' ], 10, 4 );
 	}
 
 	/**
@@ -64,6 +67,7 @@ class Capabilities {
 		self::maybe_add_cohort_caps();
 		self::maybe_add_facilitator_context_caps();
 		self::maybe_add_cohort_cpt_caps();
+		self::maybe_add_facilitator_cohort_caps();
 	}
 
 	/**
@@ -141,6 +145,30 @@ class Capabilities {
 		$facilitator = get_role( 'leaderspath_facilitator' );
 
 		if ( ! $facilitator || $facilitator->has_cap( 'edit_leaderspath_context' ) ) {
+			return;
+		}
+
+		foreach ( self::get_facilitator_caps() as $cap => $grant ) {
+			$facilitator->add_cap( $cap, $grant );
+		}
+	}
+
+	/**
+	 * Add facilitator Cohort capabilities if missing.
+	 *
+	 * Separate backfill from maybe_add_facilitator_context_caps() above:
+	 * that one is gated on edit_leaderspath_context, which every existing
+	 * facilitator role already has, so it wouldn't re-run just because
+	 * get_facilitator_caps() later grew new Cohort entries. Gated on
+	 * edit_leaderspath_cohort specifically so this actually catches that
+	 * upgrade case.
+	 *
+	 * @since 0.13.0
+	 */
+	private static function maybe_add_facilitator_cohort_caps(): void {
+		$facilitator = get_role( 'leaderspath_facilitator' );
+
+		if ( ! $facilitator || $facilitator->has_cap( 'edit_leaderspath_cohort' ) ) {
 			return;
 		}
 
@@ -391,6 +419,15 @@ class Capabilities {
 	 * acf/validate_value gate in ACF_Fields is what stops them writing an
 	 * unscoped or another-cohort's value even if they do reach the editor.
 	 *
+	 * Cohort access (added 2026-09-18) follows the identical narrow-grant
+	 * pattern: edit_others_/delete_others_/read_private_leaderspath_cohorts
+	 * are deliberately withheld, so a facilitator can't open every cohort by
+	 * post ID. Access to a cohort they don't author but *are* assigned to
+	 * facilitate (cohort_facilitator ACF field) is instead granted per-post
+	 * by grant_facilitator_own_cohort() below — the Admin_Columns list-table
+	 * query filter is a separate, UX-only narrowing (what they see by
+	 * default), not the actual security boundary.
+	 *
 	 * @since 0.1.0
 	 *
 	 * @return array<string, bool> Capabilities with true values.
@@ -405,6 +442,10 @@ class Capabilities {
 				'publish_leaderspath_contexts'         => true,
 				'delete_leaderspath_context'           => true,
 				'read_leaderspath_context'             => true,
+				'edit_leaderspath_cohort'              => true,
+				'edit_leaderspath_cohorts'             => true,
+				'read_leaderspath_cohort'              => true,
+				'delete_leaderspath_cohort'            => true,
 			]
 		);
 	}
@@ -479,6 +520,59 @@ class Capabilities {
 		}
 
 		return $deny;
+	}
+
+	/**
+	 * Grant a facilitator edit/read/delete access to a specific Cohort post
+	 * they're assigned to facilitate (cohort_facilitator ACF field), even
+	 * though they didn't author it — cohorts are always created by an admin
+	 * flow (WS Form hook, WP-CLI, WC order), never by the facilitator
+	 * themselves, so the "own post" case get_facilitator_caps() covers for
+	 * other CPTs never applies here; this filter is the only path to any
+	 * per-cohort access at all.
+	 *
+	 * Same shape as grant_facilitator_own_cohort_context() immediately
+	 * above: get_facilitator_caps() deliberately withholds
+	 * edit_others_/delete_others_/read_private_leaderspath_cohorts (so a
+	 * facilitator can't open every cohort by post ID), and this must both
+	 * grant (their assigned cohort) and hard-deny (any other cohort) rather
+	 * than silently falling through to WordPress's own default mapping —
+	 * `leaderspath_cohort` is publicly queryable (2026-09-18, for its own
+	 * public landing page), so the same generic-`read`-capability fallback
+	 * that made an explicit deny necessary for Context Files applies here
+	 * too.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param array<string> $caps    Required primitive capabilities.
+	 * @param string        $cap     Requested meta capability.
+	 * @param int           $user_id User being checked.
+	 * @param array<int>    $args    [0] => post ID being checked, for meta caps.
+	 * @return array<string> Modified required capabilities.
+	 */
+	public static function grant_facilitator_own_cohort( array $caps, string $cap, int $user_id, array $args ): array {
+		if ( ! in_array( $cap, [ 'edit_post', 'delete_post', 'read_post' ], true ) || empty( $args[0] ) ) {
+			return $caps;
+		}
+
+		$post = get_post( (int) $args[0] );
+
+		if ( ! $post || 'leaderspath_cohort' !== $post->post_type ) {
+			return $caps;
+		}
+
+		$user = get_userdata( $user_id );
+		if ( ! $user || ! in_array( 'leaderspath_facilitator', (array) $user->roles, true ) ) {
+			return $caps;
+		}
+
+		$facilitator_cohorts = Enrollment::get_facilitator_cohorts( $user_id );
+
+		if ( in_array( $post->ID, $facilitator_cohorts, true ) ) {
+			return [ 'exist' ];
+		}
+
+		return [ 'do_not_allow' ];
 	}
 
 	/**

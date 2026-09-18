@@ -65,16 +65,7 @@ class Admin_Columns {
 		add_filter( 'manage_leaderspath_cohort_posts_columns', [ $this, 'cohort_columns' ] );
 		add_action( 'manage_leaderspath_cohort_posts_custom_column', [ $this, 'cohort_column_content' ], 10, 2 );
 		add_filter( 'manage_edit-leaderspath_cohort_sortable_columns', [ $this, 'cohort_sortable_columns' ] );
-
-		// leaderspath_cohort has no native "View" row action — it's
-		// deliberately not publicly_queryable (see Post_Types::register_cohort()),
-		// so WordPress has no permalink to offer one for. That left facilitators
-		// with no way to reach the actual /learn/{cohort-slug}/lesson/{slug}/
-		// URL the cohort resolves through (found 2026-09-18). This adds a
-		// "Preview First Lesson" action instead, built from the cohort's own
-		// first reachable lesson — not a generic "View" link, since there's no
-		// single canonical page for a cohort to view.
-		add_filter( 'post_row_actions', [ $this, 'cohort_row_actions' ], 10, 2 );
+		add_action( 'pre_get_posts', [ $this, 'filter_cohorts_by_facilitator' ] );
 
 		// Handle sorting.
 		add_action( 'pre_get_posts', [ $this, 'handle_sorting' ] );
@@ -967,66 +958,38 @@ JS;
 	}
 
 	/**
-	 * Add a "Preview First Lesson" row action to the Cohorts list, in place
-	 * of the native "View" action WordPress can't offer for a
-	 * non-publicly-queryable CPT.
+	 * Scope the Cohorts admin list by role: administrators and editors see
+	 * every cohort (unchanged — they hold the full edit_others_/read_private_
+	 * capabilities); a facilitator sees only the cohort(s) they're assigned
+	 * to (cohort_facilitator ACF field); any other role reaching this screen
+	 * at all would already have been blocked by the base
+	 * edit_leaderspath_cohort capability check WordPress itself performs.
+	 *
+	 * UX-only narrowing — the actual security boundary is
+	 * Capabilities::grant_facilitator_own_cohort()'s map_meta_cap filter,
+	 * which independently blocks a facilitator from opening another
+	 * cohort's edit screen directly by URL/post ID even if this query
+	 * filter were bypassed or missing.
 	 *
 	 * @since 0.13.0
 	 *
-	 * @param array<string, string> $actions Existing row actions.
-	 * @param \WP_Post              $post    The post being rendered.
-	 * @return array<string, string> Modified row actions.
+	 * @param \WP_Query $query The query being filtered.
 	 */
-	public function cohort_row_actions( array $actions, \WP_Post $post ): array {
-		if ( 'leaderspath_cohort' !== $post->post_type ) {
-			return $actions;
+	public function filter_cohorts_by_facilitator( \WP_Query $query ): void {
+		if ( ! is_admin() || ! $query->is_main_query() || 'leaderspath_cohort' !== $query->get( 'post_type' ) ) {
+			return;
 		}
 
-		$url = $this->get_cohort_preview_url( $post->ID );
-
-		if ( null === $url ) {
-			return $actions;
+		if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_others_posts' ) ) {
+			return;
 		}
 
-		$actions['leaderspath_preview_lesson'] = sprintf(
-			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
-			esc_url( $url ),
-			esc_html__( 'Preview First Lesson', 'leaderspath' )
-		);
+		$facilitator_cohorts = \LeadersPath\Includes\Enrollment::get_facilitator_cohorts( get_current_user_id() );
 
-		return $actions;
-	}
-
-	/**
-	 * Build the /learn/{cohort-slug}/lesson/{lesson-slug}/ URL for the first
-	 * lesson this cohort can actually reach (Cohort → Course(s) → Lessons,
-	 * same membership Cohort_Rewrite itself validates against — this never
-	 * links to a lesson the cohort wouldn't legitimately resolve).
-	 *
-	 * @since 0.13.0
-	 *
-	 * @param int $cohort_id Cohort post ID.
-	 * @return string|null The preview URL, or null if the cohort has no
-	 *                      reachable lesson yet (no courses assigned, or its
-	 *                      courses have no lessons).
-	 */
-	private function get_cohort_preview_url( int $cohort_id ): ?string {
-		$cohort = get_post( $cohort_id );
-		if ( ! $cohort || empty( $cohort->post_name ) ) {
-			return null;
-		}
-
-		$lesson_ids = \LeadersPath\Includes\Enrollment::get_cohort_lessons( $cohort_id );
-		if ( empty( $lesson_ids ) ) {
-			return null;
-		}
-
-		$lesson = get_post( $lesson_ids[0] );
-		if ( ! $lesson || empty( $lesson->post_name ) ) {
-			return null;
-		}
-
-		return home_url( sprintf( '/learn/%s/lesson/%s/', $cohort->post_name, $lesson->post_name ) );
+		// No assigned cohorts at all: force an empty result rather than
+		// falling through to an unfiltered query. post__in => [0] is
+		// WordPress's own idiom for "match nothing."
+		$query->set( 'post__in', ! empty( $facilitator_cohorts ) ? $facilitator_cohorts : [ 0 ] );
 	}
 
 	/**

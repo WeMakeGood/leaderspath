@@ -31,6 +31,7 @@ class Post_Types {
 		'leaderspath_course',
 		'leaderspath_context',
 		'leaderspath_skill',
+		'leaderspath_cohort',
 	];
 
 	/**
@@ -347,11 +348,15 @@ class Post_Types {
 	 * group's) run through the curriculum. The product stays a reusable
 	 * catalog offering sellable to many organizations.
 	 *
-	 * Deliberately not `publicly_queryable` (unlike Context Files, which need
-	 * it for ACF relationship search) — a cohort holds org-confidential data
-	 * (facilitator, roster, payment status) and should only ever be resolved
-	 * through the controlled /learn/{cohort}/lesson/{lesson}/ lookup
-	 * (Cohort_Rewrite), never by direct query.
+	 * `publicly_queryable` (reversed 2026-09-18, was `false`): a cohort needs
+	 * its own public single-post page — someone who isn't enrolled yet may
+	 * still get a direct link from a colleague and should see *something*
+	 * (an invite/request-access landing page, per the Bricks template — not
+	 * this class's concern). What that page actually renders for which
+	 * visitor is a template/conditional-logic question, entirely separate
+	 * from this flag; confidential fields (facilitator, roster, payment
+	 * status) stay protected by ACF/REST field-level access, not by hiding
+	 * the post from queries altogether.
 	 *
 	 * @since 0.7.0
 	 */
@@ -381,30 +386,29 @@ class Post_Types {
 
 		$args = [
 			'labels'              => $labels,
-			'public'              => false,
-			'publicly_queryable'  => false,
-			'exclude_from_search' => true,
+			'public'              => true,
+			'publicly_queryable'  => true,
 			'show_ui'             => true,
 			'show_in_menu'        => \LeadersPath\Admin\Admin_Menu::MENU_SLUG,
 			'show_in_rest'        => true,
 			'rest_base'           => 'cohorts',
 			'rest_namespace'      => 'wp/v2',
-			'query_var'           => false,
-			'rewrite'             => false,
+			'query_var'           => true,
+			'rewrite'             => [ 'slug' => 'cohort', 'with_front' => false ],
 			'capability_type'     => [ 'leaderspath_cohort', 'leaderspath_cohorts' ],
 			'map_meta_cap'        => true,
+			// No public archive: /cohort/{slug}/ (single post) is fine to reach
+			// directly or via a shared link, but a bare listing of every
+			// organization's cohorts is not something anyone asked for and
+			// would itself leak more than the single-post template controls.
 			'has_archive'         => false,
 			'hierarchical'        => false,
-			// 'slug' does not make the CPT publicly resolvable by itself — this
-			// stays publicly_queryable=false/rewrite=false, so adding it only
-			// unlocks the native admin slug editor. Without it, post_name was
-			// still silently auto-generated from the title on save, but nobody
-			// could see or edit it — which made it impossible for a facilitator
-			// to know or construct the exact /learn/{cohort-slug}/lesson/{slug}/
-			// URL Cohort_Rewrite actually requires (found 2026-09-18: a real,
-			// practical gap in the deliberate "resolve only through the
-			// controlled rewrite lookup" design, not a reason to revisit it).
-			'supports'            => [ 'title', 'slug', 'revisions', 'custom-fields' ],
+			// Matches Activity/Lesson/Course's supports exactly — a Cohort
+			// should edit like a standard WP post type (found 2026-09-18: it
+			// was missing 'editor'/'thumbnail'/'excerpt'/'slug' entirely, an
+			// oversight from the original WC-to-CPT port, not a deliberate
+			// restriction).
+			'supports'            => [ 'title', 'editor', 'thumbnail', 'excerpt', 'slug', 'revisions', 'custom-fields' ],
 		];
 
 		register_post_type( 'leaderspath_cohort', $args );
