@@ -383,11 +383,35 @@ class ACF_Fields {
 					],
 				],
 				[
+					'key'           => 'field_chatbot_disable_context',
+					'label'         => __( 'Disable All Context', 'leaderspath' ),
+					'name'          => 'chatbot_disable_context',
+					'type'          => 'true_false',
+					// This is specifically the "blindfolded" baseline/control comparison
+					// exercise (LeadersPath Core Cohort Curriculum Design.md §7) — a real
+					// curriculum mechanic, not a hypothetical toggle. Scoped to reference
+					// material only: system prompt and skills are unaffected, since those
+					// define what the AI sandbox demonstrates, not the context it's being
+					// compared with/without.
+					'instructions'  => __( 'Skip ALL context files for this activity — both the files selected below AND any files the learner\'s cohort has attached. Use for a baseline/control comparison (e.g. a "without context" exercise) where the learner should experience the AI with no reference material at all. Does not affect the system prompt or skills.', 'leaderspath' ),
+					'default_value' => 0,
+					'ui'            => 1,
+					'conditional_logic' => [
+						[
+							[
+								'field'    => 'field_chatbot_enabled',
+								'operator' => '==',
+								'value'    => '1',
+							],
+						],
+					],
+				],
+				[
 					'key'           => 'field_chatbot_context_files',
 					'label'         => __( 'Context Files', 'leaderspath' ),
 					'name'          => 'chatbot_context_files',
 					'type'          => 'relationship',
-					'instructions'  => __( 'Select context files to include in the conversation.', 'leaderspath' ),
+					'instructions'  => __( 'Select context files to include in the conversation. The learner\'s cohort-scoped context files (if any) are always included too, unless Disable All Context above is on.', 'leaderspath' ),
 					'required'      => 0,
 					'post_type'     => [ 'leaderspath_context' ],
 					'filters'       => [ 'search' ],
@@ -400,6 +424,11 @@ class ACF_Fields {
 							[
 								'field'    => 'field_chatbot_enabled',
 								'operator' => '==',
+								'value'    => '1',
+							],
+							[
+								'field'    => 'field_chatbot_disable_context',
+								'operator' => '!=',
 								'value'    => '1',
 							],
 						],

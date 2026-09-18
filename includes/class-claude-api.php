@@ -135,9 +135,10 @@ class Claude_API {
 	 * @param string      $model            Model slug (sonnet, haiku, opus).
 	 * @param string|null $container_id     Container ID for session continuity.
 	 * @param string|null $attached_file_id Anthropic file ID to attach to this turn (container_upload block), if any.
+	 * @param int         $cohort_id        Learner's cohort ID (0 if none), pre-verified by the caller. See build_system_prompt().
 	 * @return array|WP_Error Response data or error.
 	 */
-	public function send_message( int $activity_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null, ?string $attached_file_id = null ) {
+	public function send_message( int $activity_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null, ?string $attached_file_id = null, int $cohort_id = 0 ) {
 		// Get API key.
 		$api_key = \LeadersPath\Admin\Settings::get_api_key();
 
@@ -156,7 +157,7 @@ class Claude_API {
 		}
 
 		// Build system prompt with context.
-		$system_prompt = $this->build_system_prompt( $activity_id );
+		$system_prompt = $this->build_system_prompt( $activity_id, $cohort_id );
 
 		// Build messages array.
 		$messages = $this->build_messages( $message, $history, $attached_file_id );
@@ -297,9 +298,13 @@ class Claude_API {
 	 *
 	 * @param int $activity_id Activity ID, or 0 for a lesson.
 	 * @param int $lesson_id   Lesson ID, or 0 for an activity.
+	 * @param int $cohort_id   Learner's cohort ID (0 if none), pre-verified by
+	 *                         the caller. Must match what the real chat
+	 *                         request will send — see build_system_prompt() —
+	 *                         or this cache write won't be reused at all.
 	 * @return bool True if the cache write was accepted.
 	 */
-	public function warm_cache( int $activity_id = 0, int $lesson_id = 0 ): bool {
+	public function warm_cache( int $activity_id = 0, int $lesson_id = 0, int $cohort_id = 0 ): bool {
 		$api_key = \LeadersPath\Admin\Settings::get_api_key();
 		if ( empty( $api_key ) ) {
 			return false;
@@ -307,7 +312,7 @@ class Claude_API {
 
 		if ( $activity_id ) {
 			$model         = (string) ( get_field( 'chatbot_model', $activity_id ) ?: \LeadersPath\Admin\Settings::get_default_model() );
-			$system_prompt = $this->build_system_prompt( $activity_id );
+			$system_prompt = $this->build_system_prompt( $activity_id, $cohort_id );
 			$skills        = $this->get_skills_for_api( $activity_id );
 		} elseif ( $lesson_id ) {
 			$model         = (string) ( get_field( 'lesson_chatbot_model', $lesson_id ) ?: \LeadersPath\Admin\Settings::get_default_model() );
@@ -513,9 +518,10 @@ class Claude_API {
 	 * @param string      $model            Model slug (sonnet, haiku, opus).
 	 * @param string|null $container_id     Container ID for session continuity.
 	 * @param string|null $attached_file_id Anthropic file ID to attach to this turn (container_upload block), if any.
+	 * @param int         $cohort_id        Learner's cohort ID (0 if none), pre-verified by the caller. See build_system_prompt().
 	 * @return WP_Error|null Null on success, WP_Error on pre-stream failure.
 	 */
-	public function stream_message( int $activity_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null, ?string $attached_file_id = null ): ?WP_Error {
+	public function stream_message( int $activity_id, string $message, array $history = [], string $model = 'sonnet', ?string $container_id = null, ?string $attached_file_id = null, int $cohort_id = 0 ): ?WP_Error {
 		// Get API key.
 		$api_key = \LeadersPath\Admin\Settings::get_api_key();
 
@@ -534,7 +540,7 @@ class Claude_API {
 		}
 
 		// Build system prompt with context.
-		$system_prompt = $this->build_system_prompt( $activity_id );
+		$system_prompt = $this->build_system_prompt( $activity_id, $cohort_id );
 
 		// Build messages array.
 		$messages = $this->build_messages( $message, $history, $attached_file_id );
@@ -1291,9 +1297,18 @@ class Claude_API {
 	 * @since 0.1.0
 	 *
 	 * @param int $activity_id Activity ID.
+	 * @param int $cohort_id   Optional. The learner's cohort, resolved from
+	 *                         /learn/{cohort}/lesson/{lesson}/ (see
+	 *                         Cohort_Rewrite, Chatbot_Renderer). 0 if the
+	 *                         activity isn't being accessed in a cohort
+	 *                         context (e.g. the lesson's own canonical
+	 *                         /lesson/{slug}/ permalink, admin preview).
+	 *                         Callers must have already verified the
+	 *                         requesting user is actually enrolled in this
+	 *                         cohort — this method trusts the ID it's given.
 	 * @return string System prompt.
 	 */
-	private function build_system_prompt( int $activity_id ): string {
+	private function build_system_prompt( int $activity_id, int $cohort_id = 0 ): string {
 		$activity = get_post( $activity_id );
 		$parts  = [];
 
@@ -1310,22 +1325,39 @@ class Claude_API {
 			);
 		}
 
-		// Add context files.
-		$context_files = get_field( 'chatbot_context_files', $activity_id ) ?: [];
-		if ( ! empty( $context_files ) ) {
-			$parts[] = "\n\n--- Reference Materials ---";
+		// Context files — both this activity's own selection and (if the
+		// learner is in a cohort) that cohort's org-specific material.
+		// chatbot_disable_context is an all-or-nothing baseline/control
+		// toggle (the "blindfolded" curriculum exercise) — it skips BOTH
+		// sources together, not just one; the system prompt and skills
+		// above/below are unaffected, this is reference material only.
+		$disable_context = (bool) get_field( 'chatbot_disable_context', $activity_id );
 
-			foreach ( $context_files as $context_id ) {
-				$context_post = get_post( $context_id );
-				if ( ! $context_post ) {
-					continue;
+		if ( ! $disable_context ) {
+			$context_files = get_field( 'chatbot_context_files', $activity_id ) ?: [];
+
+			if ( $cohort_id ) {
+				$cohort_context_files = \LeadersPath\Includes\Enrollment::get_cohort_context_files( $cohort_id );
+				// Merge, de-duplicated — a facilitator could plausibly attach
+				// the same file to both the activity and the cohort.
+				$context_files = array_values( array_unique( array_merge( $context_files, $cohort_context_files ) ) );
+			}
+
+			if ( ! empty( $context_files ) ) {
+				$parts[] = "\n\n--- Reference Materials ---";
+
+				foreach ( $context_files as $context_id ) {
+					$context_post = get_post( $context_id );
+					if ( ! $context_post ) {
+						continue;
+					}
+
+					$parts[] = sprintf(
+						"\n\n### %s\n%s",
+						$context_post->post_title,
+						$context_post->post_content
+					);
 				}
-
-				$parts[] = sprintf(
-					"\n\n### %s\n%s",
-					$context_post->post_title,
-					$context_post->post_content
-				);
 			}
 		}
 

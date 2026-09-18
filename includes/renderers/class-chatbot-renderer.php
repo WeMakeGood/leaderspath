@@ -41,7 +41,8 @@ class Chatbot_Renderer {
 	 *     allow_model_switch:bool,
 	 *     default_model:string,
 	 *     instructions:string,
-	 *     has_skills:bool
+	 *     has_skills:bool,
+	 *     cohort_id?:int
 	 * }|array{}
 	 */
 	public static function get_data( int $override = 0 ): array {
@@ -64,6 +65,15 @@ class Chatbot_Renderer {
 				// container_upload file-attachment mechanism requires — drives
 				// whether the upload UI renders at all (see build_html()).
 				'has_skills'         => $enabled && ! empty( ( new \LeadersPath\Includes\Claude_API() )->get_skills_for_api( $activity_id ) ),
+				// 0 unless this page was reached via
+				// /learn/{cohort}/lesson/{lesson}/ (Cohort_Rewrite) — baked into
+				// the widget's markup so chatbot.js can send it on every chat
+				// request from this instance (see docs/TASKS.md Phase 15,
+				// "cohort context files load into activity chat"). The server
+				// re-verifies enrollment before using it for anything
+				// (REST_API::resolve_cohort_id()) — this is just how it travels
+				// from render time into the request, not a trust boundary.
+				'cohort_id'          => \LeadersPath\Includes\Cohort_Rewrite::get_current_cohort_id(),
 			];
 		}
 
@@ -201,12 +211,18 @@ class Chatbot_Renderer {
 		// (a page can host multiple chatbots with different skills configs).
 		$has_skills_attr = sprintf( ' data-has-skills="%s"', $has_skills ? '1' : '0' );
 
+		// data-cohort-id carries the learner's cohort (0 if none) into every
+		// chat request chatbot.js sends from this widget instance — see
+		// get_data()'s cohort_id key.
+		$cohort_id_attr = sprintf( ' data-cohort-id="%d"', (int) ( $data['cohort_id'] ?? 0 ) );
+
 		return sprintf(
-			'<div class="leaderspath_chatbot"><div class="leaderspath_chatbot__container" data-post-id="%d" data-post-type="%s"%s%s>%s%s</div></div>',
+			'<div class="leaderspath_chatbot"><div class="leaderspath_chatbot__container" data-post-id="%d" data-post-type="%s"%s%s%s>%s%s</div></div>',
 			$data['post_id'],
 			esc_attr( $data['post_type'] ),
 			$activity_id_attr,
 			$has_skills_attr,
+			$cohort_id_attr,
 			$parts,
 			$instructions_template
 		);

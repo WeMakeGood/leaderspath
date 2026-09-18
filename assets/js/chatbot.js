@@ -82,6 +82,10 @@
 
 		var postId = container.dataset.postId;
 		var postType = container.dataset.postType;
+		// 0 unless this widget was rendered on a /learn/{cohort}/lesson/{lesson}/
+		// page (see class-chatbot-renderer.php); sent on every chat/warm request
+		// so the server can inject the learner's cohort-scoped context files.
+		var cohortId = parseInt( container.dataset.cohortId, 10 ) || 0;
 
 		// Capture the empty-state text now, so reset() can rebuild it after
 		// clearing the messages container.
@@ -375,6 +379,9 @@
 
 			if ( postType === 'activity' ) {
 				body.activity_id = parseInt( postId, 10 );
+				if ( cohortId ) {
+					body.cohort_id = cohortId;
+				}
 			} else {
 				body.lesson_id = parseInt( postId, 10 );
 			}
@@ -1011,6 +1018,11 @@
 			var warmBody = {};
 			if ( postType === 'activity' ) {
 				warmBody.activity_id = parseInt( postId, 10 );
+				// Must match the real chat request's cohort_id, or this cache
+				// write goes to waste — see Claude_API::warm_cache()'s docblock.
+				if ( cohortId ) {
+					warmBody.cohort_id = cohortId;
+				}
 			} else {
 				warmBody.lesson_id = parseInt( postId, 10 );
 			}

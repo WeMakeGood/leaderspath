@@ -241,6 +241,17 @@ class REST_API {
 				'required'          => false,
 				'sanitize_callback' => 'sanitize_text_field',
 			],
+			'cohort_id' => [
+				// Client-supplied but never trust-on-its-own: resolve_cohort_id()
+				// re-checks the requesting user is actually enrolled in it before
+				// it's used for anything. Baked into the chat widget's rendered
+				// HTML by Chatbot_Renderer when the page was reached via
+				// /learn/{cohort}/lesson/{lesson}/ (see Cohort_Rewrite) — absent
+				// otherwise (the lesson's own canonical permalink, admin preview).
+				'description'       => __( 'Learner\'s cohort ID, if accessed via a cohort-scoped lesson URL.', 'leaderspath' ),
+				'type'              => 'integer',
+				'required'          => false,
+			],
 		];
 	}
 
@@ -569,7 +580,44 @@ class REST_API {
 
 		// Activity sandbox mode.
 		$attached_file_id = $request->get_param( 'attached_file_id' );
-		return $this->handle_activity_chat( (int) $activity_id, $message, $history, $model, $attached_file_id ?: null );
+		$cohort_id        = $this->resolve_cohort_id( $request );
+		return $this->handle_activity_chat( (int) $activity_id, $message, $history, $model, $attached_file_id ?: null, $cohort_id );
+	}
+
+	/**
+	 * Resolve and verify the cohort_id param on a chat/warm request.
+	 *
+	 * The client supplies cohort_id (baked into the chat widget's rendered
+	 * HTML by Chatbot_Renderer — see docs/TASKS.md Phase 15, "cohort context
+	 * files load into activity chat"), but it's never trusted on its own:
+	 * this re-checks the requesting user is actually enrolled in that exact
+	 * cohort before it's used to select which cohort's context files load.
+	 * Without this check, a learner could pass an arbitrary cohort_id and
+	 * have another organization's confidential context injected into their
+	 * own chat — the same class of risk the file-upload ownership check
+	 * (record_upload_ownership()) closed for attached_file_id.
+	 *
+	 * Admin/editor bypass matches every other enrollment check in this
+	 * class (check_chat_permission(), etc.) — they can preview any cohort's
+	 * context without being enrolled.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return int Verified cohort ID, or 0 if absent/unverifiable.
+	 */
+	private function resolve_cohort_id( WP_REST_Request $request ): int {
+		$cohort_id = (int) $request->get_param( 'cohort_id' );
+
+		if ( ! $cohort_id ) {
+			return 0;
+		}
+
+		if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_others_posts' ) ) {
+			return $cohort_id;
+		}
+
+		return Enrollment::is_user_enrolled( get_current_user_id(), $cohort_id ) ? $cohort_id : 0;
 	}
 
 	/**
@@ -593,8 +641,12 @@ class REST_API {
 			return new WP_REST_Response( [ 'warmed' => false, 'reason' => 'no_context' ], 200 );
 		}
 
+		// Must match what the real /chat(/stream) request for this widget will
+		// send, or the cache write is wasted — see warm_cache()'s docblock.
+		$cohort_id = $this->resolve_cohort_id( $request );
+
 		$claude = new Claude_API();
-		$warmed = $claude->warm_cache( $activity_id, $lesson_id );
+		$warmed = $claude->warm_cache( $activity_id, $lesson_id, $cohort_id );
 
 		return new WP_REST_Response( [ 'warmed' => $warmed ], 200 );
 	}
@@ -785,9 +837,10 @@ class REST_API {
 	 * @param array       $history          Conversation history.
 	 * @param string|null $model            Model override.
 	 * @param string|null $attached_file_id Anthropic file ID (from /chat/upload) to attach to this turn.
+	 * @param int         $cohort_id        Verified cohort ID (0 if none) — see resolve_cohort_id().
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
-	private function handle_activity_chat( int $activity_id, string $message, array $history, ?string $model, ?string $attached_file_id = null ) {
+	private function handle_activity_chat( int $activity_id, string $message, array $history, ?string $model, ?string $attached_file_id = null, int $cohort_id = 0 ) {
 		// Check if chatbot is enabled for this activity.
 		$chatbot_enabled = get_field( 'chatbot_enabled', $activity_id );
 		if ( ! $chatbot_enabled ) {
@@ -826,7 +879,7 @@ class REST_API {
 		$claude = new Claude_API();
 
 		// Send message (activity mode).
-		$response = $claude->send_message( $activity_id, $message, $history, $model, null, $attached_file_id );
+		$response = $claude->send_message( $activity_id, $message, $history, $model, null, $attached_file_id, $cohort_id );
 
 		// Delete the file from Anthropic right after its one legitimate use —
 		// shrinks retention from their standard "up to 30 days" down to
@@ -939,6 +992,7 @@ class REST_API {
 			$model            = $error['model'];
 			$container_id     = $request->get_param( 'container_id' );
 			$attached_file_id = $request->get_param( 'attached_file_id' ) ?: null;
+			$cohort_id        = $this->resolve_cohort_id( $request );
 
 			// Reject a replayed/foreign file_id before SSE output starts (once
 			// it does, this can only surface as an in-stream error event, not
@@ -956,7 +1010,7 @@ class REST_API {
 			$this->start_sse_output();
 
 			$claude = new Claude_API();
-			$result = $claude->stream_message( (int) $activity_id, $message, $history, $model, $container_id, $attached_file_id );
+			$result = $claude->stream_message( (int) $activity_id, $message, $history, $model, $container_id, $attached_file_id, $cohort_id );
 
 			// Delete the file right after its one legitimate use — see
 			// handle_activity_chat()'s identical cleanup. Fire-and-forget.

@@ -992,6 +992,50 @@ class Enrollment {
 	}
 
 	/**
+	 * Get the Context File post IDs scoped to a cohort.
+	 *
+	 * The reverse lookup of can_user_access_context()'s per-file check —
+	 * given a cohort, find all its org-specific material. Used to inject a
+	 * cohort's context into the chat system prompt for a learner accessing
+	 * an activity via /learn/{cohort}/lesson/{lesson}/ (see
+	 * Claude_API::build_system_prompt(), Cohort_Rewrite).
+	 *
+	 * Deliberately a separate query from Admin_Cohort_Context's private
+	 * get_cohort_context_files(), not a shared/reused one: that method
+	 * returns full WP_Post objects including drafts (an admin metabox
+	 * managing the relationship), this one returns published-only IDs (the
+	 * chat system prompt should never see unpublished content) — different
+	 * contracts for different callers, not incidental duplication.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @param int $cohort_id Cohort post ID.
+	 * @return array<int> Published Context File post IDs, newest first.
+	 */
+	public static function get_cohort_context_files( int $cohort_id ): array {
+		if ( ! $cohort_id ) {
+			return [];
+		}
+
+		$query = new \WP_Query( [
+			'post_type'      => 'leaderspath_context',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+			'fields'         => 'ids',
+			'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				[
+					'key'   => 'context_cohort',
+					'value' => $cohort_id,
+				],
+			],
+		] );
+
+		return array_map( 'intval', $query->posts );
+	}
+
+	/**
 	 * Check if a user can access a specific skill via cohort enrollment.
 	 *
 	 * Resolves the chain: Skill → Activity(ies) that reference it → ... → Enrollment.
