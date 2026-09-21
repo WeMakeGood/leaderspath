@@ -104,7 +104,7 @@ class REST_API {
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => [ $this, 'handle_warm' ],
 				'permission_callback' => [ $this, 'check_chat_permission' ],
-				'args'                => $this->get_chat_args(),
+				'args'                => $this->get_warm_args(),
 			]
 		);
 
@@ -253,6 +253,23 @@ class REST_API {
 				'required'          => false,
 			],
 		];
+	}
+
+	/**
+	 * Args for the cache pre-warm endpoint — the subset of get_chat_args()
+	 * handle_warm() actually reads. Deliberately excludes 'message' (required
+	 * there, but warmCache() never sends one — see chatbot.js) along with
+	 * 'history' and 'attached_file_id', which only apply to a real chat turn.
+	 *
+	 * @since 0.13.0
+	 *
+	 * @return array REST arg definitions.
+	 */
+	private function get_warm_args(): array {
+		return array_intersect_key(
+			$this->get_chat_args(),
+			array_flip( [ 'activity_id', 'lesson_id', 'model', 'container_id', 'cohort_id' ] )
+		);
 	}
 
 	/**

@@ -394,28 +394,6 @@ class ACF_Fields {
 					],
 				],
 				[
-					'key'           => 'field_activity_instructions',
-					'label'         => __( 'Learner Instructions', 'leaderspath' ),
-					'name'          => 'activity_instructions',
-					'type'          => 'wysiwyg',
-					// Learner-facing, not model-facing. The plugin renders this as the
-					// opening message in the chat and the lesson stepper shows the same
-					// text. It is never sent to the AI — that is the System Prompt below.
-					'instructions'  => __( 'Shown to the learner as the opening chat message and in the lesson stepper. Tells the participant what to try in this sandbox. NOT sent to the AI — see System Prompt below for that.', 'leaderspath' ),
-					'tabs'          => 'all',
-					'toolbar'       => 'basic',
-					'media_upload'  => 0,
-					'conditional_logic' => [
-						[
-							[
-								'field'    => 'field_chatbot_enabled',
-								'operator' => '==',
-								'value'    => '1',
-							],
-						],
-					],
-				],
-				[
 					'key'           => 'field_chatbot_system_prompt',
 					'label'         => __( 'System Prompt', 'leaderspath' ),
 					'name'          => 'chatbot_system_prompt',

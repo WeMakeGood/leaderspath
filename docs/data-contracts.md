@@ -11,7 +11,7 @@ When you add, change, or remove an ACF field, check this document to find every 
 | ACF Field | REST Endpoint | Usage |
 |-----------|--------------|-------|
 | `activity_duration` | — | Activity duration in minutes |
-| `activity_instructions` | — | Learner-facing. Rendered by the plugin as the opening chat message; Bricks shows the same field in the stepper. **Never sent to `/chat`.** |
+| `post_content` (core) | — | Learner-facing. Rendered by the plugin as the chat's opening message (via `the_content`). **Never sent to `/chat`.** |
 | `chatbot_enabled` | `POST /chat` (internal) | Gate for activity sandbox |
 | `chatbot_model` | `POST /chat` (internal) | API param |
 | `chatbot_system_prompt` | `POST /chat` (internal) | System prompt |

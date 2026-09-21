@@ -170,6 +170,8 @@ Chronological, most architecturally-significant decisions across the plugin's hi
 | 2026-09-18 | `leaderspath_cohort` becomes `publicly_queryable`, with a full standard-post-type `supports` array | A cohort needs its own public landing page reachable via a shared link; confidential fields stay protected by ACF/REST access, not by hiding the post from queries |
 | 2026-09-18 | Cohort's own context files auto-inject into its learners' activity chats, with a real enrollment check before use | Manually re-attaching a cohort's files to every activity it reaches doesn't scale, and the URL-only cohort-resolution path (no per-request cohort param existed before this) needed a security boundary, not just wiring |
 | 2026-09-18 | Activity's own `chatbot_context_files` picker excludes cohort-scoped files entirely, no admin/editor exception | With auto-injection live, manually picking one cohort's confidential file into a shared activity would apply it to every other cohort reaching that same activity |
+| 2026-09-21 | Removed the `activity_instructions` ACF field; the chat's opening message now renders the Activity's own `post_content` | It duplicated `post_content` as a second editorial field for the same learner-facing text; one field, one place to edit, matches how Bricks' `{post_content}` tag already reads it elsewhere on the Lesson template |
+| 2026-09-21 | `/chat/warm` gets its own REST args (`get_warm_args()`), not the full `get_chat_args()` shared with `/chat` and `/chat/stream` | `warmCache()` never sends a `message`, but the shared args schema required one — every warm request 400'd at the REST args-validation layer before `handle_warm()` (which never needed `message`) ever ran |
 
 ---
 

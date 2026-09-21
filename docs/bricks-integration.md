@@ -86,7 +86,7 @@ The `MutationObserver` on the workspace watches for the `is-active` class change
 Because conversations now persist and switching no longer wipes them, page reload became the *only* way to clear a chat — too blunt (it clears every activity) and non-obvious as an affordance. So the widget needs an explicit **per-activity reset control** ("Start over"). This is a first-class learning action, not a convenience: the sandboxes exist for experimentation ("try that again differently"), and re-running from a clean slate is a core participant move.
 
 - **Scope:** resets **only the current activity's** chatbot. Other activities' conversations are untouched.
-- **Behavior:** clears that instance's `history` array, resets its `containerId` to `null` (so the Claude API session restarts — the widget reuses container IDs for continuity, so this must reset too), and re-renders the `activity_instructions` opening message.
+- **Behavior:** clears that instance's `history` array, resets its `containerId` to `null` (so the Claude API session restarts — the widget reuses container IDs for continuity, so this must reset too), and re-renders the opening instructions message (the Activity's `post_content`).
 - **Placement:** the Activity Marker (it already owns per-activity controls — context/skills icon buttons, nav arrows), so the control reads as "reset *this* activity." Chat input row is an acceptable alternative.
 - **Not a reload, not an endpoint:** purely client-side state reset on one instance. Net-new (no reset control exists in the widget today); the per-instance `history`/`containerId` state it operates on already exists in `chatbot.js`.
 
@@ -265,12 +265,12 @@ The CoWork design docs and wireframes use short/unprefixed field names in their 
 | `skills` | `chatbot_skills` | Activity |
 | `lessons` | `course_lessons` | Course |
 | `facilitator` | `cohort_facilitator` | Cohort product |
-| `activity_instructions` | `chatbot_system_prompt` (confirm intent — see note) | Activity |
+| `activity_instructions` | core `post_content` | Activity |
 | `current_lesson` | *(to be added)* | Cohort product |
 | cohort video field | *(to be added)* | Cohort product |
 | `cohort_description` | WC core `post_content` / `post_excerpt` (no ACF field) | Cohort product |
 
-**Note on `activity_instructions`:** the wireframes show learner-facing instructions surfaced at the top of the chat *and* in the stepper. The plugin has no such field — it has `chatbot_system_prompt` (the system prompt, not necessarily learner-readable). Decide whether the system prompt doubles as displayed instructions or a separate learner-facing field is needed before building the lesson page.
+**Resolved: `activity_instructions`.** The wireframes show learner-facing instructions surfaced at the top of the chat *and* in the stepper. There was briefly a dedicated `activity_instructions` WYSIWYG field for this, but it duplicated the Activity's own `post_content` — removed; the chat's opening message (`Chatbot_Renderer::get_data()`) now renders `post_content` directly (through `the_content`, same as Bricks' own `{post_content}` dynamic tag), so there's one editorial field, not two. `chatbot_system_prompt` remains separate and AI-facing only, never shown to the learner.
 
 ---
 

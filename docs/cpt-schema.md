@@ -87,7 +87,6 @@ AI sandbox experiments within a facilitated Lesson.
 | `chatbot_enabled` | True/False | Enable AI sandbox for this activity |
 | `chatbot_model` | Select | Claude model (sonnet, haiku, opus) — resolved live to current IDs |
 | `chatbot_allow_model_switch` | True/False | Allow users to switch models |
-| `activity_instructions` | WYSIWYG | Learner-facing instructions. Rendered as the opening chat message and shown in the lesson stepper. **Never sent to the AI.** |
 | `chatbot_system_prompt` | Textarea | Custom system prompt defining the AI behavior learners will experience. Sent to the AI, not shown to the learner. |
 | `chatbot_context_files` | Relationship | Related Context Files |
 | `chatbot_skills` | Relationship | Related Skills |
