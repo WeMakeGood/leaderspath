@@ -54,6 +54,24 @@
 	// fallback if the localized config is somehow missing.
 	var MAX_UPLOAD_BYTES = config.maxUploadBytes || ( 30 * 1024 * 1024 );
 
+	// Escape-to-stop needs to work while the textarea is disabled (setSending()
+	// disables it during a streaming response), and a disabled form element
+	// doesn't dispatch keydown — so this can't be a per-widget listener bound
+	// to inputEl or even to that widget's container, since browsers commonly
+	// move focus to document.body when the focused element becomes disabled,
+	// taking the event's bubble path out of that container's subtree. One
+	// document-level listener, keyed off this shared registry instead of
+	// focus/event-target location, is the only reliable way to catch it
+	// regardless of which chatbot (if any) is actually streaming.
+	var activeAbortController = null;
+
+	document.addEventListener( 'keydown', function ( e ) {
+		if ( e.key === 'Escape' && activeAbortController ) {
+			e.preventDefault();
+			activeAbortController.abort();
+		}
+	} );
+
 	/**
 	 * Initialize a single chatbot instance.
 	 */
@@ -507,6 +525,7 @@
 		 */
 		function sendMessageStream( message, body, typing ) {
 			abortController = new AbortController();
+			activeAbortController = abortController;
 
 			// Create assistant message element for incremental display. The
 			// copy button stays hidden (--streaming) until the stream finishes
@@ -746,6 +765,7 @@
 					scrollToBottom();
 					setSending( false );
 					abortController = null;
+					activeAbortController = null;
 					inputEl.focus();
 				} )
 				.catch( function ( err ) {
@@ -790,6 +810,7 @@
 					scrollToBottom();
 					setSending( false );
 					abortController = null;
+					activeAbortController = null;
 					inputEl.focus();
 				} );
 		}
@@ -1257,52 +1278,6 @@
 			'.leaderspath_chatbot__container'
 		);
 		containers.forEach( initChatbot );
-
-		observeLessonWorkspace();
-	}
-
-	/**
-	 * Lesson page: watch the workspace for activity sections becoming active,
-	 * and initialize that section's chatbot the FIRST time it is shown.
-	 *
-	 * Init-once only: revealing a previously-hidden section must not reset its
-	 * conversation. A section is considered active when it gains the `is-active`
-	 * class (added by the Bricks Interaction). The workspace opts in by carrying
-	 * a `data-lp-workspace` attribute (set in the Bricks template).
-	 */
-	function observeLessonWorkspace() {
-		if ( typeof MutationObserver === 'undefined' ) {
-			return;
-		}
-
-		var workspace = document.querySelector( '[data-lp-workspace]' );
-		if ( ! workspace ) {
-			return; // Not a lesson page — nothing to observe.
-		}
-
-		var observer = new MutationObserver( function ( mutations ) {
-			for ( var i = 0; i < mutations.length; i++ ) {
-				var target = mutations[ i ].target;
-				if (
-					target.nodeType === 1 &&
-					target.classList &&
-					target.classList.contains( 'is-active' )
-				) {
-					var containerEl = target.querySelector(
-						'.leaderspath_chatbot__container'
-					);
-					if ( containerEl ) {
-						initChatbot( containerEl ); // init-once guarded
-					}
-				}
-			}
-		} );
-
-		observer.observe( workspace, {
-			subtree: true,
-			attributes: true,
-			attributeFilter: [ 'class' ],
-		} );
 	}
 
 	// Initialize when DOM is ready.
