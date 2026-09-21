@@ -58,9 +58,12 @@ class Chatbot_Renderer {
 				'post_type'          => 'activity',
 				'allow_model_switch' => $enabled && (bool) get_field( 'chatbot_allow_model_switch', $activity_id ),
 				'default_model'      => $enabled ? ( (string) get_field( 'chatbot_model', $activity_id ) ?: 'sonnet' ) : 'sonnet',
-				// Learner-facing opening instructions (WYSIWYG). Rendered as the
-				// first message in the chat; NOT sent to the AI. Empty for lessons.
-				'instructions'       => $enabled ? (string) get_field( 'activity_instructions', $activity_id ) : '',
+				// Learner-facing opening instructions. Rendered as the first
+				// message in the chat; NOT sent to the AI. Empty for lessons.
+				// the_content applies blocks/shortcodes/wpautop the same way the
+				// editor previews it, matching how post_content renders elsewhere
+				// (e.g. the Bricks {post_content} dynamic tag on the Lesson template).
+				'instructions'       => $enabled ? apply_filters( 'the_content', (string) get_post_field( 'post_content', $activity_id ) ) : '',
 				// Skills-enabled activities get a container, which is what the
 				// container_upload file-attachment mechanism requires — drives
 				// whether the upload UI renders at all (see build_html()).
@@ -107,7 +110,23 @@ class Chatbot_Renderer {
 
 		// Learner-facing opening instructions, rendered as the first message.
 		// Only for activities with instructions set. wp_kses_post: it's WYSIWYG.
-		$instructions      = isset( $data['instructions'] ) ? (string) $data['instructions'] : '';
+		$instructions = isset( $data['instructions'] ) ? (string) $data['instructions'] : '';
+
+		// Layout debug aid only — repeats the real instructions text (or a
+		// placeholder paragraph if there isn't any) to the requested length,
+		// so scroll/height CSS can be checked against a long message without
+		// waiting on a real conversation. Goes through the exact same
+		// wp_kses_post() + markup path as real content below; never sent to
+		// the AI. Gated by the shortcode's debug_length="" attribute (see
+		// Shortcodes::chatbot()), off by default.
+		$debug_length = isset( $options['debug_length'] ) ? (int) $options['debug_length'] : 0;
+		if ( $debug_length > 0 ) {
+			$base = '' !== trim( $instructions )
+				? wp_strip_all_tags( $instructions )
+				: 'This is placeholder text for checking scroll behavior. ';
+			$instructions = '<p>' . esc_html( str_repeat( trim( $base ) . ' ', $debug_length ) ) . '</p>';
+		}
+
 		$instructions_html = '';
 		if ( '' !== trim( $instructions ) ) {
 			$instructions_html = sprintf(
@@ -216,8 +235,14 @@ class Chatbot_Renderer {
 		// get_data()'s cohort_id key.
 		$cohort_id_attr = sprintf( ' data-cohort-id="%d"', (int) ( $data['cohort_id'] ?? 0 ) );
 
+		// A single .leaderspath_chatbot wrapper is enough — Shortcodes::wrap()
+		// is the only caller and already emits it (with the class/id/height
+		// attributes actually filled in). A second, attribute-less wrapper of
+		// the same class here used to sit between it and __container, breaking
+		// any height/flex chain a style="" on the outer wrapper tried to pass
+		// down (a plain, unstyled div in the middle doesn't inherit anything).
 		return sprintf(
-			'<div class="leaderspath_chatbot"><div class="leaderspath_chatbot__container" data-post-id="%d" data-post-type="%s"%s%s%s>%s%s</div></div>',
+			'<div class="leaderspath_chatbot__container" data-post-id="%d" data-post-type="%s"%s%s%s>%s%s</div>',
 			$data['post_id'],
 			esc_attr( $data['post_type'] ),
 			$activity_id_attr,

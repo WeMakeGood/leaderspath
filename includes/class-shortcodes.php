@@ -88,6 +88,18 @@ class Shortcodes {
 				'post_id'      => 0,
 				'class'        => '',
 				'id'           => '',
+				// A CSS length ('600px', '40rem') sets a fixed height. '100%'
+				// (or 'fill') makes the widget a flex item that fills its
+				// host container — the host still needs its own height/flex
+				// chain (see docs/bricks-integration.md) for that to resolve
+				// against anything; this only handles the widget's own side.
+				'height'         => '',
+				// Layout debug aid — an integer repeat count. Replaces the
+				// opening instructions with that many repetitions of long
+				// placeholder text, to check scroll/height CSS against a tall
+				// message without a real conversation. Never sent to the AI;
+				// remove from the template once layout work is done.
+				'debug_length'   => 0,
 			],
 			is_array( $atts ) ? $atts : [],
 			'leaderspath_chatbot'
@@ -101,6 +113,9 @@ class Shortcodes {
 		}
 		if ( '' !== $atts['empty_text'] ) {
 			$options['empty_text'] = $atts['empty_text'];
+		}
+		if ( (int) $atts['debug_length'] > 0 ) {
+			$options['debug_length'] = (int) $atts['debug_length'];
 		}
 
 		// Resolve the post to render. Prefer the explicit `post_id`; fall back to
@@ -150,12 +165,44 @@ class Shortcodes {
 			$id_attr = sprintf( ' id="%s"', esc_attr( (string) $atts['id'] ) );
 		}
 
+		$style_attr = $this->height_style( (string) $atts['height'] );
+
 		return sprintf(
-			'<div class="%s"%s>%s</div>',
+			'<div class="%s"%s%s>%s</div>',
 			esc_attr( implode( ' ', $classes ) ),
 			$id_attr,
+			$style_attr,
 			$html
 		);
+	}
+
+	/**
+	 * Build the style="" attribute for the `height` shortcode attribute.
+	 *
+	 * '100%'/'fill' makes the wrapper a flex item that fills whatever the
+	 * host gives it: flex:1 alone, no height. flex's flex-basis (0% by
+	 * default in the `flex: 1` shorthand) overrides an explicit height on
+	 * the same element for a flex item's main-axis sizing — confirmed live:
+	 * combining height:100% (or any literal height) with flex:1 on one
+	 * element made it grow unbounded instead of filling its parent, and
+	 * removing the height (flex:1 by itself) fixed it. min-height:0 lets it
+	 * shrink instead of pushing the page taller — see
+	 * .leaderspath_chatbot__container's own comment in leaderspath.css.
+	 * Any other non-empty value is a literal CSS length: a fixed height,
+	 * with no flex (a fixed-size element doesn't need to grow).
+	 */
+	private function height_style( string $height ): string {
+		if ( '' === trim( $height ) ) {
+			return '';
+		}
+
+		if ( in_array( strtolower( trim( $height ) ), [ '100%', 'fill' ], true ) ) {
+			$css = 'flex:1;min-height:0;';
+		} else {
+			$css = sprintf( 'height:%s;', trim( $height ) );
+		}
+
+		return sprintf( ' style="%s"', esc_attr( $css ) );
 	}
 
 	private function enqueue_chatbot_assets(): void {

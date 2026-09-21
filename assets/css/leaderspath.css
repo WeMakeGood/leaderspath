@@ -8,14 +8,44 @@
  * page builder (Bricks Builder reading ACF directly) and styled there.
  */
 
+/*
+ * Sizing model: .leaderspath_chatbot is the one box with an authoritative
+ * size — either set from outside (the shortcode's height="" attribute, see
+ * class-shortcodes.php's height_style()) or its own min-height floor when
+ * nothing sets one. It owns display:flex + overflow:hidden, so it's the
+ * single place that both defines the size and clips content to it.
+ * .leaderspath_chatbot__container does nothing but mirror that size
+ * (height:100%) and lay out its own children in a column — it has no flex/
+ * overflow logic of its own to fight with its parent's.
+ */
+.leaderspath_chatbot {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	/* Floor for hosts that don't provide a real height/flex chain (a plain WP
+	 * page, an unstyled shortcode drop-in, or no height="" attribute) —
+	 * without this, an unset height would collapse the widget to 0. When a
+	 * real height IS set (inline style from height=""), that wins because
+	 * height is more specific than this min-height floor whenever content
+	 * would otherwise need more room than the floor alone provides. */
+	min-height: 500px;
+}
+
 .leaderspath_chatbot__container {
 	display: flex;
 	flex-direction: column;
-	height: 100%;
-	min-height: 500px;
+	/* flex:1, not height:100%: a percentage height only resolves against a
+	 * parent with a "definite" height, and a flex-grown parent's box isn't
+	 * reliably treated as definite for that purpose (confirmed: forcing a
+	 * literal px height on this element made scrolling work correctly;
+	 * height:100% did not, even with min-height:0 set everywhere in the
+	 * chain). flex:1 sizes this the same way .leaderspath_chatbot itself
+	 * grows in its own parent — by flex layout, not percentage resolution —
+	 * which doesn't have that ambiguity. */
+	flex: 1;
+	min-height: 0;
 	border: 1px solid #dee2e6;
 	border-radius: 8px;
-	overflow: hidden;
 	background: #fff;
 }
 
@@ -31,9 +61,22 @@
 
 .leaderspath_chatbot__messages {
 	flex: 1 1 auto;
+	/* Same reasoning as .leaderspath_chatbot's overflow:hidden above: a flex
+	 * item's default min-height is its content's natural height, which lets
+	 * it grow past flex:1's share instead of scrolling. min-height:0 is what
+	 * actually lets a long conversation clip to the space available here and
+	 * scroll internally via overflow-y below, instead of pushing this whole
+	 * widget taller. */
+	min-height: 0;
 	overflow-y: auto;
 	padding: 1em;
 	scroll-behavior: smooth;
+	/* __instructions and __empty are both rendered together (see
+	 * Chatbot_Renderer::build_html() / chatbot.js's reset()) — a column flex
+	 * context lets __empty fill only the space __instructions doesn't use,
+	 * instead of each independently claiming height:100% and overflowing. */
+	display: flex;
+	flex-direction: column;
 }
 
 .leaderspath_chatbot__message {
@@ -438,7 +481,11 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	height: 100%;
+	/* Fills whatever __messages has left after __instructions (see the
+	 * flex-column comment on .leaderspath_chatbot__messages above) — not
+	 * height:100%, which ignored that sibling and forced overflow. */
+	flex: 1;
+	min-height: 3em;
 	text-align: center;
 	color: #868e96;
 }

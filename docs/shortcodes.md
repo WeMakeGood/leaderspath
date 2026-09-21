@@ -19,7 +19,9 @@ Interactive chatbot widget. Auto-detects whether it's on an Activity or Lesson a
 | `empty_text` | `Send a message to start the conversation.` | Empty-state copy |
 | `post_id` | (auto) | Override the auto-resolved Activity/Lesson ID |
 | `class` | — | Extra CSS classes on the wrapper |
-| `id` | — | DOM `id` on the wrapper |
+| `id` | — | DOM `id` on the wrapper. A numeric value is instead treated as an alias for `post_id` (see Post ID resolution) |
+| `height` | — | A CSS length (`600px`, `40rem`) sets a fixed height on the wrapper. `100%` (or `fill`) makes the wrapper a flex item (`flex:1;min-height:0`) that fills whatever height its host container provides — the host still needs its own height/flex chain (see `docs/bricks-integration.md`) for that to resolve against anything real. Leave unset for the widget's own `min-height: 500px` floor. |
+| `debug_length` | `0` | Layout debug aid. An integer repeat count — when set, replaces the opening instructions with that many repetitions of long placeholder text, so scroll/height CSS can be checked against a tall message without a real conversation. Never sent to the AI; remove from a template once layout work is done. |
 
 Boolean attributes accept `yes`/`no`, `true`/`false`, `on`/`off`, `1`/`0`.
 
@@ -28,8 +30,10 @@ Boolean attributes accept `yes`/`no`, `true`/`false`, `on`/`off`, `1`/`0`.
 The renderer auto-resolves the post ID:
 
 1. Explicit `post_id="123"` attribute, if it matches Activity or Lesson.
-2. The current queried post (`get_queried_object_id()` → `get_the_ID()`).
-3. The most recent published Activity, then Lesson, as a builder-preview fallback.
+2. `id="123"`, if numeric (an alias for `post_id`, matching the `id="{activity_id}"` convention used elsewhere and how Bricks routes a loop item's ID into the shortcode). A non-numeric `id` is left alone as a cosmetic wrapper `id` attribute instead.
+3. The current queried post (`get_queried_object_id()` → `get_the_ID()`).
+
+There is no sample-post fallback: if none of the above resolves to an enabled Activity or Lesson, the shortcode renders nothing (empty string) rather than showing a stand-in post's chatbot.
 
 ### Asset loading
 
