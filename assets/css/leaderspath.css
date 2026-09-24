@@ -6,6 +6,22 @@
  * (Lesson Meta, Activity Meta, Course Lessons, Context Library, Skills
  * List, Lesson Activities, Lesson Objectives) is produced by the active
  * page builder (Bricks Builder reading ACF directly) and styled there.
+ *
+ * Theming: every color/spacing/radius value below reads a --lp-chatbot-*
+ * custom property with a literal fallback, so the widget still renders
+ * correctly standalone (no host CSS at all). A host page — a Bricks theme
+ * style, a global class on the page wrapper, whatever — can point these at
+ * its own tokens without editing this file: e.g.
+ *
+ *   .leaderspath_chatbot {
+ *     --lp-chatbot-color-accent: var(--neon-carrot-500);
+ *     --lp-chatbot-color-border: var(--sandstone-200);
+ *     --lp-chatbot-radius: var(--lms-radius-s);
+ *   }
+ *
+ * Deliberately generic names, not Bricks' own token names: this file has
+ * no dependency on what a host calls its variables or whether Bricks is
+ * even present, and a renamed Bricks variable never breaks this file.
  */
 
 /*
@@ -44,19 +60,21 @@
 	 * which doesn't have that ambiguity. */
 	flex: 1;
 	min-height: 0;
-	border: 1px solid #dee2e6;
-	border-radius: 8px;
-	background: #fff;
+	border: 1px solid var(--lp-chatbot-color-border, #dee2e6);
+	border-radius: var(--lp-chatbot-radius, 8px);
+	background: var(--lp-chatbot-color-surface, #fff);
+	font-family: var(--lp-chatbot-font, inherit);
+	font-size: var(--lp-chatbot-font-size, 1em);
 }
 
 .leaderspath_chatbot__heading {
 	flex: 0 0 auto;
 	margin: 0;
-	padding: 0.75em 1em;
+	padding: var(--lp-chatbot-space-s, 0.75em) var(--lp-chatbot-space, 1em);
 	font-size: 1.1em;
 	font-weight: 600;
-	border-bottom: 1px solid #dee2e6;
-	background: #fafbfc;
+	border-bottom: 1px solid var(--lp-chatbot-color-border, #dee2e6);
+	background: var(--lp-chatbot-color-surface-muted-2, #fafbfc);
 }
 
 .leaderspath_chatbot__messages {
@@ -69,7 +87,7 @@
 	 * widget taller. */
 	min-height: 0;
 	overflow-y: auto;
-	padding: 1em;
+	padding: var(--lp-chatbot-space, 1em);
 	scroll-behavior: smooth;
 	/* __instructions and __empty are both rendered together (see
 	 * Chatbot_Renderer::build_html() / chatbot.js's reset()) — a column flex
@@ -104,21 +122,21 @@
 
 .leaderspath_chatbot__message__content {
 	max-width: 80%;
-	padding: 0.75em 1em;
+	padding: var(--lp-chatbot-space-s, 0.75em) var(--lp-chatbot-space, 1em);
 	border-radius: 12px;
 	word-break: break-word;
 	line-height: 1.5;
 }
 
 .leaderspath_chatbot__message--user .leaderspath_chatbot__message__content {
-	background: #0073aa;
-	color: #fff;
+	background: var(--lp-chatbot-color-accent, #0073aa);
+	color: var(--lp-chatbot-color-surface, #fff);
 	border-bottom-right-radius: 4px;
 }
 
 .leaderspath_chatbot__message--assistant .leaderspath_chatbot__message__content {
-	background: #f0f2f5;
-	color: #1a1a1a;
+	background: var(--lp-chatbot-color-surface-muted, #f0f2f5);
+	color: var(--lp-chatbot-color-text, #1a1a1a);
 	border-bottom-left-radius: 4px;
 }
 
@@ -135,9 +153,9 @@
 	height: 1.75em;
 	padding: 0;
 	border: none;
-	border-radius: 6px;
+	border-radius: var(--lp-chatbot-radius-s, 6px);
 	background: transparent;
-	color: #868e96;
+	color: var(--lp-chatbot-color-text-muted, #868e96);
 	cursor: pointer;
 	opacity: 0.6;
 	transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
@@ -146,12 +164,12 @@
 .leaderspath_chatbot__copy:hover {
 	opacity: 1;
 	background: #e9ecef;
-	color: #495057;
+	color: var(--lp-chatbot-color-text-muted-2, #495057);
 }
 
 .leaderspath_chatbot__copy--done {
 	opacity: 1;
-	color: #2f9e44;
+	color: var(--lp-chatbot-color-success, #2f9e44);
 }
 
 .leaderspath_chatbot__message--streaming .leaderspath_chatbot__copy {
@@ -210,18 +228,18 @@
 
 .leaderspath_chatbot__message__content th,
 .leaderspath_chatbot__message__content td {
-	border: 1px solid #dee2e6;
+	border: 1px solid var(--lp-chatbot-color-border, #dee2e6);
 	padding: 0.4em 0.6em;
 	text-align: left;
 }
 
 .leaderspath_chatbot__message__content th {
-	background: #f8f9fa;
+	background: var(--lp-chatbot-color-surface-muted-2, #f8f9fa);
 	font-weight: 600;
 }
 
 .leaderspath_chatbot__message__content blockquote {
-	border-left: 3px solid #dee2e6;
+	border-left: 3px solid var(--lp-chatbot-color-border, #dee2e6);
 	margin: 0.5em 0;
 	padding: 0.25em 0 0.25em 1em;
 	color: #666;
@@ -238,9 +256,9 @@
 
 .leaderspath_chatbot__input_area {
 	flex: 0 0 auto;
-	border-top: 1px solid #dee2e6;
-	padding: 0.75em;
-	background: #fafbfc;
+	border-top: 1px solid var(--lp-chatbot-color-border, #dee2e6);
+	padding: var(--lp-chatbot-space-s, 0.75em);
+	background: var(--lp-chatbot-color-surface-muted-2, #fafbfc);
 }
 
 .leaderspath_chatbot__input_row {
@@ -251,8 +269,8 @@
 
 .leaderspath_chatbot__input {
 	flex: 1 1 auto;
-	border: 1px solid #dee2e6;
-	border-radius: 8px;
+	border: 1px solid var(--lp-chatbot-color-border, #dee2e6);
+	border-radius: var(--lp-chatbot-radius-s, 6px);
 	padding: 0.5em 0.75em;
 	font-size: 0.95em;
 	line-height: 1.4;
@@ -261,13 +279,13 @@
 	max-height: 150px;
 	overflow-y: hidden;
 	font-family: inherit;
-	background: #fff;
+	background: var(--lp-chatbot-color-surface, #fff);
 	outline: none;
 }
 
 .leaderspath_chatbot__input:focus {
-	border-color: #0073aa;
-	box-shadow: 0 0 0 1px #0073aa;
+	border-color: var(--lp-chatbot-color-accent, #0073aa);
+	box-shadow: 0 0 0 1px var(--lp-chatbot-color-accent, #0073aa);
 }
 
 .leaderspath_chatbot__input:disabled {
@@ -283,16 +301,16 @@
 	width: 2.5em;
 	height: 2.5em;
 	border: none;
-	border-radius: 8px;
-	background: #0073aa;
-	color: #fff;
+	border-radius: var(--lp-chatbot-radius-s, 6px);
+	background: var(--lp-chatbot-color-accent, #0073aa);
+	color: var(--lp-chatbot-color-surface, #fff);
 	cursor: pointer;
 	padding: 0;
 	transition: background 0.15s ease;
 }
 
 .leaderspath_chatbot__send:hover {
-	background: #005a87;
+	background: var(--lp-chatbot-color-accent-hover, #005a87);
 }
 
 .leaderspath_chatbot__send--disabled {
@@ -315,17 +333,17 @@
 	justify-content: center;
 	width: 2.5em;
 	height: 2.5em;
-	border: 1px solid #dee2e6;
-	border-radius: 8px;
-	background: #fff;
-	color: #495057;
+	border: 1px solid var(--lp-chatbot-color-border, #dee2e6);
+	border-radius: var(--lp-chatbot-radius-s, 6px);
+	background: var(--lp-chatbot-color-surface, #fff);
+	color: var(--lp-chatbot-color-text-muted-2, #495057);
 	cursor: pointer;
 	padding: 0;
 	transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .leaderspath_chatbot__attach:hover {
-	background: #f0f2f5;
+	background: var(--lp-chatbot-color-surface-muted, #f0f2f5);
 	border-color: #adb5bd;
 }
 
@@ -338,7 +356,7 @@
    dragenter/dragleave (see chatbot.js). Only wired up for skills-enabled
    activities. */
 .leaderspath_chatbot--dragover {
-	outline: 2px dashed #0073aa;
+	outline: 2px dashed var(--lp-chatbot-color-accent, #0073aa);
 	outline-offset: -2px;
 	background: #f0f8fc;
 }
@@ -352,11 +370,11 @@
 	gap: 0.5em;
 	padding: 0.4em 0.75em;
 	margin-bottom: 0.5em;
-	background: #f0f2f5;
-	border: 1px solid #dee2e6;
-	border-radius: 6px;
+	background: var(--lp-chatbot-color-surface-muted, #f0f2f5);
+	border: 1px solid var(--lp-chatbot-color-border, #dee2e6);
+	border-radius: var(--lp-chatbot-radius-s, 6px);
 	font-size: 0.85em;
-	color: #495057;
+	color: var(--lp-chatbot-color-text-muted-2, #495057);
 }
 
 .leaderspath_chatbot__attachment_chip span {
@@ -369,7 +387,7 @@
 	flex: 0 0 auto;
 	background: none;
 	border: none;
-	color: #868e96;
+	color: var(--lp-chatbot-color-text-muted, #868e96);
 	font-size: 1.1em;
 	line-height: 1;
 	cursor: pointer;
@@ -377,7 +395,7 @@
 }
 
 .leaderspath_chatbot__attachment_chip_remove:hover {
-	color: #c92a2a;
+	color: var(--lp-chatbot-color-danger, #c92a2a);
 }
 
 /* Privacy disclosure — required whenever the attach control is present,
@@ -388,7 +406,7 @@
 	margin: 0.5em 0 0;
 	font-size: 0.75em;
 	line-height: 1.4;
-	color: #868e96;
+	color: var(--lp-chatbot-color-text-muted, #868e96);
 }
 
 .leaderspath_chatbot__model_select {
@@ -397,16 +415,16 @@
 	margin-bottom: 0.5em;
 	padding: 0.35em 0.5em;
 	font-size: 0.85em;
-	border: 1px solid #dee2e6;
-	border-radius: 6px;
-	background: #fff;
+	border: 1px solid var(--lp-chatbot-color-border, #dee2e6);
+	border-radius: var(--lp-chatbot-radius-s, 6px);
+	background: var(--lp-chatbot-color-surface, #fff);
 	color: #333;
 	cursor: pointer;
 	outline: none;
 }
 
 .leaderspath_chatbot__model_select:focus {
-	border-color: #0073aa;
+	border-color: var(--lp-chatbot-color-accent, #0073aa);
 }
 
 .leaderspath_chatbot__typing {
@@ -427,7 +445,7 @@
 /* Live status label: what the AI is doing (Thinking… / Running code… / etc.). */
 .leaderspath_chatbot__typing_status {
 	font-size: 0.85em;
-	color: #868e96;
+	color: var(--lp-chatbot-color-text-muted, #868e96);
 	font-style: italic;
 }
 
@@ -464,8 +482,8 @@
 	margin-bottom: 0.75em;
 	border: 1px dashed #ced4da;
 	border-radius: 4px;
-	background: #f8f9fa;
-	color: #495057;
+	background: var(--lp-chatbot-color-surface-muted-2, #f8f9fa);
+	color: var(--lp-chatbot-color-text-muted-2, #495057);
 	line-height: 1.6;
 }
 
@@ -487,7 +505,7 @@
 	flex: 1;
 	min-height: 3em;
 	text-align: center;
-	color: #868e96;
+	color: var(--lp-chatbot-color-text-muted, #868e96);
 }
 
 .leaderspath_chatbot__empty p {
@@ -497,9 +515,9 @@
 .leaderspath_chatbot__error {
 	padding: 0.5em 1em;
 	margin-bottom: 0.75em;
-	color: #c92a2a;
+	color: var(--lp-chatbot-color-danger, #c92a2a);
 	background: #fff5f5;
-	border-radius: 8px;
+	border-radius: var(--lp-chatbot-radius-s, 6px);
 	font-size: 0.9em;
 }
 
@@ -509,7 +527,7 @@
 	gap: 0.5em;
 	padding: 0.5em 1em;
 	margin-bottom: 0.75em;
-	color: #868e96;
+	color: var(--lp-chatbot-color-text-muted, #868e96);
 	font-size: 0.9em;
 	font-style: italic;
 }
@@ -524,17 +542,17 @@
 	margin-left: 1em;
 	padding: 0.3em 0.75em;
 	background: none;
-	border: 1px solid #0073aa;
-	border-radius: 6px;
-	color: #0073aa;
+	border: 1px solid var(--lp-chatbot-color-accent, #0073aa);
+	border-radius: var(--lp-chatbot-radius-s, 6px);
+	color: var(--lp-chatbot-color-accent, #0073aa);
 	font-size: 0.85em;
 	cursor: pointer;
 	transition: background 0.15s ease, color 0.15s ease;
 }
 
 .leaderspath_chatbot__try_again:hover {
-	background: #0073aa;
-	color: #fff;
+	background: var(--lp-chatbot-color-accent, #0073aa);
+	color: var(--lp-chatbot-color-surface, #fff);
 }
 
 .leaderspath_chatbot__stop {
@@ -543,9 +561,9 @@
 	padding: 0.4em;
 	margin-bottom: 0.75em;
 	background: none;
-	border: 1px solid #dee2e6;
-	border-radius: 6px;
-	color: #868e96;
+	border: 1px solid var(--lp-chatbot-color-border, #dee2e6);
+	border-radius: var(--lp-chatbot-radius-s, 6px);
+	color: var(--lp-chatbot-color-text-muted, #868e96);
 	font-size: 0.85em;
 	text-align: center;
 	cursor: pointer;
@@ -553,8 +571,8 @@
 }
 
 .leaderspath_chatbot__stop:hover {
-	color: #c92a2a;
-	border-color: #c92a2a;
+	color: var(--lp-chatbot-color-danger, #c92a2a);
+	border-color: var(--lp-chatbot-color-danger, #c92a2a);
 }
 
 @keyframes leaderspath-chatbot-bounce {

@@ -39,6 +39,14 @@ There is no sample-post fallback: if none of the above resolves to an enabled Ac
 
 CSS (`assets/css/leaderspath.css`) and JS (`assets/js/chatbot.js` + `assets/js/vendor/marked.umd.js` + `assets/js/vendor/purify.min.js`) register on `wp_enqueue_scripts` but only enqueue when the shortcode actually renders. DOMPurify sanitizes marked.js's output before it's set as `innerHTML` — marked.js itself has no HTML-sanitization option in this version and will pass raw `<script>`/event-handler markup straight through otherwise (see `docs/TASKS.md` Phase 15, "Markdown/HTML conversion audit").
 
+### Theming
+
+Every color, and the dominant spacing/radius values, in `leaderspath.css` read a `--lp-chatbot-*` CSS custom property with a literal fallback (e.g. `border-radius: var(--lp-chatbot-radius, 8px)`), so the widget renders correctly with no host CSS at all. A host page can restyle it without editing this file by setting those custom properties anywhere that cascades to `.leaderspath_chatbot` — a Bricks global variable landing in `:root` is sufficient (confirmed working: Bricks global variables compile into a page's `:root` block, which the widget's own `var(...)` calls then read through normal cascade).
+
+Names are deliberately generic, not tied to any host's own token names: `--lp-chatbot-color-accent`, `--lp-chatbot-color-danger`, `--lp-chatbot-color-success`, `--lp-chatbot-color-border`, `--lp-chatbot-color-surface`, `--lp-chatbot-color-surface-muted`, `--lp-chatbot-color-text`, `--lp-chatbot-color-text-muted` (plus `-hover`/`-muted-2` variants), `--lp-chatbot-radius`, `--lp-chatbot-radius-s`, `--lp-chatbot-space`, `--lp-chatbot-space-s`, `--lp-chatbot-font`, `--lp-chatbot-font-size`. Only the outer-container radius (`--lp-chatbot-radius`) and structural padding rhythm are themed this way — fine-grained values (icon dimensions, badge padding, line-heights) stay fixed as implementation detail.
+
+Do **not** add a literal `:root { --lp-chatbot-*: ...; }` block to this file — that was tried and reverted (see `docs/TASKS.md`, 2026-09-21/24 entries): a real declaration in this file's own `:root` beats a host's `var(--sandstone-200)`-style override by source order/specificity, defeating the whole mechanism. The fallback inside each `var()` call is the only default; there is no second source of truth.
+
 ---
 
 ## Calling the renderer directly
