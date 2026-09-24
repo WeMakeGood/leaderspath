@@ -172,6 +172,7 @@ Chronological, most architecturally-significant decisions across the plugin's hi
 | 2026-09-18 | Activity's own `chatbot_context_files` picker excludes cohort-scoped files entirely, no admin/editor exception | With auto-injection live, manually picking one cohort's confidential file into a shared activity would apply it to every other cohort reaching that same activity |
 | 2026-09-21 | Removed the `activity_instructions` ACF field; the chat's opening message now renders the Activity's own `post_content` | It duplicated `post_content` as a second editorial field for the same learner-facing text; one field, one place to edit, matches how Bricks' `{post_content}` tag already reads it elsewhere on the Lesson template |
 | 2026-09-21 | `/chat/warm` gets its own REST args (`get_warm_args()`), not the full `get_chat_args()` shared with `/chat` and `/chat/stream` | `warmCache()` never sends a `message`, but the shared args schema required one — every warm request 400'd at the REST args-validation layer before `handle_warm()` (which never needed `message`) ever ran |
+| 2026-09-24 | `Cohort_Rewrite::resolve_request()` sets query var `name`, not the CPT's own `leaderspath_lesson` var | Confirmed empirically: `{'leaderspath_lesson' => $slug, 'post_type' => 'leaderspath_lesson'}` makes `WP_Query` resolve `is_archive() === true` (right post in the result set, wrong template renders) — WordPress's single-CPT-by-slug resolution needs `name` + `post_type` together |
 
 ---
 

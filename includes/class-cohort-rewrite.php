@@ -161,8 +161,16 @@ class Cohort_Rewrite {
 		// Overwrite the query vars WordPress will actually query on: a plain
 		// leaderspath_lesson single-post lookup, identical to what
 		// /lesson/{slug}/ produces, so the same Bricks template renders.
-		$wp->query_vars['leaderspath_lesson'] = $lesson_slug;
-		$wp->query_vars['post_type']          = 'leaderspath_lesson';
+		//
+		// Must be 'name', not the CPT's own query_var ('leaderspath_lesson').
+		// Verified empirically: {'leaderspath_lesson' => $slug, 'post_type' =>
+		// 'leaderspath_lesson'} makes WP_Query resolve is_archive() === true
+		// (the lesson archive template renders, even though the right post is
+		// in the result set) — WordPress's single-CPT-by-slug resolution
+		// requires 'name' + 'post_type' together, not <post_type>_var +
+		// 'post_type'.
+		$wp->query_vars['name']      = $lesson_slug;
+		$wp->query_vars['post_type'] = 'leaderspath_lesson';
 		unset( $wp->query_vars[ self::QUERY_VAR_LESSON ] );
 
 		// Keep the resolved cohort ID (not the raw slug) as the query var for
